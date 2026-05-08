@@ -1,0 +1,21 @@
+services:
+  - name: payment-api
+    depends_on:
+      - auth-service
+      - postgres-db
+      - cache-service
+    owner: payments
+    tier: critical
+  - name: auth-service
+    depends_on:
+      - postgres-db
+    owner: identity
+    tier: critical
+  - name: cache-service
+    depends_on: []
+    owner: platform
+    tier: shared
+  - name: postgres-db
+    depends_on: []
+    owner: data
+    tier: critical

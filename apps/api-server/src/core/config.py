@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     prometheus_url: str = Field(default="http://localhost:9090")
     grafana_url: str = Field(default="http://localhost:3000")
     loki_url: str = Field(default="http://localhost:3100")
+    topology_path: str = Field(default="configs/development/topology.yaml")
 
     celery_broker_url: str = Field(default="redis://localhost:6379/1")
     celery_result_backend: str = Field(default="redis://localhost:6379/2")

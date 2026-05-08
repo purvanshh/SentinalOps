@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from main import app
 from memory.short_term.approval_state import clear_pending_approval, set_pending_approval
+from tests.auth_helpers import make_auth_header
 
 
 def test_approval_endpoint_processes_decision(monkeypatch) -> None:
@@ -61,6 +62,7 @@ def test_approval_endpoint_processes_decision(monkeypatch) -> None:
     response = client.post(
         f"/approvals/{incident_id}",
         json={"approved": True, "note": "Proceed"},
+        headers=make_auth_header("operator"),
     )
 
     clear_pending_approval(incident_id)

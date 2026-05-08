@@ -1,10 +1,10 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.dependencies import get_db
-from api.middleware.auth import require_role
+from api.dependencies import get_db, require_role
+from api.middleware.auth import AuthenticatedUser
 from api.schemas.approval import ApprovalDecisionRequest, ApprovalQueueItem, ApprovalResponse
 from db.repositories.incident_repo import IncidentRepository
 from memory.short_term.approval_state import (
@@ -20,7 +20,9 @@ router = APIRouter(prefix="/approvals", tags=["approvals"])
 
 
 @router.get("", response_model=list[ApprovalQueueItem])
-async def pending_approvals() -> list[ApprovalQueueItem]:
+async def pending_approvals(
+    _: AuthenticatedUser = Depends(require_role(["viewer"])),
+) -> list[ApprovalQueueItem]:
     return [ApprovalQueueItem.model_validate(item) for item in list_pending_approvals()]
 
 
@@ -28,10 +30,9 @@ async def pending_approvals() -> list[ApprovalQueueItem]:
 async def decide_approval(
     incident_id: UUID,
     payload: ApprovalDecisionRequest,
-    request: Request,
     db: AsyncSession = Depends(get_db),
+    user: AuthenticatedUser = Depends(require_role(["operator"])),
 ) -> ApprovalResponse:
-    require_role(request, "operator")
     pending = get_pending_approval(incident_id)
     if pending is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Approval not found")
@@ -45,7 +46,7 @@ async def decide_approval(
         graph = build_main_graph()
         await graph.resume(
             incident.graph_thread_id,
-            ResumeCommand(approved=payload.approved, note=payload.note),
+            ResumeCommand(approved=payload.approved, note=payload.note, approved_by=user.user_id),
         )
     else:
         await process_approval_decision(incident_id, payload.approved, payload.note, db)

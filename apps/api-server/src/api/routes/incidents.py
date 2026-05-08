@@ -1,10 +1,10 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.dependencies import get_db
-from api.middleware.auth import require_role
+from api.dependencies import get_db, require_role
+from api.middleware.auth import AuthenticatedUser
 from api.schemas.incident import (
     AlertPayload,
     IncidentCreate,
@@ -23,10 +23,9 @@ router = APIRouter(prefix="/incidents", tags=["incidents"])
 @router.post("/webhook", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
 async def create_incident_from_webhook(
     payload: AlertPayload,
-    request: Request,
     db: AsyncSession = Depends(get_db),
+    _: AuthenticatedUser = Depends(require_role(["admin"])),
 ) -> IncidentResponse:
-    require_role(request, "operator")
     repository = IncidentRepository(db)
     incident = await repository.create_from_alert(
         IncidentCreate(
@@ -42,14 +41,22 @@ async def create_incident_from_webhook(
 
 
 @router.get("", response_model=list[IncidentSummary])
-async def list_incidents(db: AsyncSession = Depends(get_db), status_filter: str | None = None) -> list[IncidentSummary]:
+async def list_incidents(
+    db: AsyncSession = Depends(get_db),
+    status_filter: str | None = None,
+    _: AuthenticatedUser = Depends(require_role(["viewer"])),
+) -> list[IncidentSummary]:
     repository = IncidentRepository(db)
     incidents = await repository.list(status_filter=status_filter)
     return [IncidentSummary.model_validate(incident) for incident in incidents]
 
 
 @router.get("/{incident_id}", response_model=IncidentResponse)
-async def get_incident(incident_id: UUID, db: AsyncSession = Depends(get_db)) -> IncidentResponse:
+async def get_incident(
+    incident_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _: AuthenticatedUser = Depends(require_role(["viewer"])),
+) -> IncidentResponse:
     repository = IncidentRepository(db)
     incident = await repository.get_with_agent_executions(incident_id)
     if incident is None:
@@ -60,10 +67,9 @@ async def get_incident(incident_id: UUID, db: AsyncSession = Depends(get_db)) ->
 @router.post("/{incident_id}/classify", response_model=IncidentResponse)
 async def classify_existing_incident(
     incident_id: UUID,
-    request: Request,
     db: AsyncSession = Depends(get_db),
+    _: AuthenticatedUser = Depends(require_role(["operator"])),
 ) -> IncidentResponse:
-    require_role(request, "operator")
     repository = IncidentRepository(db)
     incident = await repository.get(incident_id)
     if incident is None:
@@ -77,7 +83,11 @@ async def classify_existing_incident(
 
 
 @router.get("/{incident_id}/postmortems", response_model=list[PostmortemResponse])
-async def list_postmortems(incident_id: UUID, db: AsyncSession = Depends(get_db)) -> list[PostmortemResponse]:
+async def list_postmortems(
+    incident_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _: AuthenticatedUser = Depends(require_role(["viewer"])),
+) -> list[PostmortemResponse]:
     repository = IncidentRepository(db)
     incident = await repository.get(incident_id)
     if incident is None:

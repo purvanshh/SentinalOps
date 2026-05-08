@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     llm_base_url: str = Field(default="http://localhost:11434/v1")
     llm_api_key: str = Field(default="dummy-key")
     llm_model: str = Field(default="gpt-oss-120b")
+    auth0_domain: str = Field(default="sentinelops.local")
+    auth0_audience: str = Field(default="sentinelops-api")
+    auth0_algorithms: str = Field(default="HS256")
+    auth0_issuer: str | None = Field(default=None)
+    auth0_secret_key: str = Field(default="dev-secret-change-me")
 
     @property
     def database_url(self) -> str:
@@ -45,6 +50,10 @@ class Settings(BaseSettings):
             f"postgresql+psycopg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_server}:{self.postgres_port}/{self.postgres_db}"
         )
+
+    @property
+    def auth_issuer(self) -> str:
+        return self.auth0_issuer or f"https://{self.auth0_domain}/"
 
 
 @lru_cache

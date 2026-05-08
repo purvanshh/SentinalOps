@@ -1,9 +1,14 @@
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 
 from api.middleware.auth import AuthMiddleware
+from api.middleware.error_handler import (
+    http_exception_handler,
+    permission_exception_handler,
+    unhandled_exception_handler,
+)
 from api.routes.approvals import router as approvals_router
 from api.routes.evaluations import router as evaluations_router
 from api.routes.graph import router as graph_router
@@ -27,6 +32,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.add_middleware(AuthMiddleware)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(PermissionError, permission_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 
 @app.middleware("http")

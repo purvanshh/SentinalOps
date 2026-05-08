@@ -5,6 +5,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from main import app
+from tests.auth_helpers import make_auth_header
 
 
 def test_incident_webhook_creates_incident(monkeypatch) -> None:
@@ -42,6 +43,7 @@ def test_incident_webhook_creates_incident(monkeypatch) -> None:
             "severity": "high",
             "source": "prometheus",
         },
+        headers=make_auth_header("admin"),
     )
 
     assert response.status_code == 201

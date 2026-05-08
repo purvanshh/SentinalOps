@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     celery_broker_url: str = Field(default="redis://localhost:6379/1")
     celery_result_backend: str = Field(default="redis://localhost:6379/2")
     default_agent_timeout_seconds: int = Field(default=30)
+    llm_base_url: str = Field(default="http://localhost:11434/v1")
+    llm_api_key: str = Field(default="dummy-key")
+    llm_model: str = Field(default="gpt-oss-120b")
 
     @property
     def database_url(self) -> str:

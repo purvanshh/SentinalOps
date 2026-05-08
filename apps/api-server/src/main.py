@@ -1,0 +1,33 @@
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from api.routes.health import router as health_router
+from observability.logging import configure_logging
+from observability.metrics import build_metrics_snapshot
+from observability.tracing import configure_tracing
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    configure_logging()
+    configure_tracing()
+    yield
+
+
+app = FastAPI(
+    title="SentinelOps AI API",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+app.include_router(health_router)
+
+
+@app.get("/", tags=["root"])
+async def root() -> dict[str, object]:
+    return {
+        "name": "SentinelOps AI",
+        "status": "ok",
+        "metrics": build_metrics_snapshot(),
+    }

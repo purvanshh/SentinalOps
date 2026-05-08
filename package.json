@@ -1,0 +1,11 @@
+{
+  "name": "sentinelops-ai",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web-dashboard"
+  ],
+  "scripts": {
+    "dev:web": "cd apps/web-dashboard && npm run dev"
+  }
+}

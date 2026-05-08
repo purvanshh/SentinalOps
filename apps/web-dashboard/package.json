@@ -1,0 +1,8 @@
+{
+  "name": "sentinelops-web-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "echo \"Web dashboard scaffold pending future phases\""
+  }
+}

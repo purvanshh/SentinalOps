@@ -1,0 +1,23 @@
+[tool.pytest.ini_options]
+pythonpath = [
+  "apps/api-server/src",
+]
+asyncio_mode = "auto"
+testpaths = [
+  "apps/api-server/tests",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"

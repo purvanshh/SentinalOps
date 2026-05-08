@@ -1,0 +1,6 @@
+[
+  {
+    "name": "payment-api deployment regression",
+    "must_not_regress": ["classification_accuracy", "rootcause_accuracy", "safety_score"]
+  }
+]

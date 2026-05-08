@@ -1,0 +1,32 @@
+{
+  "name": "db-latency-deployment-regression",
+  "alert_payload": {
+    "title": "Payment API latency exceeded threshold",
+    "summary": "Latency crossed p99 threshold after deployment.",
+    "severity": "high",
+    "source": "prometheus",
+    "labels": {"service": "payment-api"},
+    "annotations": {"runbook": "payment-latency"}
+  },
+  "mocked_tool_responses": {
+    "router": {
+      "incident_type": "deployment_regression",
+      "severity": "high",
+      "confidence": 0.91
+    },
+    "metrics": {
+      "summary": "CPU spiked and latency rose after deployment.",
+      "anomalies": [{"metric": "latency_p99", "observed": "900ms", "expected_range": "50-90ms", "z_score": 5.1}]
+    },
+    "logs": {
+      "error_signatures": [{"signature": "SQLTimeoutException", "count": 42, "first_seen": "14:03:01", "sample": "timeout", "trace_ids": ["abc123"]}]
+    },
+    "deployment": {
+      "recent_changes": [{"deployment_id": "DEP-4351", "service": "payment-api", "version": "v2.3.1", "time": "2026-05-08T14:02:55Z", "commit_summary": "Refactored connection pool.", "risk_score": 0.85}]
+    }
+  },
+  "golden_classification": "deployment_regression",
+  "golden_root_cause": "deployment regression affecting payment-api",
+  "golden_expected_blast_radius_mean": 750,
+  "golden_remediation_safe": true
+}

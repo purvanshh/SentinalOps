@@ -1,0 +1,8 @@
+{
+  "classification_accuracy": 1.0,
+  "rootcause_accuracy": 1.0,
+  "grounding_score": 1.0,
+  "hallucination_score": 1.0,
+  "blast_radius_score": 1.0,
+  "safety_score": 1.0
+}

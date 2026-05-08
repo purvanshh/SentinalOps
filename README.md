@@ -17,6 +17,7 @@ This repository currently includes:
 - Phase 9 approval workflow: remediation planning, pending approval state, approval APIs, Slack notification stubs, and timeout escalation scaffolding
 - Phase 10 graph orchestration scaffold: checkpoint-backed workflow graph, node wrappers, start/resume APIs, and worker integration through the graph execution path
 - Phase 11 postmortem generation: template-based postmortems, contributing factor analysis, prevention-item tracking, and graph-integrated postmortem generation
+- Phase 12 evaluation framework: synthetic incident datasets, scoring pipeline, evaluation summary API, regression fixtures, and CI workflow scaffold
 
 ## Quick Start
 

@@ -1,0 +1,32 @@
+{
+  "name": "cache-degradation-latency",
+  "alert_payload": {
+    "title": "Checkout latency exceeded threshold",
+    "summary": "Latency increased after cache miss spikes.",
+    "severity": "medium",
+    "source": "prometheus",
+    "labels": {"service": "payment-api"},
+    "annotations": {"runbook": "cache-degradation"}
+  },
+  "mocked_tool_responses": {
+    "router": {
+      "incident_type": "cache_degradation",
+      "severity": "medium",
+      "confidence": 0.78
+    },
+    "metrics": {
+      "summary": "Latency rose while cache-backed dependencies slowed.",
+      "anomalies": [{"metric": "cache_miss_rate", "observed": "45%", "expected_range": "5-10%", "z_score": 4.3}]
+    },
+    "logs": {
+      "error_signatures": [{"signature": "CacheTimeoutException", "count": 20, "first_seen": "15:10:01", "sample": "cache timeout", "trace_ids": ["def456"]}]
+    },
+    "deployment": {
+      "recent_changes": []
+    }
+  },
+  "golden_classification": "cache_degradation",
+  "golden_root_cause": "cache degradation affecting payment-api",
+  "golden_expected_blast_radius_mean": 600,
+  "golden_remediation_safe": true
+}

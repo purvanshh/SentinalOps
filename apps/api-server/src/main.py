@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from api.routes.approvals import router as approvals_router
 from api.routes.approvals import router as approvals_router
+from api.routes.evaluations import router as evaluations_router
 from api.routes.graph import router as graph_router
 from api.routes.health import router as health_router
 from api.routes.incidents import router as incidents_router
@@ -29,6 +30,7 @@ app.include_router(health_router)
 app.include_router(incidents_router)
 app.include_router(approvals_router)
 app.include_router(graph_router)
+app.include_router(evaluations_router)
 
 
 @app.get("/", tags=["root"])

@@ -1,0 +1,23 @@
+name: Evaluation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  evaluation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install minimal dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pydantic fastapi sqlalchemy
+      - name: Run evaluation summary
+        run: |
+          PYTHONPATH=apps/api-server/src python -c "from evaluation.runner import run_evaluation; import json; print(json.dumps(run_evaluation(), indent=2))"

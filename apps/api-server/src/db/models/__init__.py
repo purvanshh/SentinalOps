@@ -6,6 +6,7 @@ from db.models.incident import Incident
 from db.models.postmortem import Postmortem
 from db.models.remediation import RemediationAction
 from db.models.remediation_history import RemediationHistory
+from db.models.workflow_checkpoint import WorkflowCheckpoint
 
 __all__ = [
     "AgentExecution",
@@ -16,4 +17,5 @@ __all__ = [
     "Postmortem",
     "RemediationAction",
     "RemediationHistory",
+    "WorkflowCheckpoint",
 ]

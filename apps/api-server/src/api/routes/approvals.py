@@ -11,6 +11,8 @@ from memory.short_term.approval_state import (
     get_pending_approval,
     list_pending_approvals,
 )
+from orchestration.graphs.main_graph import build_main_graph
+from orchestration.interrupts.commands import ResumeCommand
 from workers.tasks.approval_workflow import process_approval_decision
 
 router = APIRouter(prefix="/approvals", tags=["approvals"])
@@ -31,10 +33,21 @@ async def decide_approval(
     if pending is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Approval not found")
 
-    await process_approval_decision(incident_id, payload.approved, payload.note, db)
+    repository = IncidentRepository(db)
+    incident = await repository.get(incident_id)
+    if incident is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+
+    if incident.graph_thread_id:
+        graph = build_main_graph()
+        await graph.resume(
+            incident.graph_thread_id,
+            ResumeCommand(approved=payload.approved, note=payload.note),
+        )
+    else:
+        await process_approval_decision(incident_id, payload.approved, payload.note, db)
     clear_pending_approval(incident_id)
 
-    repository = IncidentRepository(db)
     incident = await repository.get_with_context(incident_id)
     if incident is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")

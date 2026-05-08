@@ -25,6 +25,9 @@ def test_approval_endpoint_processes_decision(monkeypatch) -> None:
     async def fake_process(incident_id_arg, approved, note, db):
         return None
 
+    async def fake_get(self, incident_id_arg):
+        return SimpleNamespace(id=incident_id_arg, graph_thread_id=None)
+
     async def fake_get_with_context(self, incident_id_arg):
         return SimpleNamespace(
             id=incident_id_arg,
@@ -46,6 +49,10 @@ def test_approval_endpoint_processes_decision(monkeypatch) -> None:
         )
 
     monkeypatch.setattr("api.routes.approvals.process_approval_decision", fake_process)
+    monkeypatch.setattr(
+        "db.repositories.incident_repo.IncidentRepository.get",
+        fake_get,
+    )
     monkeypatch.setattr(
         "db.repositories.incident_repo.IncidentRepository.get_with_context",
         fake_get_with_context,

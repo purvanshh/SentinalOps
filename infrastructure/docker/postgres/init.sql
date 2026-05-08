@@ -81,3 +81,14 @@ CREATE TABLE IF NOT EXISTS remediation_history (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS workflow_checkpoints (
+    id UUID PRIMARY KEY,
+    thread_id TEXT NOT NULL,
+    incident_id UUID REFERENCES incidents(id) ON DELETE CASCADE,
+    node_name TEXT NOT NULL,
+    status TEXT NOT NULL,
+    state JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

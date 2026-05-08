@@ -9,6 +9,9 @@ from db.repositories import BaseRepository
 
 
 class IncidentRepository(BaseRepository):
+    def _coerce_uuid(self, value: UUID | str) -> UUID:
+        return value if isinstance(value, UUID) else UUID(str(value))
+
     async def create_from_alert(self, data: IncidentCreate) -> Incident:
         incident = Incident(
             title=data.title,
@@ -30,19 +33,21 @@ class IncidentRepository(BaseRepository):
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def get_with_agent_executions(self, incident_id: UUID) -> Incident | None:
+    async def get_with_agent_executions(self, incident_id: UUID | str) -> Incident | None:
+        incident_uuid = self._coerce_uuid(incident_id)
         query = (
             select(Incident)
-            .where(Incident.id == incident_id)
+            .where(Incident.id == incident_uuid)
             .options(selectinload(Incident.agent_executions))
         )
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_with_context(self, incident_id: UUID) -> Incident | None:
+    async def get_with_context(self, incident_id: UUID | str) -> Incident | None:
+        incident_uuid = self._coerce_uuid(incident_id)
         query = (
             select(Incident)
-            .where(Incident.id == incident_id)
+            .where(Incident.id == incident_uuid)
             .options(
                 selectinload(Incident.agent_executions),
                 selectinload(Incident.evidence_items),
@@ -52,7 +57,7 @@ class IncidentRepository(BaseRepository):
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def update_status(self, incident_id: UUID, status: str) -> Incident | None:
+    async def update_status(self, incident_id: UUID | str, status: str) -> Incident | None:
         incident = await self.get_with_agent_executions(incident_id)
         if incident is None:
             return None
@@ -63,7 +68,7 @@ class IncidentRepository(BaseRepository):
 
     async def update_root_cause(
         self,
-        incident_id: UUID,
+        incident_id: UUID | str,
         *,
         root_cause_status: str,
         root_cause_confidence: float | None,
@@ -77,7 +82,7 @@ class IncidentRepository(BaseRepository):
         await self.session.refresh(incident)
         return incident
 
-    async def update_graph_thread_id(self, incident_id: UUID, thread_id: str) -> Incident | None:
+    async def update_graph_thread_id(self, incident_id: UUID | str, thread_id: str) -> Incident | None:
         incident = await self.get(incident_id)
         if incident is None:
             return None
@@ -86,14 +91,15 @@ class IncidentRepository(BaseRepository):
         await self.session.refresh(incident)
         return incident
 
-    async def get(self, incident_id: UUID) -> Incident | None:
-        query = select(Incident).where(Incident.id == incident_id)
+    async def get(self, incident_id: UUID | str) -> Incident | None:
+        incident_uuid = self._coerce_uuid(incident_id)
+        query = select(Incident).where(Incident.id == incident_uuid)
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
     async def update_classification(
         self,
-        incident_id: UUID,
+        incident_id: UUID | str,
         *,
         incident_type: str,
         severity: str,
@@ -117,15 +123,16 @@ class IncidentRepository(BaseRepository):
 
     async def create_agent_execution(
         self,
-        incident_id: UUID,
+        incident_id: UUID | str,
         agent_name: str,
         input_payload: dict | None,
         output_payload: dict | None,
         status: str,
         latency: float | None = None,
     ) -> AgentExecution:
+        incident_uuid = self._coerce_uuid(incident_id)
         execution = AgentExecution(
-            incident_id=incident_id,
+            incident_id=incident_uuid,
             agent_name=agent_name,
             input=input_payload,
             output=output_payload,
@@ -139,12 +146,13 @@ class IncidentRepository(BaseRepository):
 
     async def replace_evidence_items(
         self,
-        incident_id: UUID,
+        incident_id: UUID | str,
         evidence_items: list[dict],
     ) -> list[EvidenceItem]:
         incident = await self.get_with_context(incident_id)
         if incident is None:
             return []
+        incident_uuid = self._coerce_uuid(incident_id)
 
         for item in list(incident.evidence_items):
             await self.session.delete(item)
@@ -153,7 +161,7 @@ class IncidentRepository(BaseRepository):
         created_items: list[EvidenceItem] = []
         for payload in evidence_items:
             item = EvidenceItem(
-                incident_id=incident_id,
+                incident_id=incident_uuid,
                 source=payload["source"],
                 item_type=payload["item_type"],
                 item_key=payload["item_key"],
@@ -167,10 +175,11 @@ class IncidentRepository(BaseRepository):
             await self.session.refresh(item)
         return created_items
 
-    async def list_agent_executions(self, incident_id: UUID) -> list[AgentExecution]:
+    async def list_agent_executions(self, incident_id: UUID | str) -> list[AgentExecution]:
+        incident_uuid = self._coerce_uuid(incident_id)
         query = (
             select(AgentExecution)
-            .where(AgentExecution.incident_id == incident_id)
+            .where(AgentExecution.incident_id == incident_uuid)
             .order_by(AgentExecution.created_at.asc())
         )
         result = await self.session.execute(query)
@@ -178,12 +187,13 @@ class IncidentRepository(BaseRepository):
 
     async def replace_remediation_actions(
         self,
-        incident_id: UUID,
+        incident_id: UUID | str,
         steps: list[dict],
     ) -> list[RemediationAction]:
         incident = await self.get_with_context(incident_id)
         if incident is None:
             return []
+        incident_uuid = self._coerce_uuid(incident_id)
         for action in list(incident.remediation_actions):
             await self.session.delete(action)
         await self.session.flush()
@@ -191,7 +201,7 @@ class IncidentRepository(BaseRepository):
         rows: list[RemediationAction] = []
         for step in steps:
             action = RemediationAction(
-                incident_id=incident_id,
+                incident_id=incident_uuid,
                 action=step["action"],
                 details={
                     "rationale": step["rationale"],

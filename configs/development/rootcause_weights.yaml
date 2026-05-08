@@ -1,0 +1,6 @@
+weights:
+  evidence_coverage: 0.3
+  temporal_score: 0.2
+  pattern_match_score: 0.2
+  prior_probability: 0.15
+  counterfactual_power: 0.15

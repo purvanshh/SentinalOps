@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS evidence_items (
     incident_id UUID REFERENCES incidents(id) ON DELETE CASCADE,
     source TEXT NOT NULL,
     item_type TEXT NOT NULL,
+    item_key TEXT NOT NULL,
     content JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

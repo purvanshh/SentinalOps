@@ -1,0 +1,26 @@
+[
+  {
+    "pattern_id": "connection_pool_exhaustion",
+    "title": "Connection pool exhaustion",
+    "symptoms": ["latency spike", "sql timeout", "connection pool exhausted"],
+    "cause_service": "postgres-db",
+    "effect_service": "payment-api",
+    "description": "Database pool saturation causes rising query latency and request backlog."
+  },
+  {
+    "pattern_id": "deployment_regression_backend",
+    "title": "Backend deployment regression",
+    "symptoms": ["latency spike", "deploy completed", "error spike"],
+    "cause_service": "payment-api",
+    "effect_service": "payment-api",
+    "description": "A backend deploy introduced performance regressions shortly before user impact."
+  },
+  {
+    "pattern_id": "cache_degradation",
+    "title": "Cache degradation",
+    "symptoms": ["cache miss spike", "latency increase", "downstream load"],
+    "cause_service": "cache-service",
+    "effect_service": "payment-api",
+    "description": "Cache slowdown increases backend load and raises API latency."
+  }
+]

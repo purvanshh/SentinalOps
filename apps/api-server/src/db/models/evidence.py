@@ -15,6 +15,7 @@ class EvidenceItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     source: Mapped[str] = mapped_column(Text, nullable=False)
     item_type: Mapped[str] = mapped_column(Text, nullable=False)
+    item_key: Mapped[str] = mapped_column(Text, nullable=False)
     content: Mapped[dict] = mapped_column(JsonDict, nullable=False, default=dict)
 
     incident = relationship("Incident", back_populates="evidence_items")

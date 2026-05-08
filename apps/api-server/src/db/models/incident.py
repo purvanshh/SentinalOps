@@ -17,6 +17,8 @@ class Incident(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     classification_confidence: Mapped[float | None] = mapped_column(nullable=True)
     classification_rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
     recommended_workflow: Mapped[str | None] = mapped_column(Text, nullable=True)
+    root_cause_status: Mapped[str | None] = mapped_column(Text, nullable=True)
+    root_cause_confidence: Mapped[float | None] = mapped_column(nullable=True)
 
     agent_executions = relationship("AgentExecution", back_populates="incident", lazy="selectin")
     remediation_actions = relationship("RemediationAction", back_populates="incident", lazy="selectin")

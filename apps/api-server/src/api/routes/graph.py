@@ -1,9 +1,10 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.dependencies import get_db
+from api.middleware.auth import require_role
 from api.schemas.approval import ApprovalDecisionRequest
 from db.repositories.incident_repo import IncidentRepository
 from memory.short_term.approval_state import clear_pending_approval
@@ -14,7 +15,8 @@ router = APIRouter(prefix="/graph", tags=["graph"])
 
 
 @router.post("/incidents/{incident_id}/start")
-async def start_graph(incident_id: UUID, db: AsyncSession = Depends(get_db)) -> dict:
+async def start_graph(incident_id: UUID, request: Request, db: AsyncSession = Depends(get_db)) -> dict:
+    require_role(request, "operator")
     repository = IncidentRepository(db)
     incident = await repository.get(incident_id)
     if incident is None:
@@ -28,8 +30,10 @@ async def start_graph(incident_id: UUID, db: AsyncSession = Depends(get_db)) -> 
 async def resume_graph(
     incident_id: UUID,
     payload: ApprovalDecisionRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    require_role(request, "operator")
     repository = IncidentRepository(db)
     incident = await repository.get(incident_id)
     if incident is None or not incident.graph_thread_id:

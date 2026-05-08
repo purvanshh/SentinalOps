@@ -7,6 +7,7 @@ from pydantic import BaseModel, ValidationError
 
 from core.config import get_settings
 from core.exceptions import SentinelOpsError
+from memory.short_term.llm_cache import get_cached, set_cached
 
 
 class LLMClientError(SentinelOpsError):
@@ -58,6 +59,11 @@ class LLMClient:
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
+        cached = get_cached(payload)
+        if cached is not None:
+            if structured_output_model is None:
+                return cached
+            return self._parse_structured_output(cached.get("content", ""), structured_output_model)
 
         last_error: Exception | None = None
         for _attempt in range(self.max_retries + 1):
@@ -66,6 +72,7 @@ class LLMClient:
                 response.raise_for_status()
                 body = response.json()
                 message = body["choices"][0]["message"]
+                set_cached(payload, message)
                 if structured_output_model is None:
                     return message
                 content = message.get("content", "")

@@ -19,6 +19,7 @@ This repository currently includes:
 - Phase 11 postmortem generation: template-based postmortems, contributing factor analysis, prevention-item tracking, and graph-integrated postmortem generation
 - Phase 12 evaluation framework: synthetic incident datasets, scoring pipeline, evaluation summary API, regression fixtures, and CI workflow scaffold
 - Phase 13 frontend dashboard: Next.js command center scaffold with incidents, approvals, evaluation views, trace surfaces, and shared API client wiring
+- Phase 14 hardening scaffolds: auth middleware, permission checks, request correlation, expanded metrics, fallback/caching helpers, Grafana dashboard JSON, and load-test skeleton
 
 ## Quick Start
 

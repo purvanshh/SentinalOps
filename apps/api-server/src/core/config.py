@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     slack_webhook_url: str = Field(default="")
     approval_timeout_minutes: int = Field(default=15)
     approval_auto_reject_minutes: int = Field(default=30)
+    api_rate_limit_per_minute: int = Field(default=120)
 
     celery_broker_url: str = Field(default="redis://localhost:6379/1")
     celery_result_backend: str = Field(default="redis://localhost:6379/2")

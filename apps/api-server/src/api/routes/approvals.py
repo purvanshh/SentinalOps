@@ -1,9 +1,10 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.dependencies import get_db
+from api.middleware.auth import require_role
 from api.schemas.approval import ApprovalDecisionRequest, ApprovalQueueItem, ApprovalResponse
 from db.repositories.incident_repo import IncidentRepository
 from memory.short_term.approval_state import (
@@ -27,8 +28,10 @@ async def pending_approvals() -> list[ApprovalQueueItem]:
 async def decide_approval(
     incident_id: UUID,
     payload: ApprovalDecisionRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> ApprovalResponse:
+    require_role(request, "operator")
     pending = get_pending_approval(incident_id)
     if pending is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Approval not found")

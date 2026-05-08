@@ -1,0 +1,22 @@
+{
+  "title": "SentinelOps Overview",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Incidents Total",
+      "targets": [{"expr": "incidents_total"}]
+    },
+    {
+      "type": "graph",
+      "title": "Agent Duration Seconds",
+      "targets": [{"expr": "rate(agent_duration_seconds_sum[5m])"}]
+    },
+    {
+      "type": "graph",
+      "title": "Tool Failures",
+      "targets": [{"expr": "tool_failures_total"}]
+    }
+  ],
+  "schemaVersion": 39,
+  "version": 1
+}

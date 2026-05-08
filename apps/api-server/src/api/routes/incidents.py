@@ -1,9 +1,10 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.dependencies import get_db
+from api.middleware.auth import require_role
 from api.schemas.incident import (
     AlertPayload,
     IncidentCreate,
@@ -22,8 +23,10 @@ router = APIRouter(prefix="/incidents", tags=["incidents"])
 @router.post("/webhook", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
 async def create_incident_from_webhook(
     payload: AlertPayload,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> IncidentResponse:
+    require_role(request, "operator")
     repository = IncidentRepository(db)
     incident = await repository.create_from_alert(
         IncidentCreate(
@@ -57,8 +60,10 @@ async def get_incident(incident_id: UUID, db: AsyncSession = Depends(get_db)) ->
 @router.post("/{incident_id}/classify", response_model=IncidentResponse)
 async def classify_existing_incident(
     incident_id: UUID,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> IncidentResponse:
+    require_role(request, "operator")
     repository = IncidentRepository(db)
     incident = await repository.get(incident_id)
     if incident is None:

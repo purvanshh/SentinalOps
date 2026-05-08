@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from api.routes.health import router as health_router
+from api.routes.incidents import router as incidents_router
 from observability.logging import configure_logging
 from observability.metrics import build_metrics_snapshot
 from observability.tracing import configure_tracing
@@ -22,6 +23,7 @@ app = FastAPI(
 )
 
 app.include_router(health_router)
+app.include_router(incidents_router)
 
 
 @app.get("/", tags=["root"])

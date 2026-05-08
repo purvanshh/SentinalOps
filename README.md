@@ -13,6 +13,7 @@ This repository currently includes:
 - Phase 5 observability evidence gathering: Prometheus and Loki tool wrappers plus Metrics and Logs agents
 - Phase 6 deployment analysis: topology-aware GitHub deployment tooling and Deployment agent
 - Phase 7 evidence-grounded root cause analysis: evidence normalization, pattern matching, causal validation, confidence scoring, and Root Cause agent integration
+- Phase 8 quantitative risk assessment: blast-radius estimation, remediation risk scoring, historical action priors, and Risk agent integration
 
 ## Quick Start
 

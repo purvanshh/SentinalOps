@@ -1,0 +1,4 @@
+incident_type,severity_factor,services_impacted,notes
+database_latency,0.23,2,Database latency affected checkout and payment APIs
+deployment_regression,0.18,1,Recent deploy caused localized degradation
+cache_degradation,0.14,2,Cache failures increased backend load

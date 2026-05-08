@@ -5,6 +5,7 @@ from db.models.evidence import EvidenceItem
 from db.models.incident import Incident
 from db.models.postmortem import Postmortem
 from db.models.remediation import RemediationAction
+from db.models.remediation_history import RemediationHistory
 
 __all__ = [
     "AgentExecution",
@@ -14,4 +15,5 @@ __all__ = [
     "Incident",
     "Postmortem",
     "RemediationAction",
+    "RemediationHistory",
 ]

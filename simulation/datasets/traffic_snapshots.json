@@ -1,0 +1,6 @@
+{
+  "payment-api": { "rps": 420 },
+  "auth-service": { "rps": 300 },
+  "cache-service": { "rps": 500 },
+  "postgres-db": { "rps": 450 }
+}

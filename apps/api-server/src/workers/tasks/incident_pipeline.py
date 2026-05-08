@@ -4,6 +4,7 @@ from uuid import UUID
 from agents.deployment_agent import analyze_deployments
 from agents.logs_agent import analyze_logs
 from agents.metrics_agent import analyze_metrics
+from agents.risk_agent import assess_risk
 from agents.rootcause_agent import analyze_root_cause
 from agents.router_agent import classify_incident
 from db.repositories.incident_repo import IncidentRepository
@@ -35,6 +36,7 @@ async def _run_incident_pipeline(incident_id: UUID) -> None:
                 _run_deployment_agent(incident_id),
             )
             await _run_rootcause_agent(incident_id)
+            await _run_risk_agent(incident_id)
 
 
 async def _run_metrics_agent(incident_id: UUID) -> None:
@@ -71,6 +73,15 @@ async def _run_rootcause_agent(incident_id: UUID) -> None:
         if incident is None:
             return
         await analyze_root_cause(incident, db_session=session)
+
+
+async def _run_risk_agent(incident_id: UUID) -> None:
+    async with SessionLocal() as session:
+        repository = IncidentRepository(session)
+        incident = await repository.get_with_context(incident_id)
+        if incident is None:
+            return
+        await assess_risk(incident, db_session=session)
 
 
 def enqueue_incident_pipeline(incident_id: str) -> None:

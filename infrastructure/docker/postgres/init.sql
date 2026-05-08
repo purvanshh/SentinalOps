@@ -65,3 +65,14 @@ CREATE TABLE IF NOT EXISTS evaluations (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS remediation_history (
+    id UUID PRIMARY KEY,
+    action_name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    success BOOLEAN NOT NULL DEFAULT TRUE,
+    execution_time_seconds DOUBLE PRECISION NOT NULL DEFAULT 60,
+    severity_on_failure DOUBLE PRECISION NOT NULL DEFAULT 0.5,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

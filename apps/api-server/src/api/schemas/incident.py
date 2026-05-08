@@ -54,3 +54,15 @@ class IncidentSummary(TimestampedResponse):
 class IncidentResponse(IncidentSummary):
     raw_payload: dict[str, Any]
     agent_executions: list[AgentExecutionResponse] = Field(default_factory=list)
+
+
+class PostmortemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    incident_id: UUID
+    title: str
+    content: str
+    version: int
+    created_at: datetime
+    updated_at: datetime

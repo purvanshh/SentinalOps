@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS remediation_actions (
 CREATE TABLE IF NOT EXISTS postmortems (
     id UUID PRIMARY KEY,
     incident_id UUID REFERENCES incidents(id) ON DELETE CASCADE,
+    title TEXT NOT NULL DEFAULT 'Incident Postmortem',
     content TEXT NOT NULL,
     version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -89,6 +90,17 @@ CREATE TABLE IF NOT EXISTS workflow_checkpoints (
     node_name TEXT NOT NULL,
     status TEXT NOT NULL,
     state JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS prevention_items (
+    id UUID PRIMARY KEY,
+    incident_id UUID REFERENCES incidents(id) ON DELETE SET NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'open',
+    completed BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

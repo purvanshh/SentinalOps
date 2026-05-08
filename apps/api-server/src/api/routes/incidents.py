@@ -4,9 +4,16 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.dependencies import get_db
-from api.schemas.incident import AlertPayload, IncidentCreate, IncidentResponse, IncidentSummary
+from api.schemas.incident import (
+    AlertPayload,
+    IncidentCreate,
+    IncidentResponse,
+    IncidentSummary,
+    PostmortemResponse,
+)
 from agents.router_agent import classify_incident
 from db.repositories.incident_repo import IncidentRepository
+from db.repositories.postmortem_repo import PostmortemRepository
 from workers.tasks.incident_pipeline import enqueue_incident_pipeline
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
@@ -62,3 +69,14 @@ async def classify_existing_incident(
     if refreshed is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
     return IncidentResponse.model_validate(refreshed)
+
+
+@router.get("/{incident_id}/postmortems", response_model=list[PostmortemResponse])
+async def list_postmortems(incident_id: UUID, db: AsyncSession = Depends(get_db)) -> list[PostmortemResponse]:
+    repository = IncidentRepository(db)
+    incident = await repository.get(incident_id)
+    if incident is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+    postmortem_repo = PostmortemRepository(db)
+    rows = await postmortem_repo.list_postmortems(incident_id)
+    return [PostmortemResponse.model_validate(row) for row in rows]

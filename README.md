@@ -16,6 +16,7 @@ This repository currently includes:
 - Phase 8 quantitative risk assessment: blast-radius estimation, remediation risk scoring, historical action priors, and Risk agent integration
 - Phase 9 approval workflow: remediation planning, pending approval state, approval APIs, Slack notification stubs, and timeout escalation scaffolding
 - Phase 10 graph orchestration scaffold: checkpoint-backed workflow graph, node wrappers, start/resume APIs, and worker integration through the graph execution path
+- Phase 11 postmortem generation: template-based postmortems, contributing factor analysis, prevention-item tracking, and graph-integrated postmortem generation
 
 ## Quick Start
 

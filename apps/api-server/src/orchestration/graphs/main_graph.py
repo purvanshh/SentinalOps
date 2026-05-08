@@ -10,6 +10,7 @@ from orchestration.nodes.deployment_node import deployment_node
 from orchestration.nodes.execution_node import execution_node
 from orchestration.nodes.logs_node import logs_node
 from orchestration.nodes.metrics_node import metrics_node
+from orchestration.nodes.postmortem_node import postmortem_node
 from orchestration.nodes.remediation_node import remediation_node
 from orchestration.nodes.risk_node import risk_node
 from orchestration.nodes.rootcause_node import rootcause_node
@@ -73,6 +74,7 @@ class IncidentWorkflowGraph:
             return state
 
         state = await self._run_node(thread_id, incident_id, "execution", execution_node, state)
+        state = await self._run_node(thread_id, incident_id, "postmortem", postmortem_node, state)
         return state
 
     async def resume(self, thread_id: str, command: ResumeCommand) -> dict:
@@ -91,6 +93,7 @@ class IncidentWorkflowGraph:
             },
         )
         state = await self._run_node(thread_id, str(latest.incident_id), "execution", execution_node, state)
+        state = await self._run_node(thread_id, str(latest.incident_id), "postmortem", postmortem_node, state)
         return state
 
     async def _run_node(self, thread_id: str, incident_id: str, node_name: str, node, state: dict) -> dict:

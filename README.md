@@ -20,6 +20,15 @@ This repository currently includes:
 - Phase 12 evaluation framework: synthetic incident datasets, scoring pipeline, evaluation summary API, regression fixtures, and CI workflow scaffold
 - Phase 13 frontend dashboard: Next.js command center scaffold with incidents, approvals, evaluation views, trace surfaces, and shared API client wiring
 - Phase 14 hardening scaffolds: auth middleware, permission checks, request correlation, expanded metrics, fallback/caching helpers, Grafana dashboard JSON, and load-test skeleton
+- Phase 15 delivery assets: production-leaning Dockerfiles, Render blueprint, deploy workflow scaffold, architecture docs, ADRs, runbooks, demo script, and contribution guide
+
+## Delivery Docs
+
+- Architecture: [docs/architecture/overview.md](/Users/purvansh/Desktop/Projects/SentinalOps/docs/architecture/overview.md:1)
+- ADRs: [docs/adr/0001-workflow-graph.md](/Users/purvansh/Desktop/Projects/SentinalOps/docs/adr/0001-workflow-graph.md:1), [docs/adr/0002-evidence-grounding.md](/Users/purvansh/Desktop/Projects/SentinalOps/docs/adr/0002-evidence-grounding.md:1)
+- API overview: [docs/api-specs/overview.md](/Users/purvansh/Desktop/Projects/SentinalOps/docs/api-specs/overview.md:1)
+- Runbook: [docs/runbooks/oncall-guide.md](/Users/purvansh/Desktop/Projects/SentinalOps/docs/runbooks/oncall-guide.md:1)
+- Demo: [docs/demo-script.md](/Users/purvansh/Desktop/Projects/SentinalOps/docs/demo-script.md:1)
 
 ## Quick Start
 

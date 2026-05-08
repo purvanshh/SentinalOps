@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: sentinelops-api
+    runtime: docker
+    dockerfilePath: apps/api-server/Dockerfile
+    envVars:
+      - key: API_PORT
+        value: "8000"
+  - type: web
+    name: sentinelops-web
+    runtime: docker
+    dockerfilePath: apps/web-dashboard/Dockerfile
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE_URL
+        value: https://sentinelops-api.onrender.com

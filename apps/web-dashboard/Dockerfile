@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:20-alpine AS base
 
 WORKDIR /app
 
@@ -9,5 +9,8 @@ COPY apps/web-dashboard/next-env.d.ts /app/next-env.d.ts
 RUN npm install
 
 COPY apps/web-dashboard /app
+RUN npm run build
 
-CMD ["npm", "run", "dev"]
+EXPOSE 3000
+
+CMD ["npm", "run", "start"]

@@ -13,6 +13,10 @@ class Incident(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     source: Mapped[str] = mapped_column(Text, nullable=False, default="prometheus")
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     raw_payload: Mapped[dict] = mapped_column(JsonDict, nullable=False, default=dict)
+    incident_type: Mapped[str | None] = mapped_column(Text, nullable=True)
+    classification_confidence: Mapped[float | None] = mapped_column(nullable=True)
+    classification_rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recommended_workflow: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     agent_executions = relationship("AgentExecution", back_populates="incident", lazy="selectin")
     remediation_actions = relationship("RemediationAction", back_populates="incident", lazy="selectin")

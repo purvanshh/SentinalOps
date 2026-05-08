@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.dependencies import get_db
 from api.schemas.incident import AlertPayload, IncidentCreate, IncidentResponse, IncidentSummary
+from agents.router_agent import classify_incident
 from db.repositories.incident_repo import IncidentRepository
 from workers.tasks.incident_pipeline import enqueue_incident_pipeline
 
@@ -44,3 +45,20 @@ async def get_incident(incident_id: UUID, db: AsyncSession = Depends(get_db)) ->
     if incident is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
     return IncidentResponse.model_validate(incident)
+
+
+@router.post("/{incident_id}/classify", response_model=IncidentResponse)
+async def classify_existing_incident(
+    incident_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> IncidentResponse:
+    repository = IncidentRepository(db)
+    incident = await repository.get(incident_id)
+    if incident is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+
+    await classify_incident(incident, db_session=db)
+    refreshed = await repository.get_with_agent_executions(incident_id)
+    if refreshed is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+    return IncidentResponse.model_validate(refreshed)

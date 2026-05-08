@@ -1,0 +1,23 @@
+[
+  {
+    "incident_id": "INC-034",
+    "title": "Checkout latency spike after database pool saturation",
+    "summary": "Payment requests slowed after the connection pool hit its cap during peak traffic.",
+    "incident_type": "database_latency",
+    "severity": "critical"
+  },
+  {
+    "incident_id": "INC-078",
+    "title": "Deployment regression caused elevated API 5xx",
+    "summary": "A release introduced timeouts in the payment API and increased user-visible failures.",
+    "incident_type": "deployment_regression",
+    "severity": "high"
+  },
+  {
+    "incident_id": "INC-102",
+    "title": "Cache cluster slowdown created downstream latency",
+    "summary": "Response times rose after cache misses spiked and backend queries backed up.",
+    "incident_type": "cache_degradation",
+    "severity": "medium"
+  }
+]

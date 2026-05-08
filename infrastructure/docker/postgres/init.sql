@@ -6,6 +6,10 @@ CREATE TABLE IF NOT EXISTS incidents (
     source TEXT NOT NULL DEFAULT 'prometheus',
     summary TEXT NOT NULL DEFAULT '',
     raw_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    incident_type TEXT,
+    classification_confidence DOUBLE PRECISION,
+    classification_rationale TEXT,
+    recommended_workflow TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

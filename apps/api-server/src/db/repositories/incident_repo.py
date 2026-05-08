@@ -48,6 +48,35 @@ class IncidentRepository(BaseRepository):
         await self.session.refresh(incident)
         return incident
 
+    async def get(self, incident_id: UUID) -> Incident | None:
+        query = select(Incident).where(Incident.id == incident_id)
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def update_classification(
+        self,
+        incident_id: UUID,
+        *,
+        incident_type: str,
+        severity: str,
+        confidence: float,
+        rationale: str,
+        recommended_workflow: str,
+        status: str,
+    ) -> Incident | None:
+        incident = await self.get(incident_id)
+        if incident is None:
+            return None
+        incident.incident_type = incident_type
+        incident.severity = severity
+        incident.classification_confidence = confidence
+        incident.classification_rationale = rationale
+        incident.recommended_workflow = recommended_workflow
+        incident.status = status
+        await self.session.commit()
+        await self.session.refresh(incident)
+        return incident
+
     async def create_agent_execution(
         self,
         incident_id: UUID,

@@ -1,0 +1,1 @@
+"""Past incident retrieval helpers."""

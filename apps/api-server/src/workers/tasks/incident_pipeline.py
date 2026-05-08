@@ -1,9 +1,8 @@
 import asyncio
 from uuid import UUID
 
-from sqlalchemy import select
-
-from db.models.incident import Incident
+from agents.router_agent import classify_incident
+from db.repositories.incident_repo import IncidentRepository
 from db.session import SessionLocal
 from workers.queues import celery_app
 
@@ -15,13 +14,15 @@ def run_incident_pipeline(incident_id: str) -> None:
 
 async def _run_incident_pipeline(incident_id: UUID) -> None:
     async with SessionLocal() as session:
-        result = await session.execute(select(Incident).where(Incident.id == incident_id))
-        incident = result.scalar_one_or_none()
+        repository = IncidentRepository(session)
+        incident = await repository.get(incident_id)
         if incident is None:
             return
 
         incident.status = "investigating"
         await session.commit()
+        await session.refresh(incident)
+        await classify_incident(incident, db_session=session)
 
 
 def enqueue_incident_pipeline(incident_id: str) -> None:

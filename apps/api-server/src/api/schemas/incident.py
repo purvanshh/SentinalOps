@@ -45,6 +45,10 @@ class IncidentSummary(TimestampedResponse):
     status: str
     source: str
     summary: str
+    incident_type: str | None = None
+    classification_confidence: float | None = None
+    classification_rationale: str | None = None
+    recommended_workflow: str | None = None
 
 
 class IncidentResponse(IncidentSummary):

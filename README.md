@@ -14,6 +14,7 @@ This repository currently includes:
 - Phase 6 deployment analysis: topology-aware GitHub deployment tooling and Deployment agent
 - Phase 7 evidence-grounded root cause analysis: evidence normalization, pattern matching, causal validation, confidence scoring, and Root Cause agent integration
 - Phase 8 quantitative risk assessment: blast-radius estimation, remediation risk scoring, historical action priors, and Risk agent integration
+- Phase 9 approval workflow: remediation planning, pending approval state, approval APIs, Slack notification stubs, and timeout escalation scaffolding
 
 ## Quick Start
 

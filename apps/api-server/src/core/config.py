@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     topology_path: str = Field(default="configs/development/topology.yaml")
     github_api_url: str = Field(default="https://api.github.com")
     github_token: str = Field(default="dummy-token")
+    slack_webhook_url: str = Field(default="")
+    approval_timeout_minutes: int = Field(default=15)
+    approval_auto_reject_minutes: int = Field(default=30)
 
     celery_broker_url: str = Field(default="redis://localhost:6379/1")
     celery_result_backend: str = Field(default="redis://localhost:6379/2")

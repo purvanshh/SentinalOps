@@ -4,11 +4,13 @@ from uuid import UUID
 from agents.deployment_agent import analyze_deployments
 from agents.logs_agent import analyze_logs
 from agents.metrics_agent import analyze_metrics
+from agents.remediation_agent import build_remediation_plan
 from agents.risk_agent import assess_risk
 from agents.rootcause_agent import analyze_root_cause
 from agents.router_agent import classify_incident
 from db.repositories.incident_repo import IncidentRepository
 from db.session import SessionLocal
+from workers.tasks.approval_workflow import start_approval_workflow
 from workers.queues import celery_app
 
 
@@ -37,6 +39,7 @@ async def _run_incident_pipeline(incident_id: UUID) -> None:
             )
             await _run_rootcause_agent(incident_id)
             await _run_risk_agent(incident_id)
+            await _run_remediation_agent(incident_id)
 
 
 async def _run_metrics_agent(incident_id: UUID) -> None:
@@ -82,6 +85,29 @@ async def _run_risk_agent(incident_id: UUID) -> None:
         if incident is None:
             return
         await assess_risk(incident, db_session=session)
+
+
+async def _run_remediation_agent(incident_id: UUID) -> None:
+    async with SessionLocal() as session:
+        repository = IncidentRepository(session)
+        incident = await repository.get_with_context(incident_id)
+        if incident is None:
+            return
+        plan = await build_remediation_plan(incident, db_session=session)
+        await repository.replace_remediation_actions(
+            incident_id,
+            [step.model_dump(mode="json") for step in plan.steps],
+        )
+        risky_actions = [step.action for step in plan.steps if step.requires_approval]
+        if risky_actions:
+            await start_approval_workflow(
+                incident_id,
+                plan.summary,
+                risky_actions,
+                session,
+            )
+        else:
+            await repository.update_status(incident_id, "resolved")
 
 
 def enqueue_incident_pipeline(incident_id: str) -> None:

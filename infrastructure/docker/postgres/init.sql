@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS incidents (
     classification_confidence DOUBLE PRECISION,
     classification_rationale TEXT,
     recommended_workflow TEXT,
+    root_cause_status TEXT,
+    root_cause_confidence DOUBLE PRECISION,
+    graph_thread_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -44,6 +47,8 @@ CREATE TABLE IF NOT EXISTS remediation_actions (
     details JSONB NOT NULL DEFAULT '{}'::jsonb,
     approved BOOLEAN NOT NULL DEFAULT FALSE,
     executed BOOLEAN NOT NULL DEFAULT FALSE,
+    requires_approval BOOLEAN NOT NULL DEFAULT TRUE,
+    status TEXT NOT NULL DEFAULT 'pending',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

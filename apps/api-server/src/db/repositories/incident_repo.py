@@ -4,7 +4,7 @@ from sqlalchemy import Select, select
 from sqlalchemy.orm import selectinload
 
 from api.schemas.incident import IncidentCreate
-from db.models import AgentExecution, EvidenceItem, Incident
+from db.models import AgentExecution, EvidenceItem, Incident, RemediationAction
 from db.repositories import BaseRepository
 
 
@@ -46,6 +46,7 @@ class IncidentRepository(BaseRepository):
             .options(
                 selectinload(Incident.agent_executions),
                 selectinload(Incident.evidence_items),
+                selectinload(Incident.remediation_actions),
             )
         )
         result = await self.session.execute(query)
@@ -72,6 +73,15 @@ class IncidentRepository(BaseRepository):
             return None
         incident.root_cause_status = root_cause_status
         incident.root_cause_confidence = root_cause_confidence
+        await self.session.commit()
+        await self.session.refresh(incident)
+        return incident
+
+    async def update_graph_thread_id(self, incident_id: UUID, thread_id: str) -> Incident | None:
+        incident = await self.get(incident_id)
+        if incident is None:
+            return None
+        incident.graph_thread_id = thread_id
         await self.session.commit()
         await self.session.refresh(incident)
         return incident
@@ -165,3 +175,37 @@ class IncidentRepository(BaseRepository):
         )
         result = await self.session.execute(query)
         return list(result.scalars().all())
+
+    async def replace_remediation_actions(
+        self,
+        incident_id: UUID,
+        steps: list[dict],
+    ) -> list[RemediationAction]:
+        incident = await self.get_with_context(incident_id)
+        if incident is None:
+            return []
+        for action in list(incident.remediation_actions):
+            await self.session.delete(action)
+        await self.session.flush()
+
+        rows: list[RemediationAction] = []
+        for step in steps:
+            action = RemediationAction(
+                incident_id=incident_id,
+                action=step["action"],
+                details={
+                    "rationale": step["rationale"],
+                    "verification_metric": step["verification_metric"],
+                    "priority": step["priority"],
+                },
+                requires_approval=step["requires_approval"],
+                approved=False,
+                executed=False,
+                status="pending",
+            )
+            self.session.add(action)
+            rows.append(action)
+        await self.session.commit()
+        for row in rows:
+            await self.session.refresh(row)
+        return rows

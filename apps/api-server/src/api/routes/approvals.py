@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -10,6 +11,8 @@ from db.repositories.incident_repo import IncidentRepository
 from orchestration.graphs.main_graph import build_main_graph
 from orchestration.interrupts.commands import ResumeCommand
 from orchestration.interrupts.approval_store import ApprovalStore
+from tools.action_mapping import map_action_to_tool
+from tools.execution_guard import create_approval_token
 from workers.tasks.approval_workflow import process_approval_decision
 
 router = APIRouter(prefix="/approvals", tags=["approvals"])
@@ -55,13 +58,28 @@ async def decide_approval(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
 
     if incident.graph_thread_id:
+        approval_token = None
+        if payload.approved:
+            approved_tools = [map_action_to_tool(action)[0] for action in pending.actions]
+            approval_token = create_approval_token(
+                incident_id=str(incident_id),
+                action_ids=approved_tools,
+                approved_by=user.user_id,
+                expires_at=datetime.fromisoformat(pending.expires_at),
+            )
         graph = build_main_graph()
         await graph.resume(
             incident.graph_thread_id,
-            ResumeCommand(approved=payload.approved, note=payload.note, approved_by=user.user_id),
+            ResumeCommand(
+                approved=payload.approved,
+                note=payload.note,
+                approved_by=user.user_id,
+                approval_token=approval_token,
+            ),
         )
     else:
         await process_approval_decision(incident_id, payload.approved, payload.note, user.user_id, db)
+        approval_token = None
     await approval_store.record_approval(
         incident_id,
         approved=payload.approved,
@@ -78,5 +96,6 @@ async def decide_approval(
             "approved": payload.approved,
             "status": incident.status,
             "note": payload.note,
+            "approval_token": approval_token,
         }
     )

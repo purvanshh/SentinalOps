@@ -25,3 +25,4 @@ class ApprovalResponse(BaseModel):
     approved: bool
     status: str
     note: str = ""
+    approval_token: str | None = None

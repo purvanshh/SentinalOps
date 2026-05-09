@@ -1,0 +1,6 @@
+dangerous_tools:
+  - rollback_deployment
+  - restart_service
+  - scale_service
+approval_required_tools:
+  - verify_metric

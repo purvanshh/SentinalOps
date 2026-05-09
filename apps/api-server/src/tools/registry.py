@@ -2,8 +2,10 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from pydantic import BaseModel, ValidationError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from tools.base import SafetyLevel, ToolCall, ToolResult
+from tools.execution_guard import enforce_tool_execution_policy
 
 ToolHandler = Callable[..., Awaitable[Any]]
 
@@ -61,9 +63,21 @@ class ToolRegistry:
         )
         return [tool.openai_schema() for tool in selected]
 
-    async def execute(self, tool_call: ToolCall) -> ToolResult:
+    async def execute(
+        self,
+        tool_call: ToolCall,
+        *,
+        execution_context: dict[str, Any] | None = None,
+        session: AsyncSession | None = None,
+    ) -> ToolResult:
         tool = self.get(tool_call.name)
         try:
+            await enforce_tool_execution_policy(
+                tool_name=tool_call.name,
+                safety_level=tool.safety_level,
+                context=execution_context or {},
+                session=session,
+            )
             output = await tool.handler(**tool_call.arguments)
             return ToolResult(name=tool_call.name, output=output, success=True)
         except ValidationError as exc:

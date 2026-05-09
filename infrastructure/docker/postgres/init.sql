@@ -111,6 +111,18 @@ CREATE TABLE IF NOT EXISTS approval_requests (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id UUID PRIMARY KEY,
+    incident_id UUID REFERENCES incidents(id) ON DELETE SET NULL,
+    event_type TEXT NOT NULL,
+    actor_id TEXT,
+    target TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    details JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS prevention_items (
     id UUID PRIMARY KEY,
     incident_id UUID REFERENCES incidents(id) ON DELETE SET NULL,

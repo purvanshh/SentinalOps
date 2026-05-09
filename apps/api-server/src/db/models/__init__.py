@@ -1,5 +1,6 @@
 from db.models.agent_execution import AgentExecution
 from db.models.approval import ApprovalRequest
+from db.models.audit_log import AuditLog
 from db.models.base import Base
 from db.models.evaluation import Evaluation
 from db.models.evidence import EvidenceItem
@@ -13,6 +14,7 @@ from db.models.workflow_checkpoint import WorkflowCheckpoint
 __all__ = [
     "AgentExecution",
     "ApprovalRequest",
+    "AuditLog",
     "Base",
     "Evaluation",
     "EvidenceItem",

@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -10,6 +11,8 @@ from db.repositories.incident_repo import IncidentRepository
 from orchestration.graphs.main_graph import build_main_graph
 from orchestration.interrupts.commands import ResumeCommand
 from orchestration.interrupts.approval_store import ApprovalStore
+from tools.action_mapping import map_action_to_tool
+from tools.execution_guard import create_approval_token
 
 router = APIRouter(prefix="/graph", tags=["graph"])
 
@@ -41,10 +44,26 @@ async def resume_graph(
     incident = await repository.get(incident_id)
     if incident is None or not incident.graph_thread_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Graph thread not found")
+    approval_row = await ApprovalStore(db).get_approval(incident_id)
+    if approval_row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Approval request not found")
+    approval_token = ""
+    if payload.approved:
+        approval_token = create_approval_token(
+            incident_id=str(incident_id),
+            action_ids=[map_action_to_tool(action)[0] for action in approval_row.actions],
+            approved_by=user.user_id,
+            expires_at=datetime.fromisoformat(approval_row.expires_at),
+        )
     graph = build_main_graph()
     state = await graph.resume(
         incident.graph_thread_id,
-        ResumeCommand(approved=payload.approved, note=payload.note, approved_by=user.user_id),
+        ResumeCommand(
+            approved=payload.approved,
+            note=payload.note,
+            approved_by=user.user_id,
+            approval_token=approval_token,
+        ),
     )
     await ApprovalStore(db).record_approval(
         incident_id,

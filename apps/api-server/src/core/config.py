@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     auth0_algorithms: str = Field(default="HS256")
     auth0_issuer: str | None = Field(default=None)
     auth0_secret_key: str = Field(default="dev-secret-change-me")
+    approval_token_secret: str = Field(default="approval-secret-change-me")
+    tool_allowlist_path: str = Field(default="configs/production/tool_allowlist.yaml")
+    backup_oncall_targets: str = Field(default="backup-oncall")
 
     @property
     def database_url(self) -> str:
@@ -54,6 +57,10 @@ class Settings(BaseSettings):
     @property
     def auth_issuer(self) -> str:
         return self.auth0_issuer or f"https://{self.auth0_domain}/"
+
+    @property
+    def backup_oncall_list(self) -> list[str]:
+        return [item.strip() for item in self.backup_oncall_targets.split(",") if item.strip()]
 
 
 @lru_cache

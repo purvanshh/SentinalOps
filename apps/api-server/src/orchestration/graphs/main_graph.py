@@ -142,6 +142,7 @@ class LangGraphWorkflow:
                         "approved": command.approved,
                         "note": command.note,
                         "approved_by": command.approved_by,
+                        "approval_token": command.approval_token,
                     }
                 }
             ),

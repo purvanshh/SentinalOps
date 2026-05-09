@@ -4,6 +4,7 @@ from typing import Any
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from observability.metrics import observe_tool_execution
 from tools.base import SafetyLevel, ToolCall, ToolResult
 from tools.execution_guard import enforce_tool_execution_policy
 
@@ -79,8 +80,11 @@ class ToolRegistry:
                 session=session,
             )
             output = await tool.handler(**tool_call.arguments)
+            observe_tool_execution(tool_call.name, "success")
             return ToolResult(name=tool_call.name, output=output, success=True)
         except ValidationError as exc:
+            observe_tool_execution(tool_call.name, "validation_error")
             return ToolResult(name=tool_call.name, success=False, error=str(exc))
         except Exception as exc:  # noqa: BLE001
+            observe_tool_execution(tool_call.name, "error")
             return ToolResult(name=tool_call.name, success=False, error=str(exc))

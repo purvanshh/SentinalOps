@@ -15,7 +15,7 @@ from api.routes.graph import router as graph_router
 from api.routes.health import router as health_router
 from api.routes.incidents import router as incidents_router
 from observability.logging import bind_request_id, configure_logging
-from observability.metrics import API_REQUEST_COUNT, build_metrics_snapshot, render_metrics
+from observability.metrics import build_metrics_snapshot, observe_api_request, render_metrics
 from observability.tracing import configure_tracing
 
 
@@ -41,7 +41,7 @@ app.add_exception_handler(Exception, unhandled_exception_handler)
 async def request_context_middleware(request: Request, call_next):
     request_id = request.headers.get("x-request-id", str(uuid4()))
     bind_request_id(request_id)
-    API_REQUEST_COUNT.inc()
+    observe_api_request(request.method, request.url.path)
     response = await call_next(request)
     response.headers["x-request-id"] = request_id
     return response

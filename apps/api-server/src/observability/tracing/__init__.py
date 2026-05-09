@@ -1,7 +1,3 @@
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
+from observability.tracing.provider import configure_tracing, get_tracer
 
-
-def configure_tracing() -> None:
-    if not isinstance(trace.get_tracer_provider(), TracerProvider):
-        trace.set_tracer_provider(TracerProvider())
+__all__ = ["configure_tracing", "get_tracer"]

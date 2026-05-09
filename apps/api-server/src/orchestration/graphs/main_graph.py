@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 from memory.short_term.incident_state import IncidentStateStore
+from observability.logging import bind_incident_context
 from orchestration.checkpointing.checkpoint import build_langgraph_checkpointer
 from orchestration.interrupts.commands import ResumeCommand
 from orchestration.nodes.approval_node import approval_node
@@ -127,6 +128,7 @@ class LangGraphWorkflow:
             "completed_nodes": [],
             "approved_actions": [],
         }
+        bind_incident_context(incident_id=state["incident_id"], thread_id=thread_id, agent="workflow")
         await self.state_store.save_state(state["incident_id"], state)
         result = await self.graph.ainvoke(state, config=self._config(thread_id))
         await self.state_store.save_state(state["incident_id"], result)
@@ -135,6 +137,7 @@ class LangGraphWorkflow:
     async def resume(self, thread_id: str, command: ResumeCommand) -> dict:
         from langgraph.types import Command
 
+        bind_incident_context(thread_id=thread_id, agent="workflow_resume")
         state = await self.graph.ainvoke(
             Command(
                 resume={
@@ -156,6 +159,7 @@ class LangGraphWorkflow:
         return state
 
     async def get_state(self, thread_id: str) -> dict:
+        bind_incident_context(thread_id=thread_id, agent="workflow_state")
         snapshot = await self.graph.aget_state(config=self._config(thread_id))
         values = getattr(snapshot, "values", snapshot)
         if isinstance(values, dict) and values.get("incident_id"):

@@ -24,6 +24,9 @@ class RemediationRisk(BaseModel):
     worst_case_impact: str
     risk_score: float
     recommendation: str
+    base_risk: float | None = None
+    execution_time_factor: float | None = None
+    severity_on_failure: float | None = None
 
 
 class RiskAssessment(BaseModel):

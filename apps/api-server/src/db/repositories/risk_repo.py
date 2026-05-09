@@ -22,3 +22,24 @@ class RiskRepository(BaseRepository):
         for row in rows:
             await self.session.refresh(row)
         return rows
+
+    async def record_remediation_outcome(
+        self,
+        *,
+        action_name: str,
+        category: str,
+        success: bool,
+        execution_time_seconds: float,
+        severity_on_failure: float,
+    ) -> RemediationHistory:
+        row = RemediationHistory(
+            action_name=action_name,
+            category=category,
+            success=success,
+            execution_time_seconds=execution_time_seconds,
+            severity_on_failure=severity_on_failure,
+        )
+        self.session.add(row)
+        await self.session.commit()
+        await self.session.refresh(row)
+        return row

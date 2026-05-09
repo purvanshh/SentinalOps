@@ -31,6 +31,9 @@ def score_remediation_action(
     return {
         "probability_of_success": round(probability_of_success, 4),
         "risk_score": risk_score,
+        "base_risk": round(1 - probability_of_success, 4),
+        "execution_time_factor": round(execution_factor, 4),
+        "severity_on_failure": round(avg_failure_severity, 4),
         "worst_case_impact": worst_case_impact,
         "recommendation": recommendation,
     }

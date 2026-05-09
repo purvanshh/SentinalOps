@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from db.repositories.incident_repo import IncidentRepository
+from db.repositories.risk_repo import RiskRepository
 from db.session import SessionLocal
+from agents.risk_agent.action_mapper import map_action_to_category
 from tools.action_mapping import map_action_to_tool
 from tools.base import ToolCall
 from tools.execution_guard import ExecutionGuardError
@@ -23,6 +25,7 @@ async def execution_node(state: dict, session=None) -> dict:
     approval_token = state.get("approval", {}).get("approval_token")
 
     registry = build_runtime_registry()
+    risk_repository = RiskRepository(session)
     executed_actions: list[str] = []
     verification_results: list[dict] = []
 
@@ -74,6 +77,13 @@ async def execution_node(state: dict, session=None) -> dict:
             }
             executed_actions.append(action.action)
             verification_results.append(verify_result.model_dump(mode="json"))
+            await risk_repository.record_remediation_outcome(
+                action_name=action.action,
+                category=map_action_to_category(action.action),
+                success=bool((verify_result.output or {}).get("within_range", False)),
+                execution_time_seconds=60.0,
+                severity_on_failure=0.3,
+            )
         except ExecutionGuardError as exc:
             action.status = "blocked"
             action.details = {**action.details, "guard_error": str(exc)}

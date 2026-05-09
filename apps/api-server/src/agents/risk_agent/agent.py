@@ -1,25 +1,14 @@
-import csv
-from pathlib import Path
+from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agents.risk_agent.action_risk import score_remediation_action
-from agents.risk_agent.blast_radius import compute_blast_radius, load_traffic_snapshots
+from agents.risk_agent.data_fetcher import build_runtime_inputs
 from agents.risk_agent.schemas import RiskAssessment
 from db.models.incident import Incident
 from db.repositories.incident_repo import IncidentRepository
 from db.repositories.risk_repo import RiskRepository
-from orchestration.state.topology import load_topology
-
-
-def _load_historical_incidents(path: str | None = None) -> list[dict]:
-    dataset_path = Path(path or "simulation/datasets/historical_incidents.csv")
-    if not dataset_path.is_absolute():
-        dataset_path = Path.cwd() / dataset_path
-    if not dataset_path.exists():
-        return []
-    with dataset_path.open() as handle:
-        return list(csv.DictReader(handle))
+from agents.risk_agent.blast_radius import compute_blast_radius
 
 
 def _default_remediation_history() -> list[dict]:
@@ -32,25 +21,18 @@ def _default_remediation_history() -> list[dict]:
             "severity_on_failure": 0.2,
         },
         {
-            "action_name": "rollback deployment",
-            "category": "deployment_rollback",
-            "success": True,
-            "execution_time_seconds": 120.0,
-            "severity_on_failure": 0.2,
-        },
-        {
-            "action_name": "restart service",
+            "action_name": "restart payment-api",
             "category": "service_restart",
             "success": False,
             "execution_time_seconds": 180.0,
             "severity_on_failure": 0.7,
         },
         {
-            "action_name": "restart service",
-            "category": "service_restart",
+            "action_name": "scale payment-api",
+            "category": "scaling",
             "success": True,
-            "execution_time_seconds": 150.0,
-            "severity_on_failure": 0.7,
+            "execution_time_seconds": 75.0,
+            "severity_on_failure": 0.3,
         },
     ]
 
@@ -60,10 +42,7 @@ def _candidate_actions(root_cause_execution: dict | None) -> list[str]:
     hypotheses = payload.get("hypotheses", [])
     if not hypotheses:
         return ["restart payment-api"]
-    top_index = payload.get("strongest_hypothesis_index")
-    if top_index is None or top_index >= len(hypotheses):
-        top_index = 0
-    top = hypotheses[top_index]
+    top = hypotheses[payload.get("strongest_hypothesis_index", 0)] if hypotheses else {}
     text = f"{top.get('hypothesis', '')} {top.get('causal_chain', '')}".lower()
     actions: list[str] = []
     if "deploy" in text or "regression" in text:
@@ -71,11 +50,16 @@ def _candidate_actions(root_cause_execution: dict | None) -> list[str]:
     if "pool" in text or "latency" in text:
         actions.append("restart payment-api")
     actions.append("scale payment-api")
-    deduped: list[str] = []
-    for action in actions:
-        if action not in deduped:
-            deduped.append(action)
-    return deduped
+    return list(dict.fromkeys(actions))
+
+
+def _severity_factor(incident_type: str | None, historical_incidents: list[dict]) -> float:
+    if not incident_type:
+        return 0.2
+    matching = [row for row in historical_incidents if row.get("incident_type") == incident_type]
+    if not matching:
+        return 0.2
+    return float(matching[0].get("severity_factor", "0.2"))
 
 
 async def assess_risk(
@@ -85,28 +69,21 @@ async def assess_risk(
 ) -> RiskAssessment:
     repository = IncidentRepository(db_session)
     risk_repository = RiskRepository(db_session)
-    topology = load_topology()
-    traffic = load_traffic_snapshots()
-    historical_incidents = _load_historical_incidents()
     service = incident.raw_payload.get("labels", {}).get("service", "payment-api")
+    runtime_inputs = await build_runtime_inputs(service)
+    topology = runtime_inputs["topology"]
+    traffic = runtime_inputs["traffic"]
+    historical_incidents = runtime_inputs["historical_incidents"]
+
     rootcause_execution = next(
         (execution.output for execution in incident.agent_executions if execution.agent_name == "rootcause_agent"),
         None,
     )
-    severity_factor = 0.2
-    if historical_incidents:
-        matching = [
-            row
-            for row in historical_incidents
-            if row.get("incident_type") == (incident.incident_type or "")
-        ]
-        if matching:
-            severity_factor = float(matching[0].get("severity_factor", "0.2"))
-
+    severity_factor = _severity_factor(incident.incident_type, historical_incidents)
     blast_radius = compute_blast_radius(service, topology, traffic, severity_factor=severity_factor)
-    current_rps = int(traffic.get(service, {}).get("rps", 100))
+    current_rps = float(traffic.get(service, {}).get("rps", 100.0))
     current_impact = {
-        "error_rate": min(severity_factor + 0.03, 0.95),
+        "error_rate": round(min(severity_factor + 0.03, 0.95), 4),
         "estimated_users_impacted_so_far": int(current_rps * severity_factor * 10),
         "trend": "increasing" if severity_factor >= 0.2 else "stable",
     }
@@ -122,15 +99,10 @@ async def assess_risk(
         }
         for row in history_rows
     ]
+
     remediation_risks = []
     for action in _candidate_actions(rootcause_execution):
-        scored = score_remediation_action(action, serialized_history)
-        remediation_risks.append(
-            {
-                "action": action,
-                **scored,
-            }
-        )
+        remediation_risks.append({"action": action, **score_remediation_action(action, serialized_history)})
 
     result = RiskAssessment.model_validate(
         {
@@ -146,6 +118,7 @@ async def assess_risk(
             "service": service,
             "severity_factor": severity_factor,
             "root_cause": rootcause_execution,
+            "traffic": traffic.get(service, {}),
         },
         output_payload=result.model_dump(mode="json"),
         status="completed",

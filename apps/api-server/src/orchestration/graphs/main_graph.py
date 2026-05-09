@@ -1,9 +1,9 @@
-import asyncio
+from __future__ import annotations
+
 from uuid import uuid4
 
-from db.repositories.incident_repo import IncidentRepository
-from db.session import SessionLocal
-from orchestration.checkpointing.checkpoint import WorkflowCheckpointStore
+from memory.short_term.incident_state import IncidentStateStore
+from orchestration.checkpointing.checkpoint import build_langgraph_checkpointer
 from orchestration.interrupts.commands import ResumeCommand
 from orchestration.nodes.approval_node import approval_node
 from orchestration.nodes.deployment_node import deployment_node
@@ -15,118 +15,158 @@ from orchestration.nodes.remediation_node import remediation_node
 from orchestration.nodes.risk_node import risk_node
 from orchestration.nodes.rootcause_node import rootcause_node
 from orchestration.nodes.router_node import router_node
-from orchestration.state.reducer import merge_state
+from orchestration.state.incident_state import IncidentState
 
 
-class IncidentWorkflowGraph:
+def route_after_router(state: IncidentState) -> str:
+    if state.get("remaining_steps", 0) <= 0:
+        return "triage"
+    if state.get("status") == "needs_triage":
+        return "triage"
+    return "fanout"
+
+
+def fan_out_evidence(state: IncidentState):
+    from langgraph.constants import Send
+
+    return [
+        Send("metrics", state),
+        Send("logs", state),
+        Send("deployment", state),
+    ]
+
+
+async def triage_node(state: IncidentState) -> dict:
+    return {
+        "status": "needs_triage",
+        "errors": ["Incident classification confidence below automation threshold"],
+        "completed_nodes": ["triage"],
+    }
+
+
+async def dispatch_evidence_node(state: IncidentState) -> dict:
+    return {"completed_nodes": ["dispatch_evidence"]}
+
+
+def route_after_approval(state: IncidentState) -> str:
+    if state.get("status") == "awaiting_approval":
+        return "approval_interrupt"
+    return "execution"
+
+
+async def approval_interrupt_node(state: IncidentState) -> dict:
+    return state
+
+
+class LangGraphWorkflow:
     def __init__(self) -> None:
-        self.checkpoints = WorkflowCheckpointStore()
+        from langgraph.graph import END, START, StateGraph
+
+        self.state_store = IncidentStateStore()
+        workflow = StateGraph(IncidentState)
+        workflow.add_node("router", router_node)
+        workflow.add_node("triage", triage_node)
+        workflow.add_node("dispatch_evidence", dispatch_evidence_node)
+        workflow.add_node("approval_interrupt", approval_interrupt_node)
+        workflow.add_node("metrics", metrics_node)
+        workflow.add_node("logs", logs_node)
+        workflow.add_node("deployment", deployment_node)
+        workflow.add_node("root_cause", rootcause_node)
+        workflow.add_node("risk", risk_node)
+        workflow.add_node("remediation", remediation_node)
+        workflow.add_node("approval", approval_node)
+        workflow.add_node("execution", execution_node)
+        workflow.add_node("postmortem", postmortem_node)
+
+        workflow.add_edge(START, "router")
+        workflow.add_conditional_edges(
+            "router",
+            route_after_router,
+            {
+                "fanout": "dispatch_evidence",
+                "triage": "triage",
+            },
+        )
+        workflow.add_conditional_edges("dispatch_evidence", fan_out_evidence, ["metrics", "logs", "deployment"])
+        workflow.add_edge("metrics", "root_cause")
+        workflow.add_edge("logs", "root_cause")
+        workflow.add_edge("deployment", "root_cause")
+        workflow.add_edge("root_cause", "risk")
+        workflow.add_edge("risk", "remediation")
+        workflow.add_edge("remediation", "approval")
+        workflow.add_conditional_edges(
+            "approval",
+            route_after_approval,
+            {
+                "approval_interrupt": "approval_interrupt",
+                "execution": "execution",
+            },
+        )
+        workflow.add_edge("approval_interrupt", "execution")
+        workflow.add_edge("triage", END)
+        workflow.add_edge("execution", "postmortem")
+        workflow.add_edge("postmortem", END)
+
+        self.graph = workflow.compile(
+            checkpointer=build_langgraph_checkpointer(),
+            interrupt_before=["approval_interrupt"],
+        )
+
+    @staticmethod
+    def _config(thread_id: str) -> dict:
+        return {"configurable": {"thread_id": thread_id}}
 
     async def ainvoke(self, initial_state: dict) -> dict:
         thread_id = initial_state.get("thread_id") or str(uuid4())
-        state = merge_state(initial_state, {"thread_id": thread_id, "status": "starting"})
-        incident_id = state["incident_id"]
-
-        async with SessionLocal() as session:
-            repository = IncidentRepository(session)
-            await repository.update_graph_thread_id(incident_id, thread_id)
-
-        await self.checkpoints.save(
-            thread_id=thread_id,
-            incident_id=incident_id,
-            node_name="start",
-            status="running",
-            state=state,
-        )
-
-        state = await self._run_node(thread_id, incident_id, "router", router_node, state)
-        if state.get("router", {}).get("confidence", 1.0) < 0.6:
-            return state
-
-        metrics_state, logs_state, deployment_state = await asyncio.gather(
-            self._run_parallel_node(thread_id, incident_id, "metrics", metrics_node, state),
-            self._run_parallel_node(thread_id, incident_id, "logs", logs_node, state),
-            self._run_parallel_node(thread_id, incident_id, "deployment", deployment_node, state),
-        )
-        state = merge_state(state, metrics_state)
-        state = merge_state(state, logs_state)
-        state = merge_state(state, deployment_state)
-        await self.checkpoints.save(
-            thread_id=thread_id,
-            incident_id=incident_id,
-            node_name="fanout_complete",
-            status="running",
-            state=state,
-        )
-
-        state = await self._run_node(thread_id, incident_id, "rootcause", rootcause_node, state)
-        state = await self._run_node(thread_id, incident_id, "risk", risk_node, state)
-        state = await self._run_node(thread_id, incident_id, "remediation", remediation_node, state)
-        state = await self._run_node(thread_id, incident_id, "approval", approval_node, state)
-        if state.get("status") == "awaiting_approval":
-            await self.checkpoints.save(
-                thread_id=thread_id,
-                incident_id=incident_id,
-                node_name="approval_interrupt",
-                status="interrupted",
-                state=state,
-            )
-            return state
-
-        state = await self._run_node(thread_id, incident_id, "execution", execution_node, state)
-        state = await self._run_node(thread_id, incident_id, "postmortem", postmortem_node, state)
-        return state
+        state: IncidentState = {
+            "incident_id": initial_state["incident_id"],
+            "thread_id": thread_id,
+            "status": "starting",
+            "remaining_steps": int(initial_state.get("remaining_steps", 12)),
+            "errors": [],
+            "completed_nodes": [],
+            "approved_actions": [],
+        }
+        await self.state_store.save_state(state["incident_id"], state)
+        result = await self.graph.ainvoke(state, config=self._config(thread_id))
+        await self.state_store.save_state(state["incident_id"], result)
+        return result
 
     async def resume(self, thread_id: str, command: ResumeCommand) -> dict:
-        latest = await self.checkpoints.latest(thread_id)
-        if latest is None:
-            raise ValueError(f"No checkpoint found for thread {thread_id}")
+        from langgraph.types import Command
 
-        state = merge_state(
-            latest.state,
-            {
-                "approval": {
-                    **latest.state.get("approval", {}),
-                    "approved": command.approved,
-                    "note": command.note,
-                },
-            },
+        state = await self.graph.ainvoke(
+            Command(
+                resume={
+                    "approval": {
+                        "approved": command.approved,
+                        "note": command.note,
+                        "approved_by": command.approved_by,
+                    }
+                }
+            ),
+            config=self._config(thread_id),
         )
-        state = await self._run_node(thread_id, str(latest.incident_id), "execution", execution_node, state)
-        state = await self._run_node(thread_id, str(latest.incident_id), "postmortem", postmortem_node, state)
+        incident_id = state.get("incident_id")
+        if incident_id:
+            await self.state_store.save_state(incident_id, state)
+            if state.get("status") == "resolved":
+                await self.state_store.delete_state(incident_id)
         return state
 
-    async def _run_node(self, thread_id: str, incident_id: str, node_name: str, node, state: dict) -> dict:
-        async with SessionLocal() as session:
-            updates = await node(state, session)
-        next_state = merge_state(state, updates)
-        await self.checkpoints.save(
-            thread_id=thread_id,
-            incident_id=incident_id,
-            node_name=node_name,
-            status=next_state.get("status", "running"),
-            state=next_state,
-        )
-        return next_state
-
-    async def _run_parallel_node(self, thread_id: str, incident_id: str, node_name: str, node, state: dict) -> dict:
-        async with SessionLocal() as session:
-            updates = await node(state, session)
-        await self.checkpoints.save(
-            thread_id=thread_id,
-            incident_id=incident_id,
-            node_name=node_name,
-            status="running",
-            state=merge_state(state, updates),
-        )
-        return updates
+    async def get_state(self, thread_id: str) -> dict:
+        snapshot = await self.graph.aget_state(config=self._config(thread_id))
+        values = getattr(snapshot, "values", snapshot)
+        if isinstance(values, dict) and values.get("incident_id"):
+            await self.state_store.save_state(values["incident_id"], values)
+        return values
 
 
-_GRAPH: IncidentWorkflowGraph | None = None
+_GRAPH: LangGraphWorkflow | None = None
 
 
-def build_main_graph() -> IncidentWorkflowGraph:
+def build_main_graph() -> LangGraphWorkflow:
     global _GRAPH  # noqa: PLW0603
     if _GRAPH is None:
-        _GRAPH = IncidentWorkflowGraph()
+        _GRAPH = LangGraphWorkflow()
     return _GRAPH

@@ -13,6 +13,12 @@ CREATE TABLE IF NOT EXISTS incidents (
     root_cause_status TEXT,
     root_cause_confidence DOUBLE PRECISION,
     graph_thread_id TEXT,
+    first_anomaly_at TEXT,
+    mitigated_at TEXT,
+    resolved_at TEXT,
+    ttd_seconds DOUBLE PRECISION,
+    ttm_seconds DOUBLE PRECISION,
+    ttr_seconds DOUBLE PRECISION,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

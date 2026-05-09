@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -5,6 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from agents.postmortem_agent.action_items import propose_action_items
 from agents.postmortem_agent.contributing_factors import evaluate_contributing_factors
+from agents.postmortem_agent.metrics import compute_incident_metrics
+from agents.postmortem_agent.rca_narrative import build_five_whys_narrative
+from agents.postmortem_agent.timeline import build_structured_timeline, render_timeline_markdown
 from db.models.incident import Incident
 from db.repositories.incident_repo import IncidentRepository
 from db.repositories.postmortem_repo import PostmortemRepository
@@ -17,14 +23,15 @@ def _render_template(template: str, values: dict[str, str]) -> str:
     return rendered
 
 
-def _build_timeline(executions: list[Any]) -> str:
-    if not executions:
-        return "- No agent executions recorded."
-    lines = []
-    for execution in executions:
-        timestamp = execution.created_at.isoformat() if execution.created_at else "unknown"
-        lines.append(f"- {timestamp}: `{execution.agent_name}` completed with status `{execution.status}`")
-    return "\n".join(lines)
+def _parse_alert_timestamp(raw_payload: dict[str, Any], fallback: Any) -> datetime | None:
+    for key in ("startsAt", "timestamp", "alert_time"):
+        value = raw_payload.get(key)
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value.replace("Z", "+00:00"))
+            except ValueError:
+                continue
+    return fallback
 
 
 async def generate_postmortem(
@@ -71,12 +78,26 @@ async def generate_postmortem(
     if new_action_items:
         await postmortem_repo.create_prevention_items(new_action_items)
 
-    timeline = _build_timeline(executions)
-    root_cause_summary = root_cause.get("hypotheses", [])
-    top_hypothesis = None
-    strongest_index = root_cause.get("strongest_hypothesis_index")
-    if strongest_index is not None and root_cause_summary:
-        top_hypothesis = root_cause_summary[strongest_index]
+    timeline_rows = build_structured_timeline(executions, incident_context.remediation_actions)
+    timeline = render_timeline_markdown(timeline_rows)
+    root_cause_analysis = build_five_whys_narrative(root_cause)
+
+    alert_time = _parse_alert_timestamp(incident.raw_payload, incident.created_at)
+    incident_metrics = compute_incident_metrics(
+        alert_time,
+        incident_context.evidence_items,
+        incident_context.remediation_actions,
+        incident.updated_at,
+    )
+    await repository.update_incident_metrics(
+        incident.id,
+        first_anomaly_at=incident_metrics["first_anomaly_at"],
+        mitigated_at=incident_metrics["mitigated_at"],
+        resolved_at=incident_metrics["resolved_at"],
+        ttd_seconds=incident_metrics["ttd_seconds"],
+        ttm_seconds=incident_metrics["ttm_seconds"],
+        ttr_seconds=incident_metrics["ttr_seconds"],
+    )
 
     contributing_text = "\n".join(
         f"- {factor['factor']}: {'Yes' if factor['detected'] else 'No'} — {factor['detail']}"
@@ -87,18 +108,22 @@ async def generate_postmortem(
         for item in new_action_items
     ) or "- No new action items proposed."
     detection_metrics = (
+        f"- TTD (seconds): {incident_metrics['ttd_seconds']}\n"
+        f"- TTM (seconds): {incident_metrics['ttm_seconds']}\n"
+        f"- TTR (seconds): {incident_metrics['ttr_seconds']}\n"
         f"- Estimated impacted users so far: {risk.get('current_impact', {}).get('estimated_users_impacted_so_far', 0)}\n"
         f"- Blast radius mean users at risk: {risk.get('blast_radius', {}).get('users_at_risk', {}).get('mean', 0)}"
     )
     lessons_learned = (
-        "Keep evidence-grounded reasoning, remediation approvals, and prevention tracking tightly coupled."
+        "Operational safety improves when evidence correlation, approval controls, and prevention tracking stay coupled."
     )
     appendices = (
         f"- Evidence items captured: {len(incident_context.evidence_items)}\n"
-        f"- Remediation actions tracked: {len(incident_context.remediation_actions)}"
+        f"- Remediation actions tracked: {len(incident_context.remediation_actions)}\n"
+        f"- Agent executions recorded: {len(executions)}"
     )
 
-    template_path = Path("configs/development/postmortem_template.md")
+    template_path = Path("configs/production/postmortem_template.md")
     if not template_path.is_absolute():
         template_path = Path.cwd() / template_path
     template = template_path.read_text()
@@ -108,9 +133,7 @@ async def generate_postmortem(
             "title": f"Postmortem: {incident.title}",
             "summary": incident.summary,
             "timeline": timeline,
-            "root_cause_analysis": (
-                top_hypothesis["hypothesis"] if top_hypothesis else "Insufficient evidence for a top hypothesis."
-            ),
+            "root_cause_analysis": root_cause_analysis,
             "contributing_factors": contributing_text,
             "detection_metrics": detection_metrics,
             "action_items": action_items_text,
@@ -129,7 +152,7 @@ async def generate_postmortem(
     await repository.create_agent_execution(
         incident_id=incident.id,
         agent_name="postmortem_agent",
-        input_payload={"incident_id": str(incident.id)},
+        input_payload={"incident_id": str(incident.id), "metrics": incident_metrics},
         output_payload={"postmortem_id": str(row.id), "version": version},
         status="completed",
     )
@@ -138,4 +161,5 @@ async def generate_postmortem(
         "version": version,
         "title": row.title,
         "content": row.content,
+        "metrics": incident_metrics,
     }

@@ -1,6 +1,14 @@
 from typing import Any
 
 
+def _similarity(left: str, right: str) -> float:
+    left_tokens = set(left.lower().split())
+    right_tokens = set(right.lower().split())
+    if not left_tokens or not right_tokens:
+        return 0.0
+    return len(left_tokens & right_tokens) / len(left_tokens | right_tokens)
+
+
 def propose_action_items(
     *,
     root_cause: dict[str, Any],
@@ -8,7 +16,7 @@ def propose_action_items(
     existing_items: list[dict[str, Any]],
     incident_id,
 ) -> list[dict[str, Any]]:
-    existing_titles = {item["title"].lower() for item in existing_items}
+    existing_titles = [item["title"] for item in existing_items]
     proposals: list[dict[str, Any]] = []
 
     candidate_titles = []
@@ -20,7 +28,7 @@ def propose_action_items(
         candidate_titles.append("Expand runbook coverage for recurring incident patterns")
 
     for title in candidate_titles:
-        if title.lower() in existing_titles:
+        if any(_similarity(title, existing) >= 0.7 for existing in existing_titles):
             continue
         proposals.append(
             {

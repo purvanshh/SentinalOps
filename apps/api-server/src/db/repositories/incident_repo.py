@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 from api.schemas.incident import IncidentCreate
 from db.models import AgentExecution, EvidenceItem, Incident, RemediationAction
 from db.repositories import BaseRepository
+from observability.metrics import observe_agent_execution, observe_incident_created
 
 
 class IncidentRepository(BaseRepository):
@@ -24,6 +25,7 @@ class IncidentRepository(BaseRepository):
         self.session.add(incident)
         await self.session.commit()
         await self.session.refresh(incident)
+        observe_incident_created(incident.source)
         return incident
 
     async def list(self, status_filter: str | None = None) -> list[Incident]:
@@ -91,6 +93,30 @@ class IncidentRepository(BaseRepository):
         await self.session.refresh(incident)
         return incident
 
+    async def update_incident_metrics(
+        self,
+        incident_id: UUID | str,
+        *,
+        first_anomaly_at: str | None,
+        mitigated_at: str | None,
+        resolved_at: str | None,
+        ttd_seconds: float | None,
+        ttm_seconds: float | None,
+        ttr_seconds: float | None,
+    ) -> Incident | None:
+        incident = await self.get(incident_id)
+        if incident is None:
+            return None
+        incident.first_anomaly_at = first_anomaly_at
+        incident.mitigated_at = mitigated_at
+        incident.resolved_at = resolved_at
+        incident.ttd_seconds = ttd_seconds
+        incident.ttm_seconds = ttm_seconds
+        incident.ttr_seconds = ttr_seconds
+        await self.session.commit()
+        await self.session.refresh(incident)
+        return incident
+
     async def get(self, incident_id: UUID | str) -> Incident | None:
         incident_uuid = self._coerce_uuid(incident_id)
         query = select(Incident).where(Incident.id == incident_uuid)
@@ -142,6 +168,7 @@ class IncidentRepository(BaseRepository):
         self.session.add(execution)
         await self.session.commit()
         await self.session.refresh(execution)
+        observe_agent_execution(agent_name, status, latency)
         return execution
 
     async def replace_evidence_items(

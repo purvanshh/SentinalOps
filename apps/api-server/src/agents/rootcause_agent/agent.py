@@ -1,30 +1,52 @@
+from __future__ import annotations
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agents.rootcause_agent.causal_validator import check_temporal_order, is_valid_path
-from agents.rootcause_agent.confidence import compute_confidence
+from agents.rootcause_agent.causal_graph import build_candidate_causes
+from agents.rootcause_agent.deductive_tester import assess_candidate
+from agents.rootcause_agent.evidence_builder import build_timed_events
 from agents.rootcause_agent.evidence_normalizer import normalize_agent_executions
-from agents.rootcause_agent.output_schema import RootCauseAnalysis
-from agents.rootcause_agent.prompts import (
-    build_rootcause_system_prompt,
-    build_rootcause_user_prompt,
+from agents.rootcause_agent.output_schema import (
+    HypothesisEvidence,
+    RootCauseAnalysis,
+    RootCauseHypothesis,
 )
-from core.llm_client import LLMClient
+from agents.rootcause_agent.scorer import score_assessment
 from db.models.incident import Incident
 from db.repositories.incident_repo import IncidentRepository
 from orchestration.state.topology import load_topology
 from retrieval.embeddings.pattern_searcher import PatternSearcher
 
 
+def _build_hypothesis_text(title: str, cause_service: str, affected_service: str) -> str:
+    return f"{title} in {cause_service} is the most likely cause of the impact observed on {affected_service}."
+
+
+def _build_causal_chain(candidate_title: str, cause_service: str, affected_service: str) -> str:
+    if cause_service == affected_service:
+        return f"{candidate_title} -> degraded {affected_service} behavior -> user-facing impact"
+    return f"{candidate_title} in {cause_service} -> downstream impact on {affected_service}"
+
+
+def _serialize_evidence(events) -> list[HypothesisEvidence]:
+    return [
+        HypothesisEvidence(
+            item_key=event.item_key,
+            description=event.summary,
+            source=event.source,
+        )
+        for event in events
+    ]
+
+
 async def analyze_root_cause(
     incident: Incident,
     *,
     db_session: AsyncSession,
-    llm_client: LLMClient | None = None,
     pattern_searcher: PatternSearcher | None = None,
 ) -> RootCauseAnalysis:
-    owned_llm_client = llm_client or LLMClient()
-    owned_pattern_searcher = pattern_searcher or PatternSearcher()
     repository = IncidentRepository(db_session)
+    owned_pattern_searcher = pattern_searcher or PatternSearcher()
     executions = await repository.list_agent_executions(incident.id)
     evidence_payloads = normalize_agent_executions(executions)
     evidence_rows = await repository.replace_evidence_items(incident.id, evidence_payloads)
@@ -38,95 +60,89 @@ async def analyze_root_cause(
         }
         for item in evidence_rows
     ]
-    pattern_hints = owned_pattern_searcher.search(f"{incident.title}\n{incident.summary}")
-    incident_context = {
-        "title": incident.title,
-        "summary": incident.summary,
-        "classified_type": incident.incident_type,
-        "severity": incident.severity,
-        "service": incident.raw_payload.get("labels", {}).get("service", "unknown"),
-    }
 
-    result = await owned_llm_client.generate(
-        [
-            {"role": "system", "content": build_rootcause_system_prompt()},
-            {
-                "role": "user",
-                "content": build_rootcause_user_prompt(simplified_evidence, pattern_hints, incident_context),
-            },
-        ],
-        structured_output_model=RootCauseAnalysis,
-    )
-    assert isinstance(result, RootCauseAnalysis)
-
+    service = incident.raw_payload.get("labels", {}).get("service", "payment-api")
+    timed_events = build_timed_events(simplified_evidence, service)
     topology = load_topology()
-    valid_item_keys = {item.item_key for item in evidence_rows}
-    best_index: int | None = None
-    best_score = -1.0
-    for index, hypothesis in enumerate(result.hypotheses):
-        cited_evidence = hypothesis.evidence_for + hypothesis.evidence_against + hypothesis.evidence_neutral
-        valid_citations = [item for item in cited_evidence if item.item_key in valid_item_keys]
-        evidence_coverage = min(len(valid_citations) / max(len(cited_evidence), 1), 1.0)
-        temporal_inputs = [
-            next((e for e in simplified_evidence if e["item_key"] == item.item_key), None)
-            for item in cited_evidence
-        ]
-        temporal_inputs = [item for item in temporal_inputs if item is not None]
-        temporal_score = 1.0 if check_temporal_order(temporal_inputs) else 0.0
-        path_valid = is_valid_path(hypothesis.cause_service, hypothesis.affected_service, topology)
-        temporal_score = temporal_score if path_valid else 0.0
-        pattern_match = max(
-            (
-                pattern["match_score"]
-                for pattern in pattern_hints
-                if pattern.get("cause_service") == hypothesis.cause_service
-                or pattern.get("effect_service") == hypothesis.affected_service
-            ),
-            default=0.2,
-        )
-        prior_probability = 0.7 if incident.incident_type and incident.incident_type in hypothesis.hypothesis.lower() else 0.4
-        counterfactual_power = 0.8 if hypothesis.evidence_against == [] else 0.5
-        confidence = compute_confidence(
-            evidence_coverage=evidence_coverage,
-            temporal_score=temporal_score,
-            pattern_match_score=pattern_match,
-            prior_probability=prior_probability,
-            counterfactual_power=counterfactual_power,
-        )
-        hypothesis.evidence_coverage = evidence_coverage
-        hypothesis.temporal_score = temporal_score
-        hypothesis.pattern_match_score = pattern_match
-        hypothesis.prior_probability = prior_probability
-        hypothesis.counterfactual_power = counterfactual_power
-        hypothesis.confidence = confidence
-        if confidence > best_score:
-            best_score = confidence
-            best_index = index
+    pattern_hints = owned_pattern_searcher.search(f"{incident.title}\n{incident.summary}")
+    candidates = build_candidate_causes(
+        service=service,
+        events=timed_events,
+        topology_graph=topology,
+        pattern_hints=pattern_hints,
+    )
 
-    if best_index is None or best_score < 0.4:
-        result.status = "insufficient_evidence"
-        result.strongest_hypothesis_index = None
-    else:
-        result.status = "completed"
-        result.strongest_hypothesis_index = best_index
+    hypotheses: list[RootCauseHypothesis] = []
+    investigation_steps: list[str] = [
+        f"normalized {len(timed_events)} evidence events",
+        f"retrieved {len(pattern_hints)} pattern hints",
+        f"generated {len(candidates)} candidate causes",
+    ]
+
+    for candidate in candidates:
+        assessment = assess_candidate(candidate, timed_events)
+        scores = score_assessment(assessment, incident.incident_type)
+        hypotheses.append(
+            RootCauseHypothesis(
+                hypothesis=_build_hypothesis_text(
+                    candidate.title,
+                    candidate.cause_service,
+                    candidate.affected_service,
+                ),
+                cause_service=candidate.cause_service,
+                affected_service=candidate.affected_service,
+                evidence_for=_serialize_evidence(assessment.evidence_for),
+                evidence_against=_serialize_evidence(assessment.evidence_against),
+                evidence_neutral=_serialize_evidence(assessment.evidence_neutral),
+                causal_chain=_build_causal_chain(
+                    candidate.title,
+                    candidate.cause_service,
+                    candidate.affected_service,
+                ),
+                counterfactual_test=(
+                    f"If {candidate.title.lower()} were absent, the correlated anomalies on "
+                    f"{candidate.affected_service} would be less likely to appear together."
+                ),
+                confidence=scores["confidence"],
+                temporal_score=scores["temporal_score"],
+                evidence_coverage=assessment.evidence_coverage,
+                pattern_match_score=candidate.pattern_match_score,
+                prior_probability=scores["prior_probability"],
+                counterfactual_power=assessment.counterfactual_power,
+            )
+        )
+
+    hypotheses.sort(key=lambda item: item.confidence or 0.0, reverse=True)
+    strongest_index = 0 if hypotheses and (hypotheses[0].confidence or 0.0) >= 0.4 else None
+    status = "completed" if strongest_index is not None else "insufficient_evidence"
+    recommended_next_steps = (
+        ["Review deployment rollback options", "Inspect configuration drift on the implicated service"]
+        if strongest_index is not None
+        else ["Gather more logs", "Inspect network and deployment history around the alert window"]
+    )
+
+    result = RootCauseAnalysis(
+        status=status,
+        hypotheses=hypotheses,
+        strongest_hypothesis_index=strongest_index,
+        investigation_log="; ".join(investigation_steps),
+        recommended_next_steps=recommended_next_steps,
+    )
 
     await repository.update_root_cause(
         incident.id,
         root_cause_status=result.status,
-        root_cause_confidence=best_score if best_index is not None else None,
+        root_cause_confidence=(hypotheses[0].confidence if hypotheses and strongest_index is not None else None),
     )
     await repository.create_agent_execution(
         incident_id=incident.id,
         agent_name="rootcause_agent",
         input_payload={
-            "incident_context": incident_context,
+            "service": service,
             "pattern_hints": pattern_hints,
             "evidence_items": simplified_evidence,
         },
         output_payload=result.model_dump(mode="json"),
         status="completed",
     )
-
-    if llm_client is None:
-        await owned_llm_client.close()
     return result

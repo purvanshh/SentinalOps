@@ -8,4 +8,8 @@ celery_app.conf.beat_schedule = {
         "task": "workers.schedulers.scan_pending_approvals",
         "schedule": crontab(minute="*/5"),
     },
+    "replay-pending-incidents": {
+        "task": "workers.tasks.replay_pending_incidents",
+        "schedule": crontab(minute="*/2"),
+    },
 }

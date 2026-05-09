@@ -123,6 +123,18 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS pending_tasks (
+    id UUID PRIMARY KEY,
+    incident_id UUID NOT NULL,
+    task_name TEXT NOT NULL,
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    status TEXT NOT NULL DEFAULT 'pending',
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS prevention_items (
     id UUID PRIMARY KEY,
     incident_id UUID REFERENCES incidents(id) ON DELETE SET NULL,

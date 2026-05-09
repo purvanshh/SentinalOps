@@ -1,3 +1,5 @@
+import hashlib
+import json
 import uuid
 from typing import Any
 
@@ -8,6 +10,11 @@ from db.session import SessionLocal
 
 
 class WorkflowCheckpointStore:
+    @staticmethod
+    def _state_hash(state: dict[str, Any]) -> str:
+        payload = json.dumps(state, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
     async def save(
         self,
         *,
@@ -24,6 +31,7 @@ class WorkflowCheckpointStore:
                 node_name=node_name,
                 status=status,
                 state=state,
+                state_hash=self._state_hash(state),
             )
             session.add(row)
             await session.commit()
@@ -37,4 +45,22 @@ class WorkflowCheckpointStore:
                 .where(WorkflowCheckpoint.thread_id == thread_id)
                 .order_by(WorkflowCheckpoint.created_at.desc())
             )
-            return result.scalars().first()
+            checkpoints = list(result.scalars().all())
+            for checkpoint in checkpoints:
+                if checkpoint.state_hash == self._state_hash(checkpoint.state):
+                    return checkpoint
+            return None
+
+
+def build_langgraph_checkpointer():
+    try:
+        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+    except Exception:  # noqa: BLE001
+        return None
+
+    from core.config import get_settings
+
+    settings = get_settings()
+    return AsyncPostgresSaver.from_conn_string(
+        settings.database_url.replace("+psycopg", ""),
+    )

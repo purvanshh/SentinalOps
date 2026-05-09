@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 class ApprovalDecisionRequest(BaseModel):
     approved: bool
     note: str = ""
+    approved_by: str | None = None
 
 
 class ApprovalQueueItem(BaseModel):
@@ -15,7 +16,8 @@ class ApprovalQueueItem(BaseModel):
     summary: str
     actions: list[str] = Field(default_factory=list)
     created_at: datetime
-    updated_at: str
+    updated_at: datetime
+    expires_at: datetime | None = None
 
 
 class ApprovalResponse(BaseModel):

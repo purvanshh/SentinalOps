@@ -17,3 +17,4 @@ class WorkflowCheckpoint(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     node_name: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False)
     state: Mapped[dict] = mapped_column(JsonDict, nullable=False, default=dict)
+    state_hash: Mapped[str] = mapped_column(Text, nullable=False)

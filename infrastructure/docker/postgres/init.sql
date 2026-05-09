@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS remediation_actions (
     action TEXT NOT NULL,
     details JSONB NOT NULL DEFAULT '{}'::jsonb,
     approved BOOLEAN NOT NULL DEFAULT FALSE,
+    approved_by TEXT,
     executed BOOLEAN NOT NULL DEFAULT FALSE,
     requires_approval BOOLEAN NOT NULL DEFAULT TRUE,
     status TEXT NOT NULL DEFAULT 'pending',
@@ -90,6 +91,22 @@ CREATE TABLE IF NOT EXISTS workflow_checkpoints (
     node_name TEXT NOT NULL,
     status TEXT NOT NULL,
     state JSONB NOT NULL DEFAULT '{}'::jsonb,
+    state_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS approval_requests (
+    id UUID PRIMARY KEY,
+    incident_id UUID REFERENCES incidents(id) ON DELETE CASCADE UNIQUE,
+    summary TEXT NOT NULL,
+    actions JSONB NOT NULL DEFAULT '[]'::jsonb,
+    status TEXT NOT NULL DEFAULT 'pending',
+    expires_at TEXT NOT NULL,
+    resolved_at TEXT,
+    approved BOOLEAN,
+    approved_by TEXT,
+    note TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -1,11 +1,12 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.repositories.incident_repo import IncidentRepository
-from memory.short_term.approval_state import set_pending_approval
+from orchestration.interrupts.approval_store import ApprovalStore
 from tools.slack.notifier import notify_approval_required
+from core.config import get_settings
 
 
 async def start_approval_workflow(
@@ -15,16 +16,13 @@ async def start_approval_workflow(
     db_session: AsyncSession,
 ) -> None:
     repository = IncidentRepository(db_session)
+    settings = get_settings()
     await repository.update_status(incident_id, "awaiting_approval")
-    set_pending_approval(
+    await ApprovalStore(db_session).create_approval_request(
         incident_id,
-        {
-            "incident_id": incident_id,
-            "status": "awaiting_approval",
-            "summary": summary,
-            "actions": actions,
-            "created_at": datetime.now(UTC),
-        },
+        summary=summary,
+        actions=actions,
+        expires_at=datetime.now(UTC) + timedelta(minutes=settings.approval_timeout_minutes),
     )
     await notify_approval_required(str(incident_id), summary)
 
@@ -33,6 +31,7 @@ async def process_approval_decision(
     incident_id: UUID,
     approved: bool,
     note: str,
+    approved_by: str,
     db_session: AsyncSession,
 ) -> None:
     repository = IncidentRepository(db_session)
@@ -42,6 +41,7 @@ async def process_approval_decision(
 
     for action in incident.remediation_actions:
         action.approved = approved
+        action.approved_by = approved_by
         action.status = "approved" if approved else "rejected"
         action.details = {**(action.details or {}), "approval_note": note}
         if approved:

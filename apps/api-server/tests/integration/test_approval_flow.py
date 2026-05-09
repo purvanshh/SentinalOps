@@ -5,26 +5,29 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from main import app
-from memory.short_term.approval_state import clear_pending_approval, set_pending_approval
 from tests.auth_helpers import make_auth_header
 
 
 def test_approval_endpoint_processes_decision(monkeypatch) -> None:
     incident_id = uuid4()
     client = TestClient(app)
-    set_pending_approval(
-        incident_id,
-        {
-            "incident_id": incident_id,
-            "status": "awaiting_approval",
-            "summary": "Approval needed for rollback deployment",
-            "actions": ["rollback deployment"],
-            "created_at": datetime.now(UTC),
-        },
-    )
 
-    async def fake_process(incident_id_arg, approved, note, db):
+    async def fake_process(incident_id_arg, approved, note, approved_by, db):
         return None
+
+    async def fake_get_pending(self, incident_id_arg):
+        return SimpleNamespace(
+            incident_id=incident_id_arg,
+            status="pending",
+            summary="Approval needed for rollback deployment",
+            actions=["rollback deployment"],
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            expires_at=datetime.now(UTC).isoformat(),
+        )
+
+    async def fake_record(self, incident_id_arg, *, approved, approved_by, note):
+        return SimpleNamespace(incident_id=incident_id_arg, approved=approved, approved_by=approved_by, note=note)
 
     async def fake_get(self, incident_id_arg):
         return SimpleNamespace(id=incident_id_arg, graph_thread_id=None)
@@ -51,6 +54,14 @@ def test_approval_endpoint_processes_decision(monkeypatch) -> None:
 
     monkeypatch.setattr("api.routes.approvals.process_approval_decision", fake_process)
     monkeypatch.setattr(
+        "orchestration.interrupts.approval_store.ApprovalStore.get_pending_approval",
+        fake_get_pending,
+    )
+    monkeypatch.setattr(
+        "orchestration.interrupts.approval_store.ApprovalStore.record_approval",
+        fake_record,
+    )
+    monkeypatch.setattr(
         "db.repositories.incident_repo.IncidentRepository.get",
         fake_get,
     )
@@ -65,6 +76,5 @@ def test_approval_endpoint_processes_decision(monkeypatch) -> None:
         headers=make_auth_header("operator"),
     )
 
-    clear_pending_approval(incident_id)
     assert response.status_code == 200
     assert response.json()["approved"] is True

@@ -16,6 +16,7 @@ class RemediationAction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     action: Mapped[str] = mapped_column(Text, nullable=False)
     details: Mapped[dict] = mapped_column(JsonDict, nullable=False, default=dict)
     approved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    approved_by: Mapped[str | None] = mapped_column(Text, nullable=True)
     executed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     requires_approval: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")

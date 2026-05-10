@@ -11,7 +11,8 @@ const metricLabels: Record<string, string> = {
   grounding_score: "Grounding",
   hallucination_score: "Hallucination Guard",
   blast_radius_score: "Blast Radius",
-  safety_score: "Safety"
+  safety_score: "Safety",
+  workflow_completion: "Workflow Completion"
 };
 
 export function EvaluationCharts({ evaluation }: EvaluationChartsProps) {

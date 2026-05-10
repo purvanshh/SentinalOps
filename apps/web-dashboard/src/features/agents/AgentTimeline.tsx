@@ -1,14 +1,10 @@
-const demoTimeline = [
-  { name: "Router Agent", note: "Classified as deployment regression.", status: "completed" },
-  { name: "Metrics Agent", note: "Observed latency and CPU spikes.", status: "completed" },
-  { name: "Logs Agent", note: "Detected SQL timeout signatures.", status: "completed" },
-  { name: "Deployment Agent", note: "Correlated failure with DEP-4351.", status: "completed" },
-  { name: "Root Cause Agent", note: "Ranked deployment regression highest.", status: "completed" },
-  { name: "Risk Agent", note: "Recommended rollback as safer than restart.", status: "completed" },
-  { name: "Approval Node", note: "Paused execution for operator review.", status: "waiting" }
-];
+import { AgentExecution } from "@/types/dashboard";
 
-export function AgentTimeline() {
+type AgentTimelineProps = {
+  executions: AgentExecution[];
+};
+
+export function AgentTimeline({ executions }: AgentTimelineProps) {
   return (
     <section className="trace-card">
       <div className="eyebrow">Agent Trace</div>
@@ -16,15 +12,15 @@ export function AgentTimeline() {
         Workflow progression
       </h3>
       <div className="trace-flow">
-        {demoTimeline.map((item) => (
-          <div className="trace-node" key={item.name}>
+        {executions.map((item) => (
+          <div className="trace-node" key={item.id}>
             <div className="row-top">
-              <strong>{item.name}</strong>
-              <span className={`pill ${item.status === "completed" ? "success" : "warning"}`}>
+              <strong>{item.agent_name}</strong>
+              <span className={`pill ${item.status === "completed" ? "success" : item.status.includes("approval") ? "warning" : ""}`}>
                 {item.status}
               </span>
             </div>
-            <div className="muted">{item.note}</div>
+            <div className="muted">{item.created_at}</div>
           </div>
         ))}
       </div>

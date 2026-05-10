@@ -3,10 +3,12 @@ import { PendingApprovals } from "@/features/approvals/PendingApprovals";
 import { AgentTimeline } from "@/features/agents/AgentTimeline";
 import { EvaluationCharts } from "@/features/evaluations/EvaluationCharts";
 import { IncidentList } from "@/features/incidents/IncidentList";
+import { getIncident } from "@/services/apiClient";
 import { getDashboardData } from "@/hooks/useDashboardData";
 
 export default async function HomePage() {
   const data = await getDashboardData();
+  const latestIncident = data.incidents[0] ? await getIncident(data.incidents[0].id) : null;
 
   return (
     <>
@@ -19,7 +21,7 @@ export default async function HomePage() {
       <div className="grid">
         <div className="stack">
           <IncidentList incidents={data.incidents} />
-          <AgentTimeline />
+          <AgentTimeline executions={latestIncident?.agent_executions ?? []} />
         </div>
         <div className="stack">
           <PendingApprovals approvals={data.approvals} />

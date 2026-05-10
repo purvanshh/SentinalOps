@@ -14,6 +14,7 @@ from api.routes.evaluations import router as evaluations_router
 from api.routes.graph import router as graph_router
 from api.routes.health import router as health_router
 from api.routes.incidents import router as incidents_router
+from api.ws.incident_stream import router as incident_stream_router
 from observability.logging import bind_request_id, configure_logging
 from observability.metrics import build_metrics_snapshot, observe_api_request, render_metrics
 from observability.tracing import configure_tracing
@@ -51,6 +52,7 @@ app.include_router(incidents_router)
 app.include_router(approvals_router)
 app.include_router(graph_router)
 app.include_router(evaluations_router)
+app.include_router(incident_stream_router)
 
 
 @app.get("/", tags=["root"])

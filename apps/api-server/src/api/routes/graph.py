@@ -86,3 +86,46 @@ async def graph_state(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Graph thread not found")
     state = await build_main_graph().get_state(incident.graph_thread_id)
     return {"thread_id": incident.graph_thread_id, "state": state}
+
+
+@router.get("/incidents/{incident_id}/graph-state")
+async def graph_visual_state(
+    incident_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _: AuthenticatedUser = Depends(require_role(["viewer"])),
+) -> dict:
+    repository = IncidentRepository(db)
+    incident = await repository.get(incident_id)
+    if incident is None or not incident.graph_thread_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Graph thread not found")
+    state = await build_main_graph().get_state(incident.graph_thread_id)
+    completed = set(state.get("completed_nodes", []))
+    ordered_nodes = [
+        "router",
+        "dispatch_evidence",
+        "metrics",
+        "logs",
+        "deployment",
+        "root_cause",
+        "risk",
+        "remediation",
+        "approval",
+        "approval_interrupt",
+        "execution",
+        "postmortem",
+    ]
+    nodes = [
+        {
+            "id": node_name,
+            "status": (
+                "completed"
+                if node_name in completed
+                else "active"
+                if node_name == state.get("current_node")
+                else "pending"
+            ),
+        }
+        for node_name in ordered_nodes
+    ]
+    edges = [{"source": ordered_nodes[index], "target": ordered_nodes[index + 1]} for index in range(len(ordered_nodes) - 1)]
+    return {"thread_id": incident.graph_thread_id, "nodes": nodes, "edges": edges, "state": state}

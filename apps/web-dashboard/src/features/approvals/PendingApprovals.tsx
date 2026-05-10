@@ -1,3 +1,8 @@
+"use client";
+
+import { useState } from "react";
+
+import { decideApproval } from "@/services/apiClient";
 import { ApprovalItem } from "@/types/dashboard";
 
 type PendingApprovalsProps = {
@@ -5,6 +10,17 @@ type PendingApprovalsProps = {
 };
 
 export function PendingApprovals({ approvals }: PendingApprovalsProps) {
+  const [pendingIds, setPendingIds] = useState<string[]>([]);
+
+  async function handleDecision(incidentId: string, approved: boolean) {
+    setPendingIds((current) => [...current, incidentId]);
+    try {
+      await decideApproval(incidentId, approved, approved ? "Approved from dashboard" : "Rejected from dashboard");
+    } finally {
+      setPendingIds((current) => current.filter((id) => id !== incidentId));
+    }
+  }
+
   return (
     <section className="list-card">
       <div className="eyebrow">Approval Center</div>
@@ -18,6 +34,23 @@ export function PendingApprovals({ approvals }: PendingApprovalsProps) {
             <span className="pill warning">{approval.status}</span>
           </div>
           <div className="muted">Actions: {approval.actions.join(", ")}</div>
+          <div className="muted">Expires: {approval.expires_at ?? "unknown"}</div>
+          <div className="actions" style={{ marginTop: 10 }}>
+            <button
+              className="button primary"
+              onClick={() => handleDecision(approval.incident_id, true)}
+              disabled={pendingIds.includes(approval.incident_id)}
+            >
+              Approve
+            </button>
+            <button
+              className="button secondary"
+              onClick={() => handleDecision(approval.incident_id, false)}
+              disabled={pendingIds.includes(approval.incident_id)}
+            >
+              Reject
+            </button>
+          </div>
         </div>
       ))}
     </section>

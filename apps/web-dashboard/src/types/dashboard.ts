@@ -9,6 +9,19 @@ export type Incident = {
   classification_confidence?: number | null;
 };
 
+export type AgentExecution = {
+  id: string;
+  agent_name: string;
+  status: string;
+  created_at: string;
+  output?: Record<string, unknown> | null;
+};
+
+export type IncidentDetail = Incident & {
+  agent_executions?: AgentExecution[];
+  graph_thread_id?: string | null;
+};
+
 export type ApprovalItem = {
   incident_id: string;
   status: string;
@@ -16,10 +29,12 @@ export type ApprovalItem = {
   actions: string[];
   created_at: string;
   updated_at: string;
+  expires_at?: string | null;
 };
 
 export type EvaluationSummary = {
   count: number;
+  results?: Array<Record<string, unknown>>;
   summary: {
     classification_accuracy: number;
     rootcause_accuracy: number;
@@ -27,5 +42,23 @@ export type EvaluationSummary = {
     hallucination_score: number;
     blast_radius_score: number;
     safety_score: number;
+    workflow_completion?: number;
   };
+};
+
+export type GraphNode = {
+  id: string;
+  status: string;
+};
+
+export type GraphEdge = {
+  source: string;
+  target: string;
+};
+
+export type GraphStateResponse = {
+  thread_id: string;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  state: Record<string, unknown>;
 };

@@ -7,3 +7,5 @@ def test_evaluation_runner_returns_summary() -> None:
     assert result["count"] >= 2
     assert "summary" in result
     assert "classification_accuracy" in result["summary"]
+    assert "workflow_completion" in result["summary"]
+    assert len(result["results"]) == result["count"]

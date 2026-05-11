@@ -83,6 +83,21 @@ The repository currently includes working scaffolding for all planned phases:
 - Phase 9-10: remediation planning, approval flow, workflow checkpointing, resumable orchestration scaffold
 - Phase 11-12: postmortem generation, prevention items, evaluation datasets, evaluation summary API, CI evaluation scaffold
 - Phase 13-15: dashboard scaffold, hardening scaffolds, deployment assets, docs, ADRs, demo material
+- Phase 16-34: auth/RBAC hardening, durable approval/state plumbing, LangGraph migration, execution safety, async reliability, deterministic root cause scoring, risk/postmortem enrichment, observability, command-center APIs, simulation expansion, retrieval maturation, infrastructure completeness, CI/package wiring, and architecture documentation
+
+## Phase 35 Status
+
+Phase 35 is now mostly present in-repo:
+
+- demo runner script: [scripts/demo/run_demo.sh](/Users/purvansh/Desktop/Projects/SentinalOps/scripts/demo/run_demo.sh:1)
+- PRD checklist: [docs/prd-compliance-checklist.md](/Users/purvansh/Desktop/Projects/SentinalOps/docs/prd-compliance-checklist.md:1)
+- updated demo walkthrough: [docs/demo-script.md](/Users/purvansh/Desktop/Projects/SentinalOps/docs/demo-script.md:1)
+
+Remaining Phase 35 work is mostly operational verification:
+
+- complete privileged Docker boot verification
+- capture benchmark outputs from a successful live run
+- publish final release artifacts once runtime validation is stable
 
 ## Important Reality Check
 
@@ -132,6 +147,12 @@ cp .env.example .env
 make up
 ```
 
+For a guided local demo:
+
+```bash
+sh scripts/demo/run_demo.sh
+```
+
 Expected local services:
 
 - API: `http://localhost:8000`
@@ -140,7 +161,14 @@ Expected local services:
 - Grafana: `http://localhost:3000`
 - Prometheus: `http://localhost:9090`
 - Loki: `http://localhost:3100`
+- Tempo: `http://localhost:3200`
 - Dashboard: `http://localhost:3001`
+
+## Known Runtime Notes
+
+- The web dashboard needs a browser-facing API base URL and a container-internal API base URL. The Docker Compose setup now provides both.
+- Local Docker verification may still fail if image pulls are incomplete or Docker socket permissions are unavailable in the current environment.
+- End-to-end incident execution still requires a valid LLM API key in `.env`.
 
 ## Typical Demo Flow
 

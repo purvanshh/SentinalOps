@@ -1,3 +1,37 @@
+[project]
+name = "sentinelops-ai"
+version = "0.2.0"
+description = "Multi-agent incident response and reliability orchestration platform."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Purvansh" }]
+dependencies = [
+  "fastapi==0.115.0",
+  "uvicorn[standard]==0.30.6",
+  "pydantic==2.9.2",
+  "pydantic-settings==2.5.2",
+  "sqlalchemy==2.0.35",
+  "psycopg[binary]==3.2.3",
+  "httpx==0.27.2",
+  "redis==5.0.8",
+  "celery==5.4.0",
+  "prometheus-client==0.20.0",
+  "structlog==24.4.0",
+  "opentelemetry-api==1.27.0",
+  "opentelemetry-sdk==1.27.0",
+  "python-jose[cryptography]==3.3.0",
+  "langgraph==0.2.34",
+  "PyYAML==6.0.2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "black==24.10.0",
+  "pytest==8.3.3",
+  "pytest-asyncio==0.24.0",
+  "ruff==0.6.9",
+]
+
 [tool.pytest.ini_options]
 pythonpath = [
   "apps/api-server/src",
@@ -21,3 +55,11 @@ target-version = ["py311"]
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "apps/api-server/src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["apps/api-server/src"]
+include = ["*"]

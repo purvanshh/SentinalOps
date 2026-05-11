@@ -25,6 +25,7 @@ async def health_check() -> dict[str, object]:
             "prometheus": _service_status(settings.prometheus_url),
             "grafana": _service_status(settings.grafana_url),
             "loki": _service_status(settings.loki_url),
+            "tempo": _service_status(settings.tempo_url),
         },
         "metrics": build_metrics_snapshot(),
     }

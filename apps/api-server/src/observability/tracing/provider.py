@@ -4,13 +4,17 @@ from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 
+from core.config import get_settings
+
 
 def configure_tracing() -> None:
     provider = trace.get_tracer_provider()
     if isinstance(provider, TracerProvider):
         return
+    settings = get_settings()
     tracer_provider = TracerProvider()
     tracer_provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
+    tracer_provider._sentinelops_tempo_endpoint = settings.tempo_url  # type: ignore[attr-defined]
     trace.set_tracer_provider(tracer_provider)
 
 

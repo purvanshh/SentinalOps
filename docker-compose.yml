@@ -7,7 +7,8 @@ services:
       - .env
     command: ["python", "-c", "import asyncio; from db.session import initialize_database; asyncio.run(initialize_database())"]
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   api-server:
     build:
@@ -17,14 +18,28 @@ services:
       - .env
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     depends_on:
-      - migrations
-      - postgres
-      - redis
-      - qdrant
-      - prometheus
-      - grafana
-      - loki
+      migrations:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      grafana:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
   celery-worker:
     build:
       context: .
@@ -33,9 +48,12 @@ services:
       - .env
     command: ["celery", "-A", "workers.queues.celery_app", "worker", "--loglevel=info", "-Q", "incidents,approvals"]
     depends_on:
-      - redis
-      - postgres
-      - migrations
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
   celery-beat:
     build:
       context: .
@@ -44,9 +62,12 @@ services:
       - .env
     command: ["celery", "-A", "workers.queues.celery_app", "beat", "--loglevel=info"]
     depends_on:
-      - redis
-      - postgres
-      - celery-worker
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      celery-worker:
+        condition: service_started
   web-dashboard:
     build:
       context: .
@@ -56,7 +77,8 @@ services:
     ports:
       - "3001:3000"
     depends_on:
-      - api-server
+      api-server:
+        condition: service_healthy
 
   postgres:
     image: postgres:15
@@ -68,6 +90,11 @@ services:
       - "5432:5432"
     volumes:
       - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinelops -d sentinelops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7
@@ -83,6 +110,11 @@ services:
     image: qdrant/qdrant:latest
     ports:
       - "6333:6333"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:6333/collections"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   prometheus:
     image: prom/prometheus:latest
@@ -90,6 +122,11 @@ services:
       - "9090:9090"
     volumes:
       - ./infrastructure/docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   grafana:
     image: grafana/grafana:latest
@@ -100,6 +137,11 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
       - ./infrastructure/docker/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   loki:
     image: grafana/loki:2.9.8
@@ -108,3 +150,22 @@ services:
     command: -config.file=/etc/loki/loki-config.yaml
     volumes:
       - ./infrastructure/docker/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3100/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    ports:
+      - "3200:3200"
+      - "4318:4318"
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./infrastructure/docker/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3200/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5

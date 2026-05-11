@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import HTTPException, Request, status
 from jose import JWTError, jwt
+from starlette.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from core.config import get_settings
@@ -50,18 +51,22 @@ def decode_access_token(token: str) -> AuthenticatedUser:
 
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable):
-        if request.url.path in {"/", "/health", "/docs", "/openapi.json", "/redoc"}:
+        if request.url.path in {"/", "/health", "/metrics", "/docs", "/openapi.json", "/redoc"}:
             return await call_next(request)
 
-        header = request.headers.get("authorization", "")
-        if not header.startswith("Bearer "):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
+        try:
+            header = request.headers.get("authorization", "")
+            if not header.startswith("Bearer "):
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
 
-        token = header.split(" ", 1)[1].strip()
-        user = decode_access_token(token)
-        request.state.user = user
-        request.state.user_id = user.user_id
-        request.state.user_roles = user.roles
+            token = header.split(" ", 1)[1].strip()
+            user = decode_access_token(token)
+            request.state.user = user
+            request.state.user_id = user.user_id
+            request.state.user_roles = user.roles
+        except HTTPException as exc:
+            return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
         return await call_next(request)
 
 

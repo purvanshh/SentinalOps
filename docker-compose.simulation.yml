@@ -1,0 +1,36 @@
+services:
+  payment-service:
+    build:
+      context: .
+      dockerfile: simulation/mock-services/Dockerfile
+    working_dir: /simulation/payment-service
+    command: ["uvicorn", "run:app", "--host", "0.0.0.0", "--port", "9101"]
+    ports:
+      - "9101:9101"
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: simulation/mock-services/Dockerfile
+    working_dir: /simulation/auth-service
+    command: ["uvicorn", "run:app", "--host", "0.0.0.0", "--port", "9102"]
+    ports:
+      - "9102:9102"
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: simulation/mock-services/Dockerfile
+    working_dir: /simulation/notification-service
+    command: ["uvicorn", "run:app", "--host", "0.0.0.0", "--port", "9103"]
+    ports:
+      - "9103:9103"
+
+  gateway-service:
+    build:
+      context: .
+      dockerfile: simulation/mock-services/Dockerfile
+    working_dir: /simulation/gateway-service
+    command: ["uvicorn", "run:app", "--host", "0.0.0.0", "--port", "9104"]
+    ports:
+      - "9104:9104"

@@ -106,13 +106,13 @@ async def graph_visual_state(
         "metrics",
         "logs",
         "deployment",
-        "root_cause",
+        "root_cause_analysis",
         "risk",
         "remediation",
-        "approval",
+        "approval_gate",
         "approval_interrupt",
-        "execution",
-        "postmortem",
+        "execution_actions",
+        "postmortem_report",
     ]
     nodes = [
         {

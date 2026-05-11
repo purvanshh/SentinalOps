@@ -15,5 +15,5 @@ async def rootcause_node(state: dict, session=None) -> dict:
     return {
         "root_cause": result.model_dump(mode="json"),
         "hypotheses": [hypothesis.model_dump(mode="json") for hypothesis in result.hypotheses],
-        "completed_nodes": ["root_cause"],
+        "completed_nodes": ["root_cause_analysis"],
     }

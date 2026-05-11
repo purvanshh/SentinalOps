@@ -98,5 +98,5 @@ async def execution_node(state: dict, session=None) -> dict:
         },
         "status": incident.status,
         "approved_actions": executed_actions,
-        "completed_nodes": ["execution"],
+        "completed_nodes": ["execution_actions"],
     }

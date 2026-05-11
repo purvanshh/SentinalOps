@@ -12,4 +12,4 @@ async def postmortem_node(state: dict, session=None) -> dict:
     if incident is None:
         return {"errors": [f"Incident {state['incident_id']} not found"]}
     result = await generate_postmortem(incident, db_session=session)
-    return {"postmortem": result, "status": "resolved", "completed_nodes": ["postmortem"]}
+    return {"postmortem": result, "status": "resolved", "completed_nodes": ["postmortem_report"]}

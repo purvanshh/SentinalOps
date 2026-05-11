@@ -1,4 +1,5 @@
 .venv/
+.venv311/
 __pycache__/
 .pytest_cache/
 .mypy_cache/
@@ -8,6 +9,7 @@ node_modules/
 dist/
 build/
 coverage/
+*.egg-info/
 *.pyc
 *.pyo
 *.pyd

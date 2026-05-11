@@ -21,3 +21,4 @@ celery_app.conf.update(
         "workers.schedulers.scan_pending_approvals": {"queue": "approvals"},
     },
 )
+celery_app.autodiscover_tasks(["workers.tasks", "workers.schedulers"], related_name=None, force=True)

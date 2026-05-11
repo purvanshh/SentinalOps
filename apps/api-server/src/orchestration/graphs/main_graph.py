@@ -52,7 +52,7 @@ async def dispatch_evidence_node(state: IncidentState) -> dict:
 def route_after_approval(state: IncidentState) -> str:
     if state.get("status") == "awaiting_approval":
         return "approval_interrupt"
-    return "execution"
+    return "execution_actions"
 
 
 async def approval_interrupt_node(state: IncidentState) -> dict:
@@ -72,12 +72,12 @@ class LangGraphWorkflow:
         workflow.add_node("metrics", metrics_node)
         workflow.add_node("logs", logs_node)
         workflow.add_node("deployment", deployment_node)
-        workflow.add_node("root_cause", rootcause_node)
+        workflow.add_node("root_cause_analysis", rootcause_node)
         workflow.add_node("risk", risk_node)
         workflow.add_node("remediation", remediation_node)
-        workflow.add_node("approval", approval_node)
-        workflow.add_node("execution", execution_node)
-        workflow.add_node("postmortem", postmortem_node)
+        workflow.add_node("approval_gate", approval_node)
+        workflow.add_node("execution_actions", execution_node)
+        workflow.add_node("postmortem_report", postmortem_node)
 
         workflow.add_edge(START, "router")
         workflow.add_conditional_edges(
@@ -89,24 +89,24 @@ class LangGraphWorkflow:
             },
         )
         workflow.add_conditional_edges("dispatch_evidence", fan_out_evidence, ["metrics", "logs", "deployment"])
-        workflow.add_edge("metrics", "root_cause")
-        workflow.add_edge("logs", "root_cause")
-        workflow.add_edge("deployment", "root_cause")
-        workflow.add_edge("root_cause", "risk")
+        workflow.add_edge("metrics", "root_cause_analysis")
+        workflow.add_edge("logs", "root_cause_analysis")
+        workflow.add_edge("deployment", "root_cause_analysis")
+        workflow.add_edge("root_cause_analysis", "risk")
         workflow.add_edge("risk", "remediation")
-        workflow.add_edge("remediation", "approval")
+        workflow.add_edge("remediation", "approval_gate")
         workflow.add_conditional_edges(
-            "approval",
+            "approval_gate",
             route_after_approval,
             {
                 "approval_interrupt": "approval_interrupt",
-                "execution": "execution",
+                "execution_actions": "execution_actions",
             },
         )
-        workflow.add_edge("approval_interrupt", "execution")
+        workflow.add_edge("approval_interrupt", "execution_actions")
         workflow.add_edge("triage", END)
-        workflow.add_edge("execution", "postmortem")
-        workflow.add_edge("postmortem", END)
+        workflow.add_edge("execution_actions", "postmortem_report")
+        workflow.add_edge("postmortem_report", END)
 
         self.graph = workflow.compile(
             checkpointer=build_langgraph_checkpointer(),

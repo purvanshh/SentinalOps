@@ -11,7 +11,11 @@ async def approval_node(state: dict, session=None) -> dict:
     steps = remediation.get("steps", [])
     risky_actions = [step["action"] for step in steps if step.get("requires_approval")]
     if not risky_actions:
-        return {"approval": {"required": False}, "status": "ready_for_execution", "completed_nodes": ["approval"]}
+        return {
+            "approval": {"required": False},
+            "status": "ready_for_execution",
+            "completed_nodes": ["approval_gate"],
+        }
 
     repository = IncidentRepository(session)
     incident = await repository.get(state["incident_id"])
@@ -31,5 +35,5 @@ async def approval_node(state: dict, session=None) -> dict:
             "summary": remediation.get("summary", "Approval required for remediation"),
         },
         "status": "awaiting_approval",
-        "completed_nodes": ["approval"],
+        "completed_nodes": ["approval_gate"],
     }

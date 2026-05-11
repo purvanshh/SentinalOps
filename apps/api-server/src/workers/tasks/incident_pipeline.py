@@ -5,7 +5,6 @@ from uuid import UUID
 
 from db.session import SessionLocal
 from db.repositories.task_repo import PendingTaskRepository
-from orchestration.graphs.main_graph import build_main_graph
 from workers.queues import celery_app
 
 
@@ -20,6 +19,8 @@ def run_incident_pipeline(incident_id: str) -> None:
 
 
 async def _run_incident_pipeline(incident_id: UUID) -> None:
+    from orchestration.graphs.main_graph import build_main_graph
+
     graph = build_main_graph()
     await graph.ainvoke({"incident_id": str(incident_id)})
 

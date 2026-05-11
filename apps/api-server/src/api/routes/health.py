@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from core.config import get_settings
-from observability.metrics import API_REQUEST_COUNT, build_metrics_snapshot
+from observability.metrics import build_metrics_snapshot, observe_api_request
 
 router = APIRouter(tags=["health"])
 
@@ -12,7 +12,7 @@ def _service_status(url: str | None) -> str:
 
 @router.get("/health")
 async def health_check() -> dict[str, object]:
-    API_REQUEST_COUNT.inc()
+    observe_api_request("GET", "/health")
     settings = get_settings()
 
     return {

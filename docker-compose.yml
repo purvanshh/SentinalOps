@@ -73,7 +73,9 @@ services:
       context: .
       dockerfile: apps/web-dashboard/Dockerfile
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://api-server:8000
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+      INTERNAL_API_BASE_URL: ${INTERNAL_API_BASE_URL:-http://api-server:8000}
+      NEXT_PUBLIC_DEMO_BEARER_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkYXNoYm9hcmQtZGVtbyIsInJvbGVzIjpbImFkbWluIiwib3BlcmF0b3IiLCJ2aWV3ZXIiXSwiYXVkIjoic2VudGluZWxvcHMtYXBpIiwiaXNzIjoiaHR0cHM6Ly9zZW50aW5lbG9wcy5sb2NhbC8ifQ.MQMJ_6dVZcJzwlY6RaH2VvaNDrK4dySkt9MlrQ9iXtI
     ports:
       - "3001:3000"
     depends_on:
@@ -83,15 +85,15 @@ services:
   postgres:
     image: postgres:15
     environment:
-      POSTGRES_DB: sentinelops
-      POSTGRES_USER: sentinelops
-      POSTGRES_PASSWORD: sentinelops
+      POSTGRES_DB: ${POSTGRES_DB:-sentinelops}
+      POSTGRES_USER: ${POSTGRES_USER:-sentinelops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinelops-dev}
     ports:
       - "5432:5432"
     volumes:
       - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sentinelops -d sentinelops"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sentinelops} -d ${POSTGRES_DB:-sentinelops}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -133,8 +135,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
     volumes:
       - ./infrastructure/docker/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
     healthcheck:

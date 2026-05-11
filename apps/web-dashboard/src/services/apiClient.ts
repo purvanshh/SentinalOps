@@ -8,7 +8,10 @@ import {
   IncidentDetail
 } from "@/types/dashboard";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE =
+  typeof window === "undefined"
+    ? process.env.INTERNAL_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"
+    : process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 const AUTH_TOKEN = process.env.NEXT_PUBLIC_DEMO_BEARER_TOKEN ?? "";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

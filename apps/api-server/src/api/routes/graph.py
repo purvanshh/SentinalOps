@@ -129,3 +129,48 @@ async def graph_visual_state(
     ]
     edges = [{"source": ordered_nodes[index], "target": ordered_nodes[index + 1]} for index in range(len(ordered_nodes) - 1)]
     return {"thread_id": incident.graph_thread_id, "nodes": nodes, "edges": edges, "state": state}
+
+
+@router.get("/incidents/{incident_id}/trace")
+async def graph_trace(
+    incident_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _: AuthenticatedUser = Depends(require_role(["viewer"])),
+) -> dict:
+    repository = IncidentRepository(db)
+    incident = await repository.get_with_context(incident_id)
+    if incident is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+    graph_state_payload = {}
+    if incident.graph_thread_id:
+        graph_state_payload = await build_main_graph().get_state(incident.graph_thread_id)
+    return {
+        "incident_id": str(incident_id),
+        "thread_id": incident.graph_thread_id,
+        "status": incident.status,
+        "agent_executions": [
+            {
+                "id": str(execution.id),
+                "agent_name": execution.agent_name,
+                "status": execution.status,
+                "latency": execution.latency,
+                "created_at": execution.created_at.isoformat(),
+                "input": execution.input,
+                "output": execution.output,
+            }
+            for execution in incident.agent_executions
+        ],
+        "remediation_actions": [
+            {
+                "id": str(action.id),
+                "action": action.action,
+                "status": action.status,
+                "approved": action.approved,
+                "executed": action.executed,
+                "requires_approval": action.requires_approval,
+                "details": action.details,
+            }
+            for action in incident.remediation_actions
+        ],
+        "graph_state": graph_state_payload,
+    }

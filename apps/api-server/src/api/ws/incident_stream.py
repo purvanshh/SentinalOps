@@ -24,6 +24,16 @@ async def incident_stream(websocket: WebSocket, incident_id: UUID) -> None:
                     "incident_id": str(incident_id),
                     "status": incident.status,
                     "thread_id": incident.graph_thread_id,
+                    "agent_executions": [
+                        {
+                            "id": str(execution.id),
+                            "agent_name": execution.agent_name,
+                            "status": execution.status,
+                            "latency": execution.latency,
+                            "created_at": execution.created_at.isoformat(),
+                        }
+                        for execution in incident.agent_executions
+                    ],
                 }
                 if incident.graph_thread_id:
                     payload["graph_state"] = await build_main_graph().get_state(incident.graph_thread_id)

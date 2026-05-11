@@ -14,6 +14,7 @@ from agents.postmortem_agent.timeline import build_structured_timeline, render_t
 from db.models.incident import Incident
 from db.repositories.incident_repo import IncidentRepository
 from db.repositories.postmortem_repo import PostmortemRepository
+from retrieval.retrieval_orchestrator import RetrievalOrchestrator
 
 
 def _render_template(template: str, values: dict[str, str]) -> str:
@@ -69,6 +70,20 @@ async def generate_postmortem(
         }
         for item in await postmortem_repo.list_prevention_items()
     ]
+    retrieval = RetrievalOrchestrator()
+    retrieval_matches = await retrieval.search_prevention_items(
+        f"{incident.title}\n{incident.summary}\n{root_cause}",
+        limit=5,
+    )
+    existing_prevention_items.extend(
+        {
+            "title": item.get("title", ""),
+            "description": item.get("description", ""),
+            "status": item.get("status", "open"),
+            "completed": False,
+        }
+        for item in retrieval_matches
+    )
     new_action_items = propose_action_items(
         root_cause=root_cause,
         contributing_factors=contributing_factors,
@@ -156,6 +171,15 @@ async def generate_postmortem(
         output_payload={"postmortem_id": str(row.id), "version": version},
         status="completed",
     )
+    strongest_root_cause = root_cause.get("hypotheses", [{}])[0].get("hypothesis", "")
+    await retrieval.index_resolved_incident(
+        incident_id=str(incident.id),
+        title=incident.title,
+        summary=incident.summary,
+        root_cause=strongest_root_cause,
+    )
+    if new_action_items:
+        await retrieval.index_prevention_items(new_action_items)
     return {
         "postmortem_id": str(row.id),
         "version": version,

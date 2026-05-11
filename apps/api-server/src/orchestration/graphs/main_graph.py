@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import time
 from uuid import uuid4
 
+import structlog
+
+from core.resilience.operating_mode import OperatingModeManager
 from memory.short_term.incident_state import IncidentStateStore
 from observability.logging import bind_incident_context
 from orchestration.checkpointing.checkpoint import build_langgraph_checkpointer
@@ -17,6 +21,8 @@ from orchestration.nodes.risk_node import risk_node
 from orchestration.nodes.rootcause_node import rootcause_node
 from orchestration.nodes.router_node import router_node
 from orchestration.state.incident_state import IncidentState
+
+logger = structlog.get_logger(__name__)
 
 
 def route_after_router(state: IncidentState) -> str:
@@ -119,18 +125,59 @@ class LangGraphWorkflow:
 
     async def ainvoke(self, initial_state: dict) -> dict:
         thread_id = initial_state.get("thread_id") or str(uuid4())
+        execution_id = str(uuid4())
+        mode_manager = OperatingModeManager()
+
+        # Bootstrap state - persisted BEFORE any provider interaction
         state: IncidentState = {
             "incident_id": initial_state["incident_id"],
             "thread_id": thread_id,
+            "execution_id": execution_id,
             "status": "starting",
+            "operating_mode": mode_manager.current_mode.value,
+            "started_at": time.time(),
             "remaining_steps": int(initial_state.get("remaining_steps", 12)),
             "errors": [],
             "completed_nodes": [],
             "approved_actions": [],
+            "fallback_activated": False,
         }
+
         bind_incident_context(incident_id=state["incident_id"], thread_id=thread_id, agent="workflow")
+
+        # CRITICAL: Persist bootstrap state BEFORE first LLM call
+        # This state survives provider failure
         await self.state_store.save_state(state["incident_id"], state)
-        result = await self.graph.ainvoke(state, config=self._config(thread_id))
+
+        logger.info(
+            "workflow_bootstrap_persisted",
+            incident_id=state["incident_id"],
+            thread_id=thread_id,
+            execution_id=execution_id,
+            operating_mode=state["operating_mode"],
+        )
+
+        try:
+            result = await self.graph.ainvoke(state, config=self._config(thread_id))
+        except Exception as exc:
+            # Even if the graph fails, record the failure transparently
+            logger.error(
+                "workflow_execution_failed",
+                incident_id=state["incident_id"],
+                thread_id=thread_id,
+                error=str(exc),
+                operating_mode=mode_manager.current_mode.value,
+            )
+            failure_state = dict(state)
+            failure_state["status"] = "failed"
+            failure_state["errors"] = [f"Workflow execution failed: {exc}"]
+            failure_state["operating_mode"] = mode_manager.current_mode.value
+            await self.state_store.save_state(state["incident_id"], failure_state)
+            raise
+
+        # Persist final state with operating mode
+        if isinstance(result, dict):
+            result["operating_mode"] = mode_manager.current_mode.value
         await self.state_store.save_state(state["incident_id"], result)
         return result
 

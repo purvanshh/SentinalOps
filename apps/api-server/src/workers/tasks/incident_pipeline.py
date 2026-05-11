@@ -3,9 +3,13 @@ from __future__ import annotations
 import asyncio
 from uuid import UUID
 
+import structlog
+
 from db.session import SessionLocal
 from db.repositories.task_repo import PendingTaskRepository
 from workers.queues import celery_app
+
+logger = structlog.get_logger(__name__)
 
 
 @celery_app.task(
@@ -22,7 +26,25 @@ async def _run_incident_pipeline(incident_id: UUID) -> None:
     from orchestration.graphs.main_graph import build_main_graph
 
     graph = build_main_graph()
-    await graph.ainvoke({"incident_id": str(incident_id)})
+    try:
+        result = await graph.ainvoke({"incident_id": str(incident_id)})
+        logger.info(
+            "incident_pipeline_completed",
+            incident_id=str(incident_id),
+            status=result.get("status") if isinstance(result, dict) else "unknown",
+            operating_mode=result.get("operating_mode") if isinstance(result, dict) else "unknown",
+            fallback_activated=result.get("fallback_activated") if isinstance(result, dict) else False,
+        )
+    except Exception as exc:
+        logger.error(
+            "incident_pipeline_failed",
+            incident_id=str(incident_id),
+            error=str(exc),
+            error_type=type(exc).__name__,
+        )
+        # Store as deferred task for later retry
+        await _store_deferred_task(incident_id, exc)
+        raise
 
 
 async def _store_deferred_task(incident_id: UUID, error: Exception | None = None) -> None:

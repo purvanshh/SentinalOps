@@ -14,8 +14,11 @@ def append_unique(current: list[str], updates: list[str] | None) -> list[str]:
 class IncidentState(TypedDict, total=False):
     incident_id: str
     thread_id: str
+    execution_id: str
     status: str
+    operating_mode: str
     remaining_steps: int
+    started_at: float
     alert_payload: dict[str, Any]
     classification: dict[str, Any]
     metrics_summary: dict[str, Any]
@@ -32,3 +35,7 @@ class IncidentState(TypedDict, total=False):
     postmortem: dict[str, Any]
     errors: Annotated[list[str], append_unique]
     completed_nodes: Annotated[list[str], append_unique]
+    # Resilience metadata
+    provider_chain_result: dict[str, Any]
+    fallback_activated: bool
+    degraded_mode_activation: dict[str, Any]

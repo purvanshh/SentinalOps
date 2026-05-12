@@ -377,10 +377,10 @@ class LangGraphWorkflow:
         return result
 
     async def resume(self, thread_id: str, command: ResumeCommand) -> dict:
-        from langgraph.types import Command
-
         bind_incident_context(thread_id=thread_id, agent="workflow_resume")
         try:
+            from langgraph.types import Command
+
             state = await self.graph.ainvoke(
                 Command(
                     resume={

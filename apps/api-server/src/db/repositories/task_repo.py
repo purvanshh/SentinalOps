@@ -104,7 +104,10 @@ class PendingTaskRepository(BaseRepository):
         stale_before = datetime.now(timezone.utc) - timedelta(seconds=stale_after_seconds)
         query = select(PendingTask).where(
             PendingTask.status.in_(["pending", "failed"])
-            | ((PendingTask.status == "running") & (PendingTask.updated_at <= stale_before))
+            | (
+                PendingTask.status.in_(["running", "replaying"])
+                & (PendingTask.updated_at <= stale_before)
+            )
         )
         if task_name:
             query = query.where(PendingTask.task_name == task_name)

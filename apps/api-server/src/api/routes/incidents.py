@@ -20,6 +20,17 @@ from workers.tasks.incident_pipeline import enqueue_incident_pipeline
 router = APIRouter(prefix="/incidents", tags=["incidents"])
 
 
+def _merge_runtime_state(incident, runtime_state: dict | None) -> dict:
+    payload = IncidentResponse.model_validate(incident).model_dump(mode="json")
+    if runtime_state:
+        payload["operating_mode"] = runtime_state.get("operating_mode")
+        payload["graph_status"] = runtime_state.get("graph_status")
+        payload["fallback_activated"] = runtime_state.get("fallback_activated")
+        payload["last_successful_step"] = runtime_state.get("last_successful_step")
+        payload["provider_chain_result"] = runtime_state.get("provider_chain_result")
+    return payload
+
+
 @router.post("/webhook", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
 async def create_incident_from_webhook(
     payload: AlertPayload,
@@ -61,7 +72,15 @@ async def get_incident(
     incident = await repository.get_with_agent_executions(incident_id)
     if incident is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
-    return IncidentResponse.model_validate(incident)
+    runtime_state = None
+    if incident.graph_thread_id:
+        from orchestration.graphs.main_graph import build_main_graph
+
+        try:
+            runtime_state = await build_main_graph().get_state(incident.graph_thread_id)
+        except Exception:
+            runtime_state = None
+    return IncidentResponse.model_validate(_merge_runtime_state(incident, runtime_state))
 
 
 @router.post("/{incident_id}/classify", response_model=IncidentResponse)

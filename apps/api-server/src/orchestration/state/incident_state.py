@@ -16,9 +16,15 @@ class IncidentState(TypedDict, total=False):
     thread_id: str
     execution_id: str
     status: str
+    graph_status: str
     operating_mode: str
     remaining_steps: int
     started_at: float
+    classification_started_at: float | None
+    retry_count: int
+    provider_attempts: list[dict[str, Any]]
+    last_successful_step: str
+    failure_reason: str | None
     alert_payload: dict[str, Any]
     classification: dict[str, Any]
     metrics_summary: dict[str, Any]

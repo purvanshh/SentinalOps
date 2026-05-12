@@ -49,6 +49,11 @@ class IncidentSummary(TimestampedResponse):
     classification_confidence: float | None = None
     classification_rationale: str | None = None
     recommended_workflow: str | None = None
+    operating_mode: str | None = None
+    graph_status: str | None = None
+    fallback_activated: bool | None = None
+    last_successful_step: str | None = None
+    provider_chain_result: dict[str, Any] | None = None
 
 
 class IncidentResponse(IncidentSummary):

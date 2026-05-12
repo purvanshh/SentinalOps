@@ -4,8 +4,11 @@ import time
 from uuid import uuid4
 
 import structlog
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.resilience.operating_mode import OperatingModeManager
+from db.repositories.incident_repo import IncidentRepository
+from db.session import SessionLocal
 from memory.short_term.incident_state import IncidentStateStore
 from observability.logging import bind_incident_context
 from orchestration.checkpointing.checkpoint import WorkflowCheckpointStore, build_langgraph_checkpointer
@@ -134,13 +137,20 @@ class LangGraphWorkflow:
             "thread_id": thread_id,
             "execution_id": execution_id,
             "status": "starting",
+            "graph_status": "bootstrapped",
             "operating_mode": mode_manager.current_mode.value,
             "started_at": time.time(),
+            "classification_started_at": time.time(),
             "remaining_steps": int(initial_state.get("remaining_steps", 12)),
+            "retry_count": 0,
+            "provider_attempts": [],
+            "last_successful_step": "bootstrap",
+            "failure_reason": None,
             "errors": [],
             "completed_nodes": [],
             "approved_actions": [],
             "fallback_activated": False,
+            "degraded_mode_activation": {},
         }
 
         bind_incident_context(incident_id=state["incident_id"], thread_id=thread_id, agent="workflow")
@@ -149,6 +159,11 @@ class LangGraphWorkflow:
         # The PostgreSQL checkpoint is the durable recovery anchor — it survives
         # Redis eviction and worker restarts.
         await self.state_store.save_state(state["incident_id"], state)
+        try:
+            async with SessionLocal() as session:
+                await self._persist_bootstrap_runtime(session, state)
+        except Exception as exc:
+            logger.warning("bootstrap_runtime_persist_failed", error=str(exc))
         try:
             await self._checkpoint_store.save(
                 thread_id=thread_id,
@@ -180,9 +195,16 @@ class LangGraphWorkflow:
             )
             failure_state = dict(state)
             failure_state["status"] = "failed"
+            failure_state["graph_status"] = "failed"
             failure_state["errors"] = [f"Workflow execution failed: {exc}"]
+            failure_state["failure_reason"] = str(exc)
             failure_state["operating_mode"] = mode_manager.current_mode.value
             await self.state_store.save_state(state["incident_id"], failure_state)
+            try:
+                async with SessionLocal() as session:
+                    await self._persist_failure_runtime(session, failure_state)
+            except Exception as db_exc:
+                logger.warning("failure_runtime_persist_failed", error=str(db_exc))
             try:
                 await self._checkpoint_store.save(
                     thread_id=thread_id,
@@ -197,7 +219,13 @@ class LangGraphWorkflow:
 
         if isinstance(result, dict):
             result["operating_mode"] = mode_manager.current_mode.value
+            result.setdefault("graph_status", "completed")
         await self.state_store.save_state(state["incident_id"], result)
+        try:
+            async with SessionLocal() as session:
+                await self._persist_final_runtime(session, result)
+        except Exception as exc:
+            logger.warning("final_runtime_persist_failed", error=str(exc))
 
         # Persist final state to PostgreSQL for durability
         try:
@@ -254,6 +282,32 @@ class LangGraphWorkflow:
         if isinstance(values, dict) and values.get("incident_id"):
             await self.state_store.save_state(values["incident_id"], values)
         return values
+
+    async def _persist_bootstrap_runtime(self, session: AsyncSession, state: IncidentState) -> None:
+        await IncidentRepository(session).update_runtime_status(
+            state["incident_id"],
+            status="starting",
+            graph_thread_id=state["thread_id"],
+            classification_rationale=(
+                f"Workflow bootstrapped with execution_id={state['execution_id']} "
+                f"mode={state['operating_mode']}"
+            ),
+        )
+
+    async def _persist_failure_runtime(self, session: AsyncSession, state: IncidentState) -> None:
+        await IncidentRepository(session).update_runtime_status(
+            state["incident_id"],
+            status=state.get("status", "failed"),
+            graph_thread_id=state.get("thread_id"),
+            classification_rationale=state.get("failure_reason"),
+        )
+
+    async def _persist_final_runtime(self, session: AsyncSession, state: dict) -> None:
+        await IncidentRepository(session).update_runtime_status(
+            state["incident_id"],
+            status=state.get("status"),
+            graph_thread_id=state.get("thread_id"),
+        )
 
 
 _GRAPH: LangGraphWorkflow | None = None

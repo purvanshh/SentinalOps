@@ -95,6 +95,27 @@ class IncidentRepository(BaseRepository):
         await self.session.refresh(incident)
         return incident
 
+    async def update_runtime_status(
+        self,
+        incident_id: UUID | str,
+        *,
+        status: str | None = None,
+        graph_thread_id: str | None = None,
+        classification_rationale: str | None = None,
+    ) -> Incident | None:
+        incident = await self.get(incident_id)
+        if incident is None:
+            return None
+        if status is not None:
+            incident.status = status
+        if graph_thread_id is not None:
+            incident.graph_thread_id = graph_thread_id
+        if classification_rationale is not None:
+            incident.classification_rationale = classification_rationale
+        await self.session.commit()
+        await self.session.refresh(incident)
+        return incident
+
     async def update_incident_metrics(
         self,
         incident_id: UUID | str,

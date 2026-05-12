@@ -72,6 +72,25 @@ class Settings(BaseSettings):
     def backup_oncall_list(self) -> list[str]:
         return [item.strip() for item in self.backup_oncall_targets.split(",") if item.strip()]
 
+    @property
+    def is_production(self) -> bool:
+        return self.app_env in ("production", "prod")
+
+    def validate_production_secrets(self) -> list[str]:
+        """Return a list of insecure-secret warnings.
+
+        Returns an empty list in non-production environments.
+        Call at startup: if the list is non-empty in production, raise.
+        """
+        if not self.is_production:
+            return []
+        issues: list[str] = []
+        if self.auth0_secret_key == "dev-secret-change-me":
+            issues.append("AUTH0_SECRET_KEY is using the default development value")
+        if self.approval_token_secret == "approval-secret-change-me":
+            issues.append("APPROVAL_TOKEN_SECRET is using the default development value")
+        return issues
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -30,12 +30,19 @@ async def lifespan(_: FastAPI):
     configure_tracing()
     settings = get_settings()
 
-    # Validate that production deployments are not using default dev secrets
+    # Validate secrets — hard-fail in production on insecure defaults
     issues = settings.validate_production_secrets()
     for issue in issues:
         logger.critical("insecure_production_secret", detail=issue)
     if issues and settings.is_production:
         raise RuntimeError(f"Production secret validation failed: {'; '.join(issues)}")
+
+    # Validate required configuration — warn in all envs, fail in production
+    config_issues = settings.validate_required_configuration()
+    for issue in config_issues:
+        logger.warning("incomplete_configuration", detail=issue)
+    if config_issues and settings.is_production:
+        raise RuntimeError(f"Required configuration missing: {'; '.join(config_issues)}")
 
     # Bootstrap Qdrant collections once at startup so hot-path indexing
     # methods don't need to call ensure_collection() on every write.

@@ -8,7 +8,7 @@ import structlog
 from core.resilience.operating_mode import OperatingModeManager
 from memory.short_term.incident_state import IncidentStateStore
 from observability.logging import bind_incident_context
-from orchestration.checkpointing.checkpoint import build_langgraph_checkpointer
+from orchestration.checkpointing.checkpoint import WorkflowCheckpointStore, build_langgraph_checkpointer
 from orchestration.interrupts.commands import ResumeCommand
 from orchestration.nodes.approval_node import approval_node
 from orchestration.nodes.deployment_node import deployment_node
@@ -70,6 +70,7 @@ class LangGraphWorkflow:
         from langgraph.graph import END, START, StateGraph
 
         self.state_store = IncidentStateStore()
+        self._checkpoint_store = WorkflowCheckpointStore()
         workflow = StateGraph(IncidentState)
         workflow.add_node("router", router_node)
         workflow.add_node("triage", triage_node)
@@ -128,7 +129,6 @@ class LangGraphWorkflow:
         execution_id = str(uuid4())
         mode_manager = OperatingModeManager()
 
-        # Bootstrap state - persisted BEFORE any provider interaction
         state: IncidentState = {
             "incident_id": initial_state["incident_id"],
             "thread_id": thread_id,
@@ -145,9 +145,20 @@ class LangGraphWorkflow:
 
         bind_incident_context(incident_id=state["incident_id"], thread_id=thread_id, agent="workflow")
 
-        # CRITICAL: Persist bootstrap state BEFORE first LLM call
-        # This state survives provider failure
+        # Persist bootstrap state to both Redis and PostgreSQL before any LLM call.
+        # The PostgreSQL checkpoint is the durable recovery anchor — it survives
+        # Redis eviction and worker restarts.
         await self.state_store.save_state(state["incident_id"], state)
+        try:
+            await self._checkpoint_store.save(
+                thread_id=thread_id,
+                incident_id=state["incident_id"],
+                node_name="bootstrap",
+                status="started",
+                state=dict(state),
+            )
+        except Exception as exc:
+            logger.warning("checkpoint_save_failed", node="bootstrap", error=str(exc))
 
         logger.info(
             "workflow_bootstrap_persisted",
@@ -160,7 +171,6 @@ class LangGraphWorkflow:
         try:
             result = await self.graph.ainvoke(state, config=self._config(thread_id))
         except Exception as exc:
-            # Even if the graph fails, record the failure transparently
             logger.error(
                 "workflow_execution_failed",
                 incident_id=state["incident_id"],
@@ -173,12 +183,34 @@ class LangGraphWorkflow:
             failure_state["errors"] = [f"Workflow execution failed: {exc}"]
             failure_state["operating_mode"] = mode_manager.current_mode.value
             await self.state_store.save_state(state["incident_id"], failure_state)
+            try:
+                await self._checkpoint_store.save(
+                    thread_id=thread_id,
+                    incident_id=state["incident_id"],
+                    node_name="failure",
+                    status="failed",
+                    state=failure_state,
+                )
+            except Exception as cp_exc:
+                logger.warning("checkpoint_save_failed", node="failure", error=str(cp_exc))
             raise
 
-        # Persist final state with operating mode
         if isinstance(result, dict):
             result["operating_mode"] = mode_manager.current_mode.value
         await self.state_store.save_state(state["incident_id"], result)
+
+        # Persist final state to PostgreSQL for durability
+        try:
+            await self._checkpoint_store.save(
+                thread_id=thread_id,
+                incident_id=state["incident_id"],
+                node_name="completed",
+                status=result.get("status", "completed") if isinstance(result, dict) else "completed",
+                state=dict(result) if isinstance(result, dict) else {},
+            )
+        except Exception as exc:
+            logger.warning("checkpoint_save_failed", node="completed", error=str(exc))
+
         return result
 
     async def resume(self, thread_id: str, command: ResumeCommand) -> dict:
@@ -201,6 +233,16 @@ class LangGraphWorkflow:
         incident_id = state.get("incident_id")
         if incident_id:
             await self.state_store.save_state(incident_id, state)
+            try:
+                await self._checkpoint_store.save(
+                    thread_id=thread_id,
+                    incident_id=incident_id,
+                    node_name="resumed",
+                    status=state.get("status", "resumed"),
+                    state=dict(state),
+                )
+            except Exception as exc:
+                logger.warning("checkpoint_save_failed", node="resumed", error=str(exc))
             if state.get("status") == "resolved":
                 await self.state_store.delete_state(incident_id)
         return state
@@ -222,3 +264,13 @@ def build_main_graph() -> LangGraphWorkflow:
     if _GRAPH is None:
         _GRAPH = LangGraphWorkflow()
     return _GRAPH
+
+
+def reset_graph() -> None:
+    """Force reconstruction of the graph singleton.
+
+    Called after worker restart or when the checkpointer's connection pool
+    becomes stale. Ensures a fresh MemorySaver/checkpointer is used.
+    """
+    global _GRAPH  # noqa: PLW0603
+    _GRAPH = None

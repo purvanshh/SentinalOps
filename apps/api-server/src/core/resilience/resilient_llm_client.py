@@ -219,6 +219,7 @@ class ResilientLLMClient:
             attempts=chain_result.attempts,
             fallback_activated=True,
             total_latency_ms=chain_result.total_latency_ms,
+            provider_health=chain_result.provider_health,
         )
 
         return fallback_result, chain_result
@@ -233,6 +234,7 @@ class ResilientLLMClient:
             attempts=[],
             fallback_activated=True,
             total_latency_ms=0.0,
+            provider_health=self._chain.get_health(),
         )
 
     def get_health(self) -> dict[str, Any]:

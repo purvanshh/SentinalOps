@@ -83,6 +83,7 @@ class ProviderChainResult:
     attempts: list[ProviderAttempt] = field(default_factory=list)
     fallback_activated: bool = False
     total_latency_ms: float = 0.0
+    provider_health: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -93,6 +94,7 @@ class ProviderChainResult:
             "total_latency_ms": round(self.total_latency_ms, 2),
             "attempt_count": len(self.attempts),
             "attempts": [a.to_dict() for a in self.attempts],
+            "provider_health": self.provider_health,
         }
 
 
@@ -173,6 +175,7 @@ class ProviderChain:
                     attempts=attempts,
                     fallback_activated=provider.layer > 1,
                     total_latency_ms=total_latency,
+                    provider_health=self.get_health(),
                 )
             else:
                 # Provider failed, signal mode manager
@@ -194,6 +197,7 @@ class ProviderChain:
             attempts=attempts,
             fallback_activated=True,
             total_latency_ms=total_latency,
+            provider_health=self.get_health(),
         )
 
     async def _try_provider(

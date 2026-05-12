@@ -239,3 +239,17 @@ class TestProviderChain:
         assert "providers" in health
         assert "primary" in health["providers"]
         assert health["providers"]["primary"]["state"] == "CLOSED"
+
+    async def test_result_includes_provider_health_snapshot(self):
+        chain = ProviderChain(_make_providers())
+        messages = [{"role": "user", "content": "test"}]
+
+        with respx.mock:
+            respx.post("http://primary.test/v1/chat/completions").mock(
+                return_value=_success_response()
+            )
+
+            result = await chain.generate(messages)
+
+        assert "providers" in result.provider_health
+        assert "primary" in result.provider_health["providers"]

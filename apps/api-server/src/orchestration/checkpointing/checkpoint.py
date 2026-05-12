@@ -52,6 +52,12 @@ class WorkflowCheckpointStore:
             for checkpoint in result.scalars().all():
                 if checkpoint.state_hash == self._state_hash(checkpoint.state):
                     return checkpoint
+                logger.warning(
+                    "checkpoint_corruption_detected",
+                    thread_id=thread_id,
+                    checkpoint_id=str(getattr(checkpoint, "id", "unknown")),
+                    node_name=getattr(checkpoint, "node_name", "unknown"),
+                )
             return None
 
     async def latest_for_incident(self, incident_id: str) -> WorkflowCheckpoint | None:
@@ -65,7 +71,21 @@ class WorkflowCheckpointStore:
             for checkpoint in result.scalars().all():
                 if checkpoint.state_hash == self._state_hash(checkpoint.state):
                     return checkpoint
+                logger.warning(
+                    "checkpoint_corruption_detected",
+                    incident_id=incident_id,
+                    checkpoint_id=str(getattr(checkpoint, "id", "unknown")),
+                    node_name=getattr(checkpoint, "node_name", "unknown"),
+                )
             return None
+
+    async def recover_state(self, *, thread_id: str | None = None, incident_id: str | None = None) -> dict[str, Any] | None:
+        checkpoint = None
+        if thread_id is not None:
+            checkpoint = await self.latest(thread_id)
+        if checkpoint is None and incident_id is not None:
+            checkpoint = await self.latest_for_incident(incident_id)
+        return dict(checkpoint.state) if checkpoint is not None else None
 
 
 def build_langgraph_checkpointer():

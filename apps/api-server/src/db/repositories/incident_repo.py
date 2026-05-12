@@ -146,6 +146,11 @@ class IncidentRepository(BaseRepository):
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
+    async def get_by_thread_id(self, thread_id: str) -> Incident | None:
+        query = select(Incident).where(Incident.graph_thread_id == thread_id)
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
     async def update_classification(
         self,
         incident_id: UUID | str,

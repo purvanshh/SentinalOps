@@ -129,9 +129,12 @@ async def _replay_pending_incidents() -> int:
             stale_after_seconds=_STALE_REPLAY_AFTER_SECONDS,
         )
         replayed = 0
+        from observability.metrics import observe_dead_letter, observe_task_replay
+
         for task in pending:
             if task.attempts >= _MAX_REPLAY_ATTEMPTS:
                 await repository.mark_dead_letter(task.id, "exceeded max replay attempts")
+                observe_dead_letter(_TASK_NAME)
                 logger.warning(
                     "task_moved_to_dead_letter",
                     task_id=str(task.id),
@@ -140,12 +143,14 @@ async def _replay_pending_incidents() -> int:
                 )
                 continue
             try:
+                replay_reason = f"stale-after-{_STALE_REPLAY_AFTER_SECONDS}s"
                 await repository.mark_replay_scheduled(
                     task.id,
                     replayer_id=str(uuid4()),
-                    reason=f"stale-after-{_STALE_REPLAY_AFTER_SECONDS}s",
+                    reason=replay_reason,
                 )
                 run_incident_pipeline.delay(task.payload["incident_id"])
+                observe_task_replay(replay_reason)
                 replayed += 1
             except Exception as exc:  # noqa: BLE001
                 await repository.mark_failed(task.id, str(exc))

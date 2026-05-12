@@ -112,6 +112,12 @@ class OperatingModeManager:
             self._mode = new_mode
             self._last_transition_time = time.time()
 
+            try:
+                from observability.metrics import observe_degraded_mode
+                observe_degraded_mode(old_mode.value, new_mode.value)
+            except Exception:  # noqa: BLE001
+                pass
+
             logger.warning(
                 "operating_mode_transition",
                 from_mode=old_mode.value,

@@ -74,17 +74,37 @@ async def enforce_tool_execution_policy(
                 actor_id=actor_id,
                 details=context,
             )
+        try:
+            from observability.metrics import observe_execution_guard_block
+            observe_execution_guard_block("not_allowlisted")
+        except Exception:  # noqa: BLE001
+            pass
         raise ExecutionGuardError(f"Tool `{tool_name}` is not allowlisted")
 
     if safety_level == "dangerous":
         token = context.get("approval_token")
         if not token:
+            try:
+                from observability.metrics import observe_execution_guard_block
+                observe_execution_guard_block("no_approval_token")
+            except Exception:  # noqa: BLE001
+                pass
             raise ExecutionGuardError(f"Tool `{tool_name}` requires an approval token")
         payload = decode_approval_token(token)
         if str(payload.get("incident_id")) != str(incident_id):
+            try:
+                from observability.metrics import observe_execution_guard_block
+                observe_execution_guard_block("incident_mismatch")
+            except Exception:  # noqa: BLE001
+                pass
             raise ExecutionGuardError("Approval token incident mismatch")
         approved_tool_names = payload.get("action_ids", [])
         if tool_name not in approved_tool_names:
+            try:
+                from observability.metrics import observe_execution_guard_block
+                observe_execution_guard_block("tool_not_approved")
+            except Exception:  # noqa: BLE001
+                pass
             raise ExecutionGuardError(f"Tool `{tool_name}` was not approved for this execution")
 
     if audit_repo is not None:

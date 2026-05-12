@@ -91,6 +91,23 @@ class Settings(BaseSettings):
             issues.append("APPROVAL_TOKEN_SECRET is using the default development value")
         return issues
 
+    def validate_required_configuration(self) -> list[str]:
+        """Return a list of configuration warnings for any environment.
+
+        These are not necessarily security issues but represent incomplete
+        configurations that would cause runtime failures.
+        """
+        issues: list[str] = []
+        if not self.postgres_server or self.postgres_server == "localhost" and self.is_production:
+            issues.append("POSTGRES_SERVER is 'localhost' in a production environment")
+        if not self.redis_url:
+            issues.append("REDIS_URL is not configured")
+        if not self.celery_broker_url:
+            issues.append("CELERY_BROKER_URL is not configured")
+        if self.llm_api_key == "dummy-key" and self.is_production:
+            issues.append("LLM_API_KEY is using the dummy development value in production")
+        return issues
+
 
 @lru_cache
 def get_settings() -> Settings:

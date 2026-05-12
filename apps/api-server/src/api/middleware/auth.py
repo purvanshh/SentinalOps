@@ -36,9 +36,14 @@ def decode_access_token(token: str) -> AuthenticatedUser:
             algorithms=[algorithm.strip() for algorithm in settings.auth0_algorithms.split(",") if algorithm.strip()],
             audience=settings.auth0_audience,
             issuer=settings.auth_issuer,
+            options={"require_exp": True, "verify_exp": True, "verify_aud": True},
         )
     except JWTError as exc:  # noqa: PERF203
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token") from exc
+
+    # Explicit aud check — some jose versions don't raise when aud is missing
+    if settings.auth0_audience and payload.get("aud") != settings.auth0_audience:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token")
 
     user_id = str(payload.get("sub") or "")
     roles = _extract_roles(payload)

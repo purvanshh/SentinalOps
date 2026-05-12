@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,7 @@ def create_approval_token(
 ) -> str:
     settings = get_settings()
     payload = {
+        "jti": str(uuid.uuid4()),
         "incident_id": incident_id,
         "action_ids": action_ids,
         "approved_by": approved_by,

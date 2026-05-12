@@ -8,6 +8,8 @@ from api.dependencies import get_db, require_role
 from api.middleware.auth import AuthenticatedUser
 from api.schemas.approval import ApprovalDecisionRequest
 from db.repositories.incident_repo import IncidentRepository
+from db.repositories.task_repo import PendingTaskRepository
+from orchestration.checkpointing.checkpoint import WorkflowCheckpointStore
 from memory.short_term.incident_state import IncidentStateStore
 from orchestration.graphs.main_graph import build_main_graph
 from orchestration.interrupts.commands import ResumeCommand
@@ -151,6 +153,13 @@ async def graph_trace(
         graph_state_payload = await build_main_graph().get_state(incident.graph_thread_id)
     if not graph_state_payload:
         graph_state_payload = await IncidentStateStore().load_state(str(incident_id)) or {}
+    pending_task = await PendingTaskRepository(db).get_task(
+        incident_id,
+        "workers.tasks.run_incident_pipeline",
+    )
+    latest_checkpoint = None
+    if incident.graph_thread_id:
+        latest_checkpoint = await WorkflowCheckpointStore().latest(incident.graph_thread_id)
     return {
         "incident_id": str(incident_id),
         "thread_id": incident.graph_thread_id,
@@ -183,5 +192,25 @@ async def graph_trace(
             }
             for action in incident.remediation_actions
         ],
+        "task_recovery": (
+            {
+                "status": pending_task.status,
+                "attempts": pending_task.attempts,
+                "last_error": pending_task.last_error,
+                "recovery": pending_task.payload.get("recovery", {}),
+            }
+            if pending_task is not None
+            else None
+        ),
+        "latest_checkpoint": (
+            {
+                "node_name": latest_checkpoint.node_name,
+                "status": latest_checkpoint.status,
+                "created_at": latest_checkpoint.created_at.isoformat(),
+                "state_hash": latest_checkpoint.state_hash,
+            }
+            if latest_checkpoint is not None
+            else None
+        ),
         "graph_state": graph_state_payload,
     }

@@ -175,20 +175,22 @@ def test_concurrent_index_calls_produce_independent_vectors():
 # Health endpoint: structure check
 # ---------------------------------------------------------------------------
 
-def test_health_response_contains_required_service_keys():
+@pytest.mark.asyncio
+async def test_health_response_contains_required_service_keys():
     from api.routes.health import health_check
     from unittest.mock import AsyncMock, patch, MagicMock
 
     with patch("api.routes.health.OperatingModeManager") as mock_mode, \
          patch("api.routes.health.get_provider_chain") as mock_chain, \
          patch("api.routes.health.build_metrics_snapshot", return_value={}), \
-         patch("api.routes.health.observe_api_request"):
+         patch("api.routes.health.observe_api_request"), \
+         patch("api.routes.health._probe_redis", new=AsyncMock(return_value="reachable")), \
+         patch("api.routes.health._probe_qdrant", new=AsyncMock(return_value="reachable")):
         mock_mode.return_value.current_mode.value = "normal"
         mock_mode.return_value.to_dict.return_value = {}
         mock_chain.return_value.get_health.return_value = {}
 
-        import asyncio
-        result = asyncio.get_event_loop().run_until_complete(health_check())
+        result = await health_check()
 
     services = result["services"]
     assert "postgres" in services

@@ -1,4 +1,5 @@
 from agents.deployment_agent import analyze_deployments
+from core.resilience.node_fallbacks import build_deployment_fallback
 from db.repositories.incident_repo import IncidentRepository
 from db.session import SessionLocal
 
@@ -11,5 +12,27 @@ async def deployment_node(state: dict, session=None) -> dict:
     incident = await repository.get(state["incident_id"])
     if incident is None:
         return {"errors": [f"Incident {state['incident_id']} not found"]}
-    result = await analyze_deployments(incident, db_session=session)
-    return {"deployment_summary": result.model_dump(mode="json"), "completed_nodes": ["deployment"]}
+    try:
+        result = await analyze_deployments(incident, db_session=session)
+        return {
+            "deployment_summary": result.model_dump(mode="json"),
+            "completed_nodes": ["deployment"],
+            "last_successful_step": "deployment",
+        }
+    except Exception as exc:
+        fallback = build_deployment_fallback(error=str(exc))
+        await repository.create_agent_execution(
+            incident.id,
+            "deployment_agent_degraded",
+            {"incident_id": str(incident.id)},
+            fallback,
+            "degraded",
+        )
+        return {
+            "deployment_summary": fallback,
+            "errors": [f"Deployment agent degraded: {exc}"],
+            "operating_mode": "SAFE_MODE",
+            "completed_nodes": ["deployment"],
+            "last_successful_step": "deployment",
+            "graph_status": "degraded_deployment",
+        }

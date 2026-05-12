@@ -34,7 +34,7 @@ class TestOperatingMode:
 
     def test_safe_mode_properties(self):
         assert OperatingMode.SAFE_MODE.allows_llm_calls is False
-        assert OperatingMode.SAFE_MODE.allows_automated_actions is True
+        assert OperatingMode.SAFE_MODE.allows_automated_actions is False
         assert OperatingMode.SAFE_MODE.is_degraded is True
 
     def test_observe_only_mode_properties(self):

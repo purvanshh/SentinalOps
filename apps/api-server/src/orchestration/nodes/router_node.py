@@ -114,8 +114,13 @@ async def router_node(state: dict, session=None) -> dict:
         confidence = classification_dict.get("confidence", 0.0)
         fallback_activated = chain_result.fallback_activated
 
-    # Determine status
-    status = "classified" if confidence >= 0.6 else "needs_triage"
+    # Determine status. When deterministic fallback produces a known category,
+    # we continue in degraded mode rather than terminating in triage.
+    incident_type = classification_dict.get("incident_type", "unknown")
+    if incident_type != "unknown" and fallback_activated:
+        status = "classified"
+    else:
+        status = "classified" if confidence >= 0.6 else "needs_triage"
 
     # Record execution in DB
     latency = time.time() - started_at
@@ -144,7 +149,7 @@ async def router_node(state: dict, session=None) -> dict:
                 "classification": classification_dict,
                 "resilience": chain_result.to_dict(),
             },
-            status="completed",
+            status="degraded" if fallback_activated else "completed",
             latency=latency,
         )
     except Exception as exc:
@@ -164,9 +169,15 @@ async def router_node(state: dict, session=None) -> dict:
     return {
         "classification": classification_dict,
         "status": status,
+        "graph_status": "classified",
         "completed_nodes": ["router"],
         "remaining_steps": max(int(state.get("remaining_steps", 1)) - 1, 0),
         "operating_mode": mode_manager.current_mode.value,
         "provider_chain_result": chain_result.to_dict(),
+        "provider_attempts": chain_result.to_dict().get("attempts", []),
+        "retry_count": sum(attempt.get("retry_count", 0) for attempt in chain_result.to_dict().get("attempts", [])),
         "fallback_activated": fallback_activated,
+        "last_successful_step": "router",
+        "degraded_mode_activation": mode_manager.to_dict(),
+        "failure_reason": None,
     }

@@ -40,7 +40,7 @@ class OperatingMode(str, Enum):
 
     @property
     def allows_automated_actions(self) -> bool:
-        return self in (OperatingMode.FULL, OperatingMode.DEGRADED, OperatingMode.LOCAL_ONLY, OperatingMode.SAFE_MODE)
+        return self in (OperatingMode.FULL, OperatingMode.DEGRADED, OperatingMode.LOCAL_ONLY)
 
     @property
     def is_degraded(self) -> bool:

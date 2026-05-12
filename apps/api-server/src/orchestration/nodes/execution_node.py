@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from core.resilience.operating_mode import OperatingMode
 from db.repositories.incident_repo import IncidentRepository
 from db.repositories.risk_repo import RiskRepository
 from db.session import SessionLocal
@@ -28,6 +29,42 @@ async def execution_node(state: dict, session=None) -> dict:
     risk_repository = RiskRepository(session)
     executed_actions: list[str] = []
     verification_results: list[dict] = []
+    operating_mode = str(state.get("operating_mode", OperatingMode.FULL.value))
+
+    if operating_mode in {OperatingMode.SAFE_MODE.value, OperatingMode.OBSERVE_ONLY.value}:
+        incident.status = "observe_only"
+        await session.commit()
+        return {
+            "execution": {
+                "approved": False,
+                "executed_actions": [],
+                "verification_results": [],
+                "execution_disabled": True,
+                "reason": f"Automated execution disabled in {operating_mode}",
+            },
+            "status": incident.status,
+            "approved_actions": [],
+            "completed_nodes": ["execution_actions"],
+            "last_successful_step": "execution_actions",
+            "graph_status": "observe_only",
+        }
+
+    if not incident.remediation_actions:
+        incident.status = "resolved"
+        await session.commit()
+        return {
+            "execution": {
+                "approved": False,
+                "executed_actions": [],
+                "verification_results": [],
+                "noop": True,
+                "reason": "No remediation actions were generated",
+            },
+            "status": incident.status,
+            "approved_actions": [],
+            "completed_nodes": ["execution_actions"],
+            "last_successful_step": "execution_actions",
+        }
 
     for action in incident.remediation_actions:
         action.approved = approved
@@ -99,4 +136,5 @@ async def execution_node(state: dict, session=None) -> dict:
         "status": incident.status,
         "approved_actions": executed_actions,
         "completed_nodes": ["execution_actions"],
+        "last_successful_step": "execution_actions",
     }

@@ -162,7 +162,24 @@ def test_broker_outage_persists_task_to_pending_store(monkeypatch):
     )
 
     incident_id = str(uuid4())
-    enqueue_incident_pipeline(incident_id)
+    asyncio.run(enqueue_incident_pipeline(incident_id))
 
     assert stored.get("incident_id") == incident_id
     assert stored.get("error") is not None
+
+
+@pytest.mark.asyncio
+async def test_mark_replay_scheduled_tracks_recovery_metadata():
+    from db.repositories.task_repo import PendingTaskRepository
+
+    session = _FakeSession()
+    task = _FakePendingTask(status="failed", attempts=2)
+    session._store[task.id] = task
+
+    repo = PendingTaskRepository(session)
+    result = await repo.mark_replay_scheduled(task.id, replayer_id="replayer-1", reason="stale-after-300s")
+
+    assert result.status == "replaying"
+    assert result.payload["recovery"]["replay_count"] == 1
+    assert result.payload["recovery"]["scheduled_by"] == "replayer-1"
+    assert result.payload["recovery"]["last_replay_reason"] == "stale-after-300s"

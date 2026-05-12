@@ -32,12 +32,30 @@ APPROVAL_WAIT_SECONDS = Histogram(
     "Approval wait time in seconds",
     labelnames=("status",),
 )
+INCIDENT_PIPELINE_COMPLETED_TOTAL = Counter(
+    "incident_pipeline_completed_total",
+    "Total incident pipelines that completed (success or failure)",
+    labelnames=("status",),
+)
+INCIDENT_PIPELINE_DURATION_SECONDS = Histogram(
+    "incident_pipeline_duration_seconds",
+    "End-to-end incident pipeline duration in seconds",
+    labelnames=("status",),
+    buckets=(5, 10, 30, 60, 120, 300, 600),
+)
+APPROVAL_DECISIONS_TOTAL = Counter(
+    "approval_decisions_total",
+    "Total approval decisions recorded",
+    labelnames=("decision",),
+)
 
-_METRIC_SNAPSHOT = {
+_METRIC_SNAPSHOT: dict[str, float] = {
     "api_requests_total": 0.0,
     "incidents_total": 0.0,
     "agent_executions_total": 0.0,
     "tool_executions_total": 0.0,
+    "incident_pipeline_completed_total": 0.0,
+    "approval_decisions_total": 0.0,
 }
 
 
@@ -65,6 +83,18 @@ def observe_tool_execution(tool: str, outcome: str) -> None:
 
 def observe_approval_wait(seconds: float, status: str) -> None:
     APPROVAL_WAIT_SECONDS.labels(status=status).observe(seconds)
+
+
+def observe_pipeline_completed(status: str, duration_seconds: float | None = None) -> None:
+    INCIDENT_PIPELINE_COMPLETED_TOTAL.labels(status=status).inc()
+    _METRIC_SNAPSHOT["incident_pipeline_completed_total"] += 1
+    if duration_seconds is not None:
+        INCIDENT_PIPELINE_DURATION_SECONDS.labels(status=status).observe(duration_seconds)
+
+
+def observe_approval_decision(decision: str) -> None:
+    APPROVAL_DECISIONS_TOTAL.labels(decision=decision).inc()
+    _METRIC_SNAPSHOT["approval_decisions_total"] += 1
 
 
 def build_metrics_snapshot() -> dict[str, float]:

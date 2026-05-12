@@ -49,6 +49,34 @@ APPROVAL_DECISIONS_TOTAL = Counter(
     labelnames=("decision",),
 )
 
+# --- Phase-38: operational runtime metrics ---
+
+DEGRADED_MODE_ACTIVATIONS_TOTAL = Counter(
+    "degraded_mode_activations_total",
+    "Total operating-mode transitions (tracks every mode change, including recoveries)",
+    labelnames=("from_mode", "to_mode"),
+)
+TASK_REPLAYS_TOTAL = Counter(
+    "task_replays_total",
+    "Total incident pipeline tasks re-enqueued by the replay scheduler",
+    labelnames=("reason",),
+)
+DEAD_LETTER_TASKS_TOTAL = Counter(
+    "dead_letter_tasks_total",
+    "Total tasks moved to dead-letter after exhausting replay attempts",
+    labelnames=("task_name",),
+)
+EXECUTION_GUARD_BLOCKS_TOTAL = Counter(
+    "execution_guard_blocks_total",
+    "Total tool executions blocked by the execution guard",
+    labelnames=("reason",),
+)
+REMEDIATION_ACTIONS_TOTAL = Counter(
+    "remediation_actions_total",
+    "Total remediation actions attempted",
+    labelnames=("outcome",),
+)
+
 _METRIC_SNAPSHOT: dict[str, float] = {
     "api_requests_total": 0.0,
     "incidents_total": 0.0,
@@ -56,6 +84,11 @@ _METRIC_SNAPSHOT: dict[str, float] = {
     "tool_executions_total": 0.0,
     "incident_pipeline_completed_total": 0.0,
     "approval_decisions_total": 0.0,
+    "degraded_mode_activations_total": 0.0,
+    "task_replays_total": 0.0,
+    "dead_letter_tasks_total": 0.0,
+    "execution_guard_blocks_total": 0.0,
+    "remediation_actions_total": 0.0,
 }
 
 
@@ -95,6 +128,31 @@ def observe_pipeline_completed(status: str, duration_seconds: float | None = Non
 def observe_approval_decision(decision: str) -> None:
     APPROVAL_DECISIONS_TOTAL.labels(decision=decision).inc()
     _METRIC_SNAPSHOT["approval_decisions_total"] += 1
+
+
+def observe_degraded_mode(from_mode: str, to_mode: str) -> None:
+    DEGRADED_MODE_ACTIVATIONS_TOTAL.labels(from_mode=from_mode, to_mode=to_mode).inc()
+    _METRIC_SNAPSHOT["degraded_mode_activations_total"] += 1
+
+
+def observe_task_replay(reason: str) -> None:
+    TASK_REPLAYS_TOTAL.labels(reason=reason).inc()
+    _METRIC_SNAPSHOT["task_replays_total"] += 1
+
+
+def observe_dead_letter(task_name: str) -> None:
+    DEAD_LETTER_TASKS_TOTAL.labels(task_name=task_name).inc()
+    _METRIC_SNAPSHOT["dead_letter_tasks_total"] += 1
+
+
+def observe_execution_guard_block(reason: str) -> None:
+    EXECUTION_GUARD_BLOCKS_TOTAL.labels(reason=reason).inc()
+    _METRIC_SNAPSHOT["execution_guard_blocks_total"] += 1
+
+
+def observe_remediation_action(outcome: str) -> None:
+    REMEDIATION_ACTIONS_TOTAL.labels(outcome=outcome).inc()
+    _METRIC_SNAPSHOT["remediation_actions_total"] += 1
 
 
 def build_metrics_snapshot() -> dict[str, float]:

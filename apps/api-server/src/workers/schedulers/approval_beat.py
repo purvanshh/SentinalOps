@@ -10,6 +10,6 @@ celery_app.conf.beat_schedule = {
     },
     "replay-pending-incidents": {
         "task": "workers.tasks.replay_pending_incidents",
-        "schedule": 30.0,
+        "schedule": 10.0,
     },
 }

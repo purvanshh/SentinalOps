@@ -15,7 +15,7 @@ from workers.queues import celery_app
 logger = structlog.get_logger(__name__)
 
 _MAX_REPLAY_ATTEMPTS = 5
-_STALE_REPLAY_AFTER_SECONDS = 300
+_STALE_REPLAY_AFTER_SECONDS = 20
 _HEARTBEAT_INTERVAL_SECONDS = 5
 _TASK_NAME = "workers.tasks.run_incident_pipeline"
 
@@ -33,7 +33,7 @@ def run_incident_pipeline(incident_id: str) -> None:
 
 
 async def _run_incident_pipeline(incident_id: UUID) -> None:
-    from orchestration.graphs.main_graph import build_main_graph
+    from orchestration.graphs.main_graph import build_main_graph, reset_graph
 
     worker_run_id = str(uuid4())
     async with SessionLocal() as session:
@@ -44,6 +44,9 @@ async def _run_incident_pipeline(incident_id: UUID) -> None:
             worker_run_id=worker_run_id,
         )
 
+    # Celery retries and worker restarts should not reuse graph-scoped async
+    # clients that may still be bound to a closed event loop.
+    reset_graph()
     graph = build_main_graph()
     stop_heartbeat = asyncio.Event()
     heartbeat_task = asyncio.create_task(

@@ -177,9 +177,9 @@ async def test_mark_replay_scheduled_tracks_recovery_metadata():
     session._store[task.id] = task
 
     repo = PendingTaskRepository(session)
-    result = await repo.mark_replay_scheduled(task.id, replayer_id="replayer-1", reason="stale-after-300s")
+    result = await repo.mark_replay_scheduled(task.id, replayer_id="replayer-1", reason="stale-after-20s")
 
     assert result.status == "replaying"
     assert result.payload["recovery"]["replay_count"] == 1
     assert result.payload["recovery"]["scheduled_by"] == "replayer-1"
-    assert result.payload["recovery"]["last_replay_reason"] == "stale-after-300s"
+    assert result.payload["recovery"]["last_replay_reason"] == "stale-after-20s"

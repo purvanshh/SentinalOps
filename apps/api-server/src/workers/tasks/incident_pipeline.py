@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+from contextlib import suppress
 from uuid import UUID
+from uuid import uuid4
 
 import structlog
 
@@ -13,6 +16,8 @@ logger = structlog.get_logger(__name__)
 
 _MAX_REPLAY_ATTEMPTS = 5
 _STALE_REPLAY_AFTER_SECONDS = 300
+_HEARTBEAT_INTERVAL_SECONDS = 5
+_TASK_NAME = "workers.tasks.run_incident_pipeline"
 
 
 @celery_app.task(
@@ -30,11 +35,24 @@ def run_incident_pipeline(incident_id: str) -> None:
 async def _run_incident_pipeline(incident_id: UUID) -> None:
     from orchestration.graphs.main_graph import build_main_graph
 
+    worker_run_id = str(uuid4())
     async with SessionLocal() as session:
         task_repo = PendingTaskRepository(session)
-        await task_repo.mark_running_by_incident(incident_id, "workers.tasks.run_incident_pipeline")
+        await task_repo.mark_running_by_incident(
+            incident_id,
+            _TASK_NAME,
+            worker_run_id=worker_run_id,
+        )
 
     graph = build_main_graph()
+    stop_heartbeat = asyncio.Event()
+    heartbeat_task = asyncio.create_task(
+        _heartbeat_task(
+            incident_id=incident_id,
+            worker_run_id=worker_run_id,
+            stop_event=stop_heartbeat,
+        )
+    )
     try:
         result = await graph.ainvoke({"incident_id": str(incident_id)})
         logger.info(
@@ -46,7 +64,9 @@ async def _run_incident_pipeline(incident_id: UUID) -> None:
         )
         async with SessionLocal() as session:
             await PendingTaskRepository(session).mark_completed_by_incident(
-                incident_id, "workers.tasks.run_incident_pipeline"
+                incident_id,
+                _TASK_NAME,
+                final_status=result.get("status", "completed") if isinstance(result, dict) else "completed",
             )
     except Exception as exc:
         logger.error(
@@ -58,18 +78,23 @@ async def _run_incident_pipeline(incident_id: UUID) -> None:
         async with SessionLocal() as session:
             await PendingTaskRepository(session).mark_failed_by_incident(
                 incident_id,
-                "workers.tasks.run_incident_pipeline",
+                _TASK_NAME,
                 str(exc),
             )
         await _store_deferred_task(incident_id, exc)
         raise
+    finally:
+        stop_heartbeat.set()
+        heartbeat_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await heartbeat_task
 
 
 async def _store_deferred_task(incident_id: UUID, error: Exception | None = None) -> None:
     async with SessionLocal() as session:
         await PendingTaskRepository(session).create_pending_task(
             incident_id=incident_id,
-            task_name="workers.tasks.run_incident_pipeline",
+            task_name=_TASK_NAME,
             payload={"incident_id": str(incident_id)},
             status="pending",
             last_error=str(error) if error is not None else None,
@@ -97,7 +122,7 @@ async def _replay_pending_incidents() -> int:
     async with SessionLocal() as session:
         repository = PendingTaskRepository(session)
         pending = await repository.list_recoverable_tasks(
-            "workers.tasks.run_incident_pipeline",
+            _TASK_NAME,
             stale_after_seconds=_STALE_REPLAY_AFTER_SECONDS,
         )
         replayed = 0
@@ -112,8 +137,33 @@ async def _replay_pending_incidents() -> int:
                 )
                 continue
             try:
+                await repository.mark_replay_scheduled(
+                    task.id,
+                    replayer_id=str(uuid4()),
+                    reason=f"stale-after-{_STALE_REPLAY_AFTER_SECONDS}s",
+                )
                 run_incident_pipeline.delay(task.payload["incident_id"])
                 replayed += 1
             except Exception as exc:  # noqa: BLE001
                 await repository.mark_failed(task.id, str(exc))
         return replayed
+
+
+async def _heartbeat_task(
+    *,
+    incident_id: UUID,
+    worker_run_id: str,
+    stop_event: asyncio.Event,
+) -> None:
+    while not stop_event.is_set():
+        async with SessionLocal() as session:
+            await PendingTaskRepository(session).heartbeat_by_incident(
+                incident_id,
+                _TASK_NAME,
+                worker_run_id=worker_run_id,
+                stage="graph_running",
+            )
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=_HEARTBEAT_INTERVAL_SECONDS)
+        except TimeoutError:
+            continue

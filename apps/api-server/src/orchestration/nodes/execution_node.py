@@ -1,13 +1,19 @@
 from __future__ import annotations
 
+import uuid
+from datetime import datetime, timezone
+
 from core.resilience.operating_mode import OperatingMode
 from db.repositories.incident_repo import IncidentRepository
 from db.repositories.risk_repo import RiskRepository
 from db.session import SessionLocal
 from agents.risk_agent.action_mapper import map_action_to_category
+from observability.logging import bind_execution_id
+from observability.metrics import observe_remediation_action
 from tools.action_mapping import map_action_to_tool
 from tools.base import ToolCall
 from tools.execution_guard import ExecutionGuardError
+from tools.risk_classifier import classify_action_risk_tier
 from tools.runtime_tools import build_runtime_registry
 
 
@@ -24,6 +30,9 @@ async def execution_node(state: dict, session=None) -> dict:
     note = state.get("approval", {}).get("note", "")
     approved_by = state.get("approval", {}).get("approved_by")
     approval_token = state.get("approval", {}).get("approval_token")
+
+    execution_id = str(uuid.uuid4())
+    bind_execution_id(execution_id)
 
     registry = build_runtime_registry()
     risk_repository = RiskRepository(session)
@@ -75,6 +84,8 @@ async def execution_node(state: dict, session=None) -> dict:
             continue
 
         tool_name, arguments = map_action_to_tool(action.action)
+        risk_tier = classify_action_risk_tier(action.action)
+        rollback_path = f"rollback_{tool_name}" if "rollback" not in tool_name else None
         try:
             result = await registry.execute(
                 ToolCall(name=tool_name, arguments=arguments),
@@ -87,6 +98,7 @@ async def execution_node(state: dict, session=None) -> dict:
             )
             if not result.success:
                 action.status = "failed"
+                observe_remediation_action("failed")
                 continue
 
             verify_result = await registry.execute(
@@ -108,12 +120,18 @@ async def execution_node(state: dict, session=None) -> dict:
             action.status = "executed"
             action.details = {
                 **action.details,
+                "execution_id": execution_id,
+                "executed_at": datetime.now(timezone.utc).isoformat(),
                 "tool_name": tool_name,
+                "risk_tier": risk_tier.value,
+                "rollback_path": rollback_path,
+                "approved_by": approved_by,
                 "tool_result": result.output,
                 "verification": verify_result.output,
             }
             executed_actions.append(action.action)
             verification_results.append(verify_result.model_dump(mode="json"))
+            observe_remediation_action("executed")
             await risk_repository.record_remediation_outcome(
                 action_name=action.action,
                 category=map_action_to_category(action.action),
@@ -123,7 +141,13 @@ async def execution_node(state: dict, session=None) -> dict:
             )
         except ExecutionGuardError as exc:
             action.status = "blocked"
-            action.details = {**action.details, "guard_error": str(exc)}
+            action.details = {
+                **action.details,
+                "execution_id": execution_id,
+                "risk_tier": risk_tier.value,
+                "guard_error": str(exc),
+            }
+            observe_remediation_action("blocked")
 
     incident.status = "resolved" if approved else "approval_rejected"
     await session.commit()

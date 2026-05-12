@@ -26,12 +26,37 @@ def run_async(coro: Coroutine[Any, Any, T]) -> T:
     Safe for repeated calls in the same thread (including Celery retries) and
     safe when the calling thread already has a closed or stale loop set.
     """
+    _ensure_no_running_loop(coro)
+    _clear_stale_thread_loop()
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
         return loop.run_until_complete(coro)
     finally:
         _drain_and_close(loop)
+
+
+def _ensure_no_running_loop(coro: Coroutine[Any, Any, T]) -> None:
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return
+
+    coro.close()
+    raise RuntimeError(
+        "run_async() cannot be called while an event loop is already running; "
+        "await the coroutine directly instead."
+    )
+
+
+def _clear_stale_thread_loop() -> None:
+    try:
+        existing_loop = asyncio.get_event_loop_policy().get_event_loop()
+    except RuntimeError:
+        return
+
+    if existing_loop.is_closed():
+        asyncio.set_event_loop(None)
 
 
 def _drain_and_close(loop: asyncio.AbstractEventLoop) -> None:
@@ -41,6 +66,8 @@ def _drain_and_close(loop: asyncio.AbstractEventLoop) -> None:
             for task in pending:
                 task.cancel()
             loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+        loop.run_until_complete(loop.shutdown_asyncgens())
+        loop.run_until_complete(loop.shutdown_default_executor())
     finally:
         loop.close()
         asyncio.set_event_loop(None)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from uuid import uuid4
 
 from workers.tasks.incident_pipeline import enqueue_incident_pipeline
@@ -19,7 +20,7 @@ def test_enqueue_incident_pipeline_persists_pending_task_on_broker_failure(monke
     monkeypatch.setattr("workers.tasks.incident_pipeline._store_deferred_task", fake_store)
 
     incident_id = str(uuid4())
-    enqueue_incident_pipeline(incident_id)
+    asyncio.run(enqueue_incident_pipeline(incident_id))
 
     assert recorded["incident_id"] == incident_id
     assert "broker unavailable" in recorded["error"]

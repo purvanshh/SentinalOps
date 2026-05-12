@@ -40,7 +40,7 @@ def test_enqueue_stores_deferred_task_when_broker_fails(monkeypatch):
     monkeypatch.setattr("workers.tasks.incident_pipeline._store_deferred_task", fake_store)
 
     incident_id = str(uuid4())
-    enqueue_incident_pipeline(incident_id)
+    asyncio.run(enqueue_incident_pipeline(incident_id))
 
     assert recorded["incident_id"] == incident_id
     assert "broker down" in recorded["error"]
@@ -62,34 +62,20 @@ class _FakeRepo:
     def __init__(self, tasks):
         self._tasks = tasks
         self.dead_lettered: list[tuple] = []
-        self.completed: list = []
-        self.running: list = []
+        self.replay_scheduled: list[tuple] = []
 
-    async def list_pending_tasks(self, _task_name):
+    async def list_recoverable_tasks(self, _task_name, stale_after_seconds=30):
         return self._tasks
 
-    async def mark_running(self, task_id):
-        self.running.append(task_id)
-
-    async def mark_completed(self, task_id):
-        self.completed.append(task_id)
+    async def mark_replay_scheduled(self, task_id, *, replayer_id: str, reason: str):
+        self.replay_scheduled.append((task_id, replayer_id, reason))
+        return next(task for task in self._tasks if task.id == task_id)
 
     async def mark_failed(self, task_id, error):
         pass
 
     async def mark_dead_letter(self, task_id, reason):
         self.dead_lettered.append((task_id, reason))
-
-
-class _FakeSession:
-    def __init__(self, repo):
-        self._repo = repo
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *_):
-        pass
 
 
 @pytest.mark.asyncio
@@ -125,6 +111,8 @@ async def test_replay_dead_letters_tasks_exceeding_max_attempts(monkeypatch):
     assert replayed == 1
     assert len(repo.dead_lettered) == 1
     assert repo.dead_lettered[0][0] == exhausted.id
+    assert len(repo.replay_scheduled) == 1
+    assert repo.replay_scheduled[0][0] == healthy.id
 
 
 @pytest.mark.asyncio
@@ -150,7 +138,8 @@ async def test_replay_skips_healthy_tasks_not_exceeding_budget(monkeypatch):
 
     assert replayed == 1
     assert len(repo.dead_lettered) == 0
-    assert task.id in repo.completed
+    assert len(repo.replay_scheduled) == 1
+    assert repo.replay_scheduled[0][0] == task.id
 
 
 # ---------------------------------------------------------------------------

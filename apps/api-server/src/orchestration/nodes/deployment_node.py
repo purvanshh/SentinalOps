@@ -17,7 +17,6 @@ async def deployment_node(state: dict, session=None) -> dict:
         return {
             "deployment_summary": result.model_dump(mode="json"),
             "completed_nodes": ["deployment"],
-            "last_successful_step": "deployment",
         }
     except Exception as exc:
         fallback = build_deployment_fallback(error=str(exc))
@@ -31,8 +30,5 @@ async def deployment_node(state: dict, session=None) -> dict:
         return {
             "deployment_summary": fallback,
             "errors": [f"Deployment agent degraded: {exc}"],
-            "operating_mode": "SAFE_MODE",
             "completed_nodes": ["deployment"],
-            "last_successful_step": "deployment",
-            "graph_status": "degraded_deployment",
         }

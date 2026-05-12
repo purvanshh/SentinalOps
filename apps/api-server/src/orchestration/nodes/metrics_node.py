@@ -17,7 +17,6 @@ async def metrics_node(state: dict, session=None) -> dict:
         return {
             "metrics_summary": result.model_dump(mode="json"),
             "completed_nodes": ["metrics"],
-            "last_successful_step": "metrics",
         }
     except Exception as exc:
         fallback = build_metrics_fallback(incident_title=incident.title, error=str(exc))
@@ -31,8 +30,5 @@ async def metrics_node(state: dict, session=None) -> dict:
         return {
             "metrics_summary": fallback,
             "errors": [f"Metrics agent degraded: {exc}"],
-            "operating_mode": "SAFE_MODE",
             "completed_nodes": ["metrics"],
-            "last_successful_step": "metrics",
-            "graph_status": "degraded_metrics",
         }

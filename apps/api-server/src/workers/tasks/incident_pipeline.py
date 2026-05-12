@@ -29,6 +29,10 @@ def run_incident_pipeline(incident_id: str) -> None:
 async def _run_incident_pipeline(incident_id: UUID) -> None:
     from orchestration.graphs.main_graph import build_main_graph
 
+    async with SessionLocal() as session:
+        task_repo = PendingTaskRepository(session)
+        await task_repo.mark_running_by_incident(incident_id, "workers.tasks.run_incident_pipeline")
+
     graph = build_main_graph()
     try:
         result = await graph.ainvoke({"incident_id": str(incident_id)})
@@ -39,6 +43,10 @@ async def _run_incident_pipeline(incident_id: UUID) -> None:
             operating_mode=result.get("operating_mode") if isinstance(result, dict) else "unknown",
             fallback_activated=result.get("fallback_activated") if isinstance(result, dict) else False,
         )
+        async with SessionLocal() as session:
+            await PendingTaskRepository(session).mark_completed_by_incident(
+                incident_id, "workers.tasks.run_incident_pipeline"
+            )
     except Exception as exc:
         logger.error(
             "incident_pipeline_failed",
@@ -46,6 +54,12 @@ async def _run_incident_pipeline(incident_id: UUID) -> None:
             error=str(exc),
             error_type=type(exc).__name__,
         )
+        async with SessionLocal() as session:
+            await PendingTaskRepository(session).mark_failed_by_incident(
+                incident_id,
+                "workers.tasks.run_incident_pipeline",
+                str(exc),
+            )
         await _store_deferred_task(incident_id, exc)
         raise
 
@@ -64,6 +78,12 @@ async def _store_deferred_task(incident_id: UUID, error: Exception | None = None
 def enqueue_incident_pipeline(incident_id: str) -> None:
     incident_uuid = UUID(incident_id)
     try:
+        run_async(
+            _store_deferred_task(
+                incident_uuid,
+                None,
+            )
+        )
         run_incident_pipeline.delay(incident_id)
     except Exception as exc:  # noqa: BLE001
         run_async(_store_deferred_task(incident_uuid, exc))
@@ -77,7 +97,10 @@ def replay_pending_incidents() -> int:
 async def _replay_pending_incidents() -> int:
     async with SessionLocal() as session:
         repository = PendingTaskRepository(session)
-        pending = await repository.list_pending_tasks("workers.tasks.run_incident_pipeline")
+        pending = await repository.list_recoverable_tasks(
+            "workers.tasks.run_incident_pipeline",
+            stale_after_seconds=20,
+        )
         replayed = 0
         for task in pending:
             if task.attempts >= _MAX_REPLAY_ATTEMPTS:
@@ -89,10 +112,8 @@ async def _replay_pending_incidents() -> int:
                     attempts=task.attempts,
                 )
                 continue
-            await repository.mark_running(task.id)
             try:
                 run_incident_pipeline.delay(task.payload["incident_id"])
-                await repository.mark_completed(task.id)
                 replayed += 1
             except Exception as exc:  # noqa: BLE001
                 await repository.mark_failed(task.id, str(exc))

@@ -1,3 +1,15 @@
+"""
+RetrievalOrchestrator: vector search and incident history indexing.
+
+Collection bootstrap (ensure_collection) must be called ONCE at application
+startup via RetrievalOrchestrator().bootstrap(). Individual indexing methods
+(index_patterns, index_runbooks_from_directory, index_prevention_items,
+index_resolved_incident) no longer call bootstrap() themselves — doing so
+would issue an HTTP request to Qdrant on every write, adding unnecessary
+latency to hot paths.
+
+See apps/api-server/src/main.py lifespan for the startup call.
+"""
 from __future__ import annotations
 
 import json
@@ -18,6 +30,10 @@ class RetrievalOrchestrator:
         self.collection_manager = QdrantCollectionManager(base_url=settings.qdrant_url)
 
     def bootstrap(self) -> None:
+        """Create all required Qdrant collections if they do not exist.
+
+        Call this ONCE at application startup — not from indexing hot paths.
+        """
         dimensions = self.embedding_client.dimensions
         specs = [
             CollectionSpec(self.settings.qdrant_pattern_collection, dimensions),
@@ -36,7 +52,6 @@ class RetrievalOrchestrator:
         }
 
     def index_patterns(self, patterns: list[dict[str, Any]]) -> bool:
-        self.bootstrap()
         points = [
             self._point(
                 {
@@ -57,7 +72,6 @@ class RetrievalOrchestrator:
         return self.collection_manager.upsert_points(self.settings.qdrant_pattern_collection, points)
 
     def index_runbooks_from_directory(self, path: str | Path) -> bool:
-        self.bootstrap()
         directory = Path(path)
         if not directory.is_absolute():
             directory = Path.cwd() / directory
@@ -81,7 +95,6 @@ class RetrievalOrchestrator:
         return self.collection_manager.upsert_points(self.settings.qdrant_runbook_collection, points)
 
     async def index_prevention_items(self, items: list[dict[str, Any]]) -> bool:
-        self.bootstrap()
         points = [
             self._point(
                 {
@@ -105,7 +118,6 @@ class RetrievalOrchestrator:
         summary: str,
         root_cause: str,
     ) -> bool:
-        self.bootstrap()
         point = self._point(
             {
                 "incident_id": incident_id,

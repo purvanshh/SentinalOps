@@ -16,9 +16,10 @@ class PatternSearcher:
         self.embedding_client = EmbeddingClient()
         self.collection_manager = QdrantCollectionManager(base_url=settings.qdrant_url)
         self.patterns = json.loads(self.path.read_text()) if self.path.exists() else []
-        self.collection_manager.ensure_collection(
-            CollectionSpec(self.collection_name, self.embedding_client.dimensions)
-        )
+        # ensure_collection is NOT called here. Collections are bootstrapped
+        # once at startup via RetrievalOrchestrator().bootstrap() in main.py.
+        # Calling ensure_collection per-search adds an HTTP round-trip to every
+        # pattern lookup and is unnecessary when the collection already exists.
 
     def _fallback_search(self, text: str, limit: int = 3) -> list[dict]:
         query_vector = self.embedding_client.embed_text(text)

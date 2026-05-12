@@ -5,15 +5,14 @@ from db.session import SessionLocal
 from db.repositories.incident_repo import IncidentRepository
 from orchestration.interrupts.approval_store import ApprovalStore
 from tools.slack.notifier import notify_approval_escalation
+from workers.async_utils import run_async
 from workers.queues import celery_app
 from core.config import get_settings
 
 
-@celery_app.task(name="workers.tasks.escalate_approval")
+@celery_app.task(name="workers.tasks.escalate_approval", reject_on_worker_lost=True, acks_late=True)
 def escalate_approval(incident_id: str) -> None:
-    import asyncio
-
-    asyncio.run(_escalate_approval(UUID(incident_id)))
+    run_async(_escalate_approval(UUID(incident_id)))
 
 
 async def _escalate_approval(incident_id: UUID) -> None:

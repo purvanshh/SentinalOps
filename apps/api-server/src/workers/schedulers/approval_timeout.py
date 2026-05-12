@@ -3,6 +3,7 @@ from datetime import UTC, datetime, timedelta
 from core.config import get_settings
 from db.session import SessionLocal
 from orchestration.interrupts.approval_store import ApprovalStore
+from workers.async_utils import run_async
 from workers.queues import celery_app
 from workers.tasks.approval_escalation import escalate_approval
 
@@ -27,6 +28,4 @@ async def check_pending_approvals() -> list[str]:
 
 @celery_app.task(name="workers.schedulers.scan_pending_approvals")
 def scan_pending_approvals() -> list[str]:
-    import asyncio
-
-    return asyncio.run(check_pending_approvals())
+    return run_async(check_pending_approvals())

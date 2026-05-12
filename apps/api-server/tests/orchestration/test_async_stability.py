@@ -126,3 +126,12 @@ def test_run_async_nested_awaits_work():
         return b
 
     assert run_async(outer()) == 3
+
+
+@pytest.mark.asyncio
+async def test_run_async_rejects_running_event_loop():
+    async def payload():
+        return 1
+
+    with pytest.raises(RuntimeError, match="cannot be called while an event loop is already running"):
+        run_async(payload())

@@ -67,6 +67,12 @@ async def decide_approval(
                 approved_by=user.user_id,
                 expires_at=datetime.fromisoformat(pending.expires_at),
             )
+        await approval_store.record_approval(
+            incident_id,
+            approved=payload.approved,
+            approved_by=user.user_id,
+            note=payload.note,
+        )
         graph = build_main_graph()
         await graph.resume(
             incident.graph_thread_id,
@@ -80,12 +86,12 @@ async def decide_approval(
     else:
         await process_approval_decision(incident_id, payload.approved, payload.note, user.user_id, db)
         approval_token = None
-    await approval_store.record_approval(
-        incident_id,
-        approved=payload.approved,
-        approved_by=user.user_id,
-        note=payload.note,
-    )
+        await approval_store.record_approval(
+            incident_id,
+            approved=payload.approved,
+            approved_by=user.user_id,
+            note=payload.note,
+        )
 
     incident = await repository.get_with_context(incident_id)
     if incident is None:

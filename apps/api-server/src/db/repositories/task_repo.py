@@ -83,3 +83,23 @@ class PendingTaskRepository(BaseRepository):
         await self.session.commit()
         await self.session.refresh(row)
         return row
+
+    async def mark_dead_letter(self, task_id, reason: str) -> PendingTask | None:
+        row = await self.session.get(PendingTask, task_id)
+        if row is None:
+            return None
+        row.status = "dead_letter"
+        row.last_error = reason
+        await self.session.commit()
+        await self.session.refresh(row)
+        return row
+
+    async def list_dead_letter_tasks(self) -> list[PendingTask]:
+        from sqlalchemy import select
+
+        result = await self.session.execute(
+            select(PendingTask)
+            .where(PendingTask.status == "dead_letter")
+            .order_by(PendingTask.created_at.asc())
+        )
+        return list(result.scalars().all())

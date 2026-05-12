@@ -17,7 +17,6 @@ async def logs_node(state: dict, session=None) -> dict:
         return {
             "logs_summary": result.model_dump(mode="json"),
             "completed_nodes": ["logs"],
-            "last_successful_step": "logs",
         }
     except Exception as exc:
         fallback = build_logs_fallback(error=str(exc))
@@ -31,8 +30,5 @@ async def logs_node(state: dict, session=None) -> dict:
         return {
             "logs_summary": fallback,
             "errors": [f"Logs agent degraded: {exc}"],
-            "operating_mode": "SAFE_MODE",
             "completed_nodes": ["logs"],
-            "last_successful_step": "logs",
-            "graph_status": "degraded_logs",
         }

@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy import select
@@ -47,8 +48,33 @@ class PendingTaskRepository(BaseRepository):
         )
         return result.scalar_one_or_none()
 
+    async def get_task(self, incident_id: UUID, task_name: str) -> PendingTask | None:
+        result = await self.session.execute(
+            select(PendingTask).where(
+                PendingTask.incident_id == incident_id,
+                PendingTask.task_name == task_name,
+            )
+        )
+        return result.scalar_one_or_none()
+
     async def list_pending_tasks(self, task_name: str | None = None) -> list[PendingTask]:
         query = select(PendingTask).where(PendingTask.status.in_(["pending", "failed"]))
+        if task_name:
+            query = query.where(PendingTask.task_name == task_name)
+        result = await self.session.execute(query.order_by(PendingTask.created_at.asc()))
+        return list(result.scalars().all())
+
+    async def list_recoverable_tasks(
+        self,
+        task_name: str | None = None,
+        *,
+        stale_after_seconds: int = 30,
+    ) -> list[PendingTask]:
+        stale_before = datetime.now(timezone.utc) - timedelta(seconds=stale_after_seconds)
+        query = select(PendingTask).where(
+            PendingTask.status.in_(["pending", "failed"])
+            | ((PendingTask.status == "running") & (PendingTask.updated_at <= stale_before))
+        )
         if task_name:
             query = query.where(PendingTask.task_name == task_name)
         result = await self.session.execute(query.order_by(PendingTask.created_at.asc()))
@@ -64,12 +90,42 @@ class PendingTaskRepository(BaseRepository):
         await self.session.refresh(row)
         return row
 
+    async def mark_running_by_incident(self, incident_id: UUID, task_name: str) -> PendingTask | None:
+        row = await self.get_task(incident_id, task_name)
+        if row is None:
+            return None
+        row.status = "running"
+        row.attempts += 1
+        await self.session.commit()
+        await self.session.refresh(row)
+        return row
+
     async def mark_completed(self, task_id) -> PendingTask | None:
         row = await self.session.get(PendingTask, task_id)
         if row is None:
             return None
         row.status = "completed"
         row.last_error = None
+        await self.session.commit()
+        await self.session.refresh(row)
+        return row
+
+    async def mark_completed_by_incident(self, incident_id: UUID, task_name: str) -> PendingTask | None:
+        row = await self.get_task(incident_id, task_name)
+        if row is None:
+            return None
+        row.status = "completed"
+        row.last_error = None
+        await self.session.commit()
+        await self.session.refresh(row)
+        return row
+
+    async def mark_failed_by_incident(self, incident_id: UUID, task_name: str, error: str) -> PendingTask | None:
+        row = await self.get_task(incident_id, task_name)
+        if row is None:
+            return None
+        row.status = "failed"
+        row.last_error = error
         await self.session.commit()
         await self.session.refresh(row)
         return row

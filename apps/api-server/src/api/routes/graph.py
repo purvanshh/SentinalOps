@@ -8,6 +8,7 @@ from api.dependencies import get_db, require_role
 from api.middleware.auth import AuthenticatedUser
 from api.schemas.approval import ApprovalDecisionRequest
 from db.repositories.incident_repo import IncidentRepository
+from memory.short_term.incident_state import IncidentStateStore
 from orchestration.graphs.main_graph import build_main_graph
 from orchestration.interrupts.commands import ResumeCommand
 from orchestration.interrupts.approval_store import ApprovalStore
@@ -85,6 +86,8 @@ async def graph_state(
     if incident is None or not incident.graph_thread_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Graph thread not found")
     state = await build_main_graph().get_state(incident.graph_thread_id)
+    if not state:
+        state = await IncidentStateStore().load_state(str(incident_id)) or {}
     return {"thread_id": incident.graph_thread_id, "state": state}
 
 
@@ -99,6 +102,8 @@ async def graph_visual_state(
     if incident is None or not incident.graph_thread_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Graph thread not found")
     state = await build_main_graph().get_state(incident.graph_thread_id)
+    if not state:
+        state = await IncidentStateStore().load_state(str(incident_id)) or {}
     completed = set(state.get("completed_nodes", []))
     ordered_nodes = [
         "router",
@@ -144,10 +149,16 @@ async def graph_trace(
     graph_state_payload = {}
     if incident.graph_thread_id:
         graph_state_payload = await build_main_graph().get_state(incident.graph_thread_id)
+    if not graph_state_payload:
+        graph_state_payload = await IncidentStateStore().load_state(str(incident_id)) or {}
     return {
         "incident_id": str(incident_id),
         "thread_id": incident.graph_thread_id,
         "status": incident.status,
+        "operating_mode": graph_state_payload.get("operating_mode"),
+        "graph_status": graph_state_payload.get("graph_status"),
+        "fallback_activated": graph_state_payload.get("fallback_activated"),
+        "last_successful_step": graph_state_payload.get("last_successful_step"),
         "agent_executions": [
             {
                 "id": str(execution.id),

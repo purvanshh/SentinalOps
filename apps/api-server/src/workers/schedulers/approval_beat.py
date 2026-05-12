@@ -10,6 +10,6 @@ celery_app.conf.beat_schedule = {
     },
     "replay-pending-incidents": {
         "task": "workers.tasks.replay_pending_incidents",
-        "schedule": crontab(minute="*/2"),
+        "schedule": 30.0,
     },
 }

@@ -15,6 +15,7 @@ from api.schemas.incident import (
 from agents.router_agent import classify_incident
 from db.repositories.incident_repo import IncidentRepository
 from db.repositories.postmortem_repo import PostmortemRepository
+from memory.short_term.incident_state import IncidentStateStore
 from workers.tasks.incident_pipeline import enqueue_incident_pipeline
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
@@ -80,6 +81,8 @@ async def get_incident(
             runtime_state = await build_main_graph().get_state(incident.graph_thread_id)
         except Exception:
             runtime_state = None
+    if not runtime_state:
+        runtime_state = await IncidentStateStore().load_state(str(incident_id))
     return IncidentResponse.model_validate(_merge_runtime_state(incident, runtime_state))
 
 

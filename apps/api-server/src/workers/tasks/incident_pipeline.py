@@ -12,6 +12,7 @@ from workers.queues import celery_app
 logger = structlog.get_logger(__name__)
 
 _MAX_REPLAY_ATTEMPTS = 5
+_STALE_REPLAY_AFTER_SECONDS = 300
 
 
 @celery_app.task(
@@ -75,18 +76,16 @@ async def _store_deferred_task(incident_id: UUID, error: Exception | None = None
         )
 
 
-def enqueue_incident_pipeline(incident_id: str) -> None:
+async def enqueue_incident_pipeline(incident_id: str) -> None:
     incident_uuid = UUID(incident_id)
     try:
-        run_async(
-            _store_deferred_task(
-                incident_uuid,
-                None,
-            )
+        await _store_deferred_task(
+            incident_uuid,
+            None,
         )
         run_incident_pipeline.delay(incident_id)
     except Exception as exc:  # noqa: BLE001
-        run_async(_store_deferred_task(incident_uuid, exc))
+        await _store_deferred_task(incident_uuid, exc)
 
 
 @celery_app.task(name="workers.tasks.replay_pending_incidents")
@@ -99,7 +98,7 @@ async def _replay_pending_incidents() -> int:
         repository = PendingTaskRepository(session)
         pending = await repository.list_recoverable_tasks(
             "workers.tasks.run_incident_pipeline",
-            stale_after_seconds=20,
+            stale_after_seconds=_STALE_REPLAY_AFTER_SECONDS,
         )
         replayed = 0
         for task in pending:

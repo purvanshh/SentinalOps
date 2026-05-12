@@ -48,7 +48,7 @@ async def create_incident_from_webhook(
             raw_payload=payload.model_dump(mode="json"),
         )
     )
-    enqueue_incident_pipeline(str(incident.id))
+    await enqueue_incident_pipeline(str(incident.id))
     return IncidentResponse.model_validate(incident)
 
 

@@ -80,6 +80,15 @@ class TestDeterministicFallbackClassifier:
         result = classifier.classify(payload)
         assert result.incident_type == "networking"
 
+    def test_infrastructure_classification(self, classifier: DeterministicFallbackClassifier):
+        payload = {
+            "title": "Node not ready with disk pressure",
+            "summary": "Worker host entered NotReady after filesystem usage exceeded threshold",
+            "severity": "high",
+        }
+        result = classifier.classify(payload)
+        assert result.incident_type == "infrastructure"
+
     def test_unknown_classification(self, classifier: DeterministicFallbackClassifier):
         payload = {
             "title": "Something happened",

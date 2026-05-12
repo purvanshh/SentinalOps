@@ -150,6 +150,22 @@ _RULES: list[_ClassificationRule] = [
         severity_boost_keywords=["partition", "unreachable", "down", "critical", "outage"],
         recommended_workflow="full_investigation",
     ),
+    _ClassificationRule(
+        incident_type="infrastructure",
+        keywords=[
+            "node", "host", "disk", "filesystem", "storage", "iops", "inode",
+            "instance", "vm", "kernel", "os", "systemd", "daemon", "pod evicted",
+            "eviction", "pressure", "not ready", "degraded host", "hardware",
+        ],
+        patterns=[
+            re.compile(r"(disk|filesystem|storage)\s*(full|usage|pressure|error)", re.IGNORECASE),
+            re.compile(r"(node|host|instance)\s*(not ready|unavailable|degraded|down)", re.IGNORECASE),
+            re.compile(r"(inode|iops)\s*(high|exceeded|critical)", re.IGNORECASE),
+            re.compile(r"(evict|pressure)\s*(memory|disk|node)?", re.IGNORECASE),
+        ],
+        severity_boost_keywords=["down", "critical", "full", "not ready", "evict"],
+        recommended_workflow="full_investigation",
+    ),
 ]
 
 

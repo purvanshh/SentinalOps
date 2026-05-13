@@ -1,42 +1,25 @@
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from agents.rootcause_agent.causal_graph import build_candidate_causes
-from agents.rootcause_agent.deductive_tester import assess_candidate
 from agents.rootcause_agent.evidence_builder import build_timed_events
 from agents.rootcause_agent.evidence_normalizer import normalize_agent_executions
-from agents.rootcause_agent.output_schema import (
-    HypothesisEvidence,
-    RootCauseAnalysis,
-    RootCauseHypothesis,
+from agents.rootcause_agent.output_schema import RootCauseAnalysis
+from agents.rootcause_agent.probabilistic_reasoner import (
+    build_probabilistic_root_cause_analysis,
 )
-from agents.rootcause_agent.scorer import score_assessment
 from db.models.incident import Incident
 from db.repositories.incident_repo import IncidentRepository
+from observability.metrics.definitions import (
+    observe_calibration_error,
+    observe_confidence_reliability,
+    observe_contradiction,
+    observe_escalation_appropriateness,
+    observe_hypothesis_stability,
+    observe_uncertainty_quality,
+)
 from orchestration.state.topology import load_topology
 from retrieval.hybrid_retrieval import HybridRetriever
-
-
-def _build_hypothesis_text(title: str, cause_service: str, affected_service: str) -> str:
-    return f"{title} in {cause_service} is the most likely cause of the impact observed on {affected_service}."
-
-
-def _build_causal_chain(candidate_title: str, cause_service: str, affected_service: str) -> str:
-    if cause_service == affected_service:
-        return f"{candidate_title} -> degraded {affected_service} behavior -> user-facing impact"
-    return f"{candidate_title} in {cause_service} -> downstream impact on {affected_service}"
-
-
-def _serialize_evidence(events) -> list[HypothesisEvidence]:
-    return [
-        HypothesisEvidence(
-            item_key=event.item_key,
-            description=event.summary,
-            source=event.source,
-        )
-        for event in events
-    ]
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def analyze_root_cause(
@@ -77,67 +60,44 @@ async def analyze_root_cause(
     )
 
     grounding = retriever.grounding_score(pattern_hints)
-    hypotheses: list[RootCauseHypothesis] = []
-    investigation_steps: list[str] = [
-        f"normalized {len(timed_events)} evidence events",
-        f"retrieved {len(pattern_hints)} pattern hints (grounding={grounding:.2f})",
-        f"generated {len(candidates)} candidate causes",
-    ]
-
-    for candidate in candidates:
-        assessment = assess_candidate(candidate, timed_events)
-        scores = score_assessment(assessment, incident.incident_type)
-        hypotheses.append(
-            RootCauseHypothesis(
-                hypothesis=_build_hypothesis_text(
-                    candidate.title,
-                    candidate.cause_service,
-                    candidate.affected_service,
-                ),
-                cause_service=candidate.cause_service,
-                affected_service=candidate.affected_service,
-                evidence_for=_serialize_evidence(assessment.evidence_for),
-                evidence_against=_serialize_evidence(assessment.evidence_against),
-                evidence_neutral=_serialize_evidence(assessment.evidence_neutral),
-                causal_chain=_build_causal_chain(
-                    candidate.title,
-                    candidate.cause_service,
-                    candidate.affected_service,
-                ),
-                counterfactual_test=(
-                    f"If {candidate.title.lower()} were absent, the correlated anomalies on "
-                    f"{candidate.affected_service} would be less likely to appear together."
-                ),
-                confidence=scores["confidence"],
-                temporal_score=scores["temporal_score"],
-                evidence_coverage=assessment.evidence_coverage,
-                pattern_match_score=candidate.pattern_match_score,
-                prior_probability=scores["prior_probability"],
-                counterfactual_power=assessment.counterfactual_power,
-            )
+    result = build_probabilistic_root_cause_analysis(
+        incident_type=incident.incident_type,
+        incident_severity=incident.severity,
+        service=service,
+        evidence_items=simplified_evidence,
+        timed_events=timed_events,
+        candidates=candidates,
+        grounding_score=grounding,
+    )
+    if result.uncertainty is not None:
+        observe_confidence_reliability("rootcause", result.uncertainty.confidence)
+        observe_calibration_error(
+            "rootcause",
+            abs((result.uncertainty.confidence_interval.upper - result.uncertainty.confidence)),
         )
-
-    hypotheses.sort(key=lambda item: item.confidence or 0.0, reverse=True)
-    strongest_index = 0 if hypotheses and (hypotheses[0].confidence or 0.0) >= 0.4 else None
-    status = "completed" if strongest_index is not None else "insufficient_evidence"
-    recommended_next_steps = (
-        ["Review deployment rollback options", "Inspect configuration drift on the implicated service"]
-        if strongest_index is not None
-        else ["Gather more logs", "Inspect network and deployment history around the alert window"]
-    )
-
-    result = RootCauseAnalysis(
-        status=status,
-        hypotheses=hypotheses,
-        strongest_hypothesis_index=strongest_index,
-        investigation_log="; ".join(investigation_steps),
-        recommended_next_steps=recommended_next_steps,
-    )
+        observe_uncertainty_quality(
+            "rootcause",
+            1.0 - result.uncertainty.uncertainty_score,
+        )
+        observe_hypothesis_stability("rootcause", result.uncertainty.hypothesis_stability)
+        if result.escalation is not None:
+            reasons = result.escalation.triggers or ["stable"]
+            for reason in reasons:
+                observe_escalation_appropriateness(
+                    "recommended" if result.escalation.recommended else "not_recommended",
+                    reason,
+                )
+        for contradiction in result.uncertainty.contradictions:
+            observe_contradiction(contradiction.category)
 
     await repository.update_root_cause(
         incident.id,
         root_cause_status=result.status,
-        root_cause_confidence=(hypotheses[0].confidence if hypotheses and strongest_index is not None else None),
+        root_cause_confidence=(
+            result.hypotheses[0].confidence
+            if result.hypotheses and result.strongest_hypothesis_index is not None
+            else None
+        ),
     )
     await repository.create_agent_execution(
         incident_id=incident.id,

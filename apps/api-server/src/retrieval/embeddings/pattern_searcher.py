@@ -1,4 +1,5 @@
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 from core.config import get_settings
@@ -21,6 +22,17 @@ class PatternSearcher:
         # Calling ensure_collection per-search adds an HTTP round-trip to every
         # pattern lookup and is unnecessary when the collection already exists.
 
+    def _build_provenance(self, score: float, source: str) -> dict:
+        return {
+            "similarity_score": round(score, 4),
+            "embedding_model": self.embedding_client.active_model,
+            "retrieved_at": datetime.now(UTC).isoformat(),
+            "source": source,
+            "grounding_status": "grounded" if score >= 0.70 else (
+                "weakly_grounded" if score >= 0.45 else "ungrounded"
+            ),
+        }
+
     def _fallback_search(self, text: str, limit: int = 3) -> list[dict]:
         query_vector = self.embedding_client.embed_text(text)
         scored_patterns: list[tuple[float, dict]] = []
@@ -40,6 +52,7 @@ class PatternSearcher:
             {
                 **pattern,
                 "match_score": round(score, 4),
+                "provenance": self._build_provenance(score, "pattern_fallback"),
             }
             for score, pattern in scored_patterns[:limit]
         ]
@@ -52,6 +65,9 @@ class PatternSearcher:
                 {
                     **(item.get("payload") or {}),
                     "match_score": round(item.get("score", 0.0), 4),
+                    "provenance": self._build_provenance(
+                        item.get("score", 0.0), "qdrant_pattern_collection"
+                    ),
                 }
                 for item in results
             ]

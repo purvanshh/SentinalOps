@@ -12,7 +12,10 @@ from db.repositories.incident_repo import IncidentRepository
 from db.session import SessionLocal
 from memory.short_term.incident_state import IncidentStateStore
 from observability.logging import bind_incident_context
-from orchestration.checkpointing.checkpoint import WorkflowCheckpointStore, build_langgraph_checkpointer
+from orchestration.checkpointing.checkpoint import (
+    WorkflowCheckpointStore,
+    build_langgraph_checkpointer,
+)
 from orchestration.interrupts.commands import ResumeCommand
 from orchestration.nodes.approval_node import approval_node
 from orchestration.nodes.deployment_node import deployment_node
@@ -79,17 +82,32 @@ class LangGraphWorkflow:
         workflow = StateGraph(IncidentState)
         workflow.add_node("router", self._checkpointed_node("router", router_node))
         workflow.add_node("triage", self._checkpointed_node("triage", triage_node))
-        workflow.add_node("dispatch_evidence", self._checkpointed_node("dispatch_evidence", dispatch_evidence_node))
-        workflow.add_node("approval_interrupt", self._checkpointed_node("approval_interrupt", approval_interrupt_node))
+        workflow.add_node(
+            "dispatch_evidence",
+            self._checkpointed_node("dispatch_evidence", dispatch_evidence_node),
+        )
+        workflow.add_node(
+            "approval_interrupt",
+            self._checkpointed_node("approval_interrupt", approval_interrupt_node),
+        )
         workflow.add_node("metrics", self._checkpointed_node("metrics", metrics_node))
         workflow.add_node("logs", self._checkpointed_node("logs", logs_node))
         workflow.add_node("deployment", self._checkpointed_node("deployment", deployment_node))
-        workflow.add_node("root_cause_analysis", self._checkpointed_node("root_cause_analysis", rootcause_node))
+        workflow.add_node(
+            "root_cause_analysis",
+            self._checkpointed_node("root_cause_analysis", rootcause_node),
+        )
         workflow.add_node("risk", self._checkpointed_node("risk", risk_node))
         workflow.add_node("remediation", self._checkpointed_node("remediation", remediation_node))
         workflow.add_node("approval_gate", self._checkpointed_node("approval_gate", approval_node))
-        workflow.add_node("execution_actions", self._checkpointed_node("execution_actions", execution_node))
-        workflow.add_node("postmortem_report", self._checkpointed_node("postmortem_report", postmortem_node))
+        workflow.add_node(
+            "execution_actions",
+            self._checkpointed_node("execution_actions", execution_node),
+        )
+        workflow.add_node(
+            "postmortem_report",
+            self._checkpointed_node("postmortem_report", postmortem_node),
+        )
 
         workflow.add_edge(START, "router")
         workflow.add_conditional_edges(
@@ -100,7 +118,9 @@ class LangGraphWorkflow:
                 "triage": "triage",
             },
         )
-        workflow.add_conditional_edges("dispatch_evidence", fan_out_evidence, ["metrics", "logs", "deployment"])
+        workflow.add_conditional_edges(
+            "dispatch_evidence", fan_out_evidence, ["metrics", "logs", "deployment"]
+        )
         workflow.add_edge("metrics", "root_cause_analysis")
         workflow.add_edge("logs", "root_cause_analysis")
         workflow.add_edge("deployment", "root_cause_analysis")
@@ -145,7 +165,9 @@ class LangGraphWorkflow:
             except Exception as exc:
                 failure_state = dict(state)
                 failure_state["failure_reason"] = str(exc)
-                failure_state["last_successful_step"] = state.get("last_successful_step", "bootstrap")
+                failure_state["last_successful_step"] = state.get(
+                    "last_successful_step", "bootstrap"
+                )
                 failure_state["graph_status"] = "failed"
                 failure_state["errors"] = append_unique(
                     list(state.get("errors", [])),
@@ -232,7 +254,8 @@ class LangGraphWorkflow:
 
         if current.get("status") == "awaiting_approval":
             return current
-        if current.get("graph_status") in {"completed", "completed_degraded", "failed", "observe_only"}:
+        terminal = {"completed", "completed_degraded", "failed", "observe_only"}
+        if current.get("graph_status") in terminal:
             return current
 
         await apply("dispatch_evidence", dispatch_evidence_node)
@@ -252,9 +275,12 @@ class LangGraphWorkflow:
         return current
 
     async def ainvoke(self, initial_state: dict) -> dict:
-        recovered = await self._recover_state(initial_state["incident_id"], initial_state.get("thread_id"))
+        recovered = await self._recover_state(
+            initial_state["incident_id"], initial_state.get("thread_id")
+        )
+        terminal_statuses = {"completed", "completed_degraded", "observe_only", "failed"}
         if recovered:
-            if recovered.get("graph_status") in {"completed", "completed_degraded", "observe_only", "failed"}:
+            if recovered.get("graph_status") in terminal_statuses:
                 return recovered
             if recovered.get("status") == "awaiting_approval":
                 return recovered
@@ -288,7 +314,9 @@ class LangGraphWorkflow:
             "degraded_mode_activation": {},
         }
 
-        bind_incident_context(incident_id=state["incident_id"], thread_id=thread_id, agent="workflow")
+        bind_incident_context(
+            incident_id=state["incident_id"], thread_id=thread_id, agent="workflow"
+        )
 
         # Persist bootstrap state to both Redis and PostgreSQL before any LLM call.
         # The PostgreSQL checkpoint is the durable recovery anchor — it survives
@@ -368,7 +396,9 @@ class LangGraphWorkflow:
                 thread_id=thread_id,
                 incident_id=state["incident_id"],
                 node_name="completed",
-                status=result.get("status", "completed") if isinstance(result, dict) else "completed",
+                status=(
+                    result.get("status", "completed") if isinstance(result, dict) else "completed"
+                ),
                 state=dict(result) if isinstance(result, dict) else {},
             )
         except Exception as exc:

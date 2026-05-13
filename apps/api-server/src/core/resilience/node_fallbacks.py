@@ -13,7 +13,8 @@ from typing import Any
 def build_metrics_fallback(*, incident_title: str, error: str) -> dict[str, Any]:
     return {
         "summary": (
-            "Metrics summary generated in degraded mode. Live telemetry collection may still have run, "
+            "Metrics summary generated in degraded mode. "
+            "Live telemetry collection may still have run, "
             "but LLM synthesis failed."
         ),
         "anomalies": [],
@@ -51,8 +52,9 @@ def build_root_cause_fallback(*, error: str) -> dict[str, Any]:
         "hypotheses": [],
         "strongest_hypothesis_index": None,
         "investigation_log": (
-            "Root cause analysis ran in degraded mode. Deterministic investigation could not form a "
-            f"stable hypothesis because upstream summaries were degraded or failed. Error: {error}"
+            "Root cause analysis ran in degraded mode. "
+            "Deterministic investigation could not form a stable hypothesis "
+            f"because upstream summaries were degraded or failed. Error: {error}"
         ),
         "recommended_next_steps": [
             "Review raw metrics and logs",
@@ -76,7 +78,9 @@ def build_risk_fallback(*, error: str) -> dict[str, Any]:
             "users_at_risk": {
                 "mean": 0,
                 "p90": 0,
-                "description": "Risk assessment degraded; blast radius could not be estimated reliably.",
+                "description": (
+                    "Risk assessment degraded; blast radius could not be estimated reliably."
+                ),
             },
         },
         "remediation_risks": [],
@@ -88,8 +92,8 @@ def build_risk_fallback(*, error: str) -> dict[str, Any]:
 def build_remediation_fallback(*, operating_mode: str, error: str) -> dict[str, Any]:
     return {
         "summary": (
-            "Remediation planning degraded. Autonomous execution is disabled until an operator reviews "
-            "the incident."
+            "Remediation planning degraded. "
+            "Autonomous execution is disabled until an operator reviews the incident."
         ),
         "steps": [],
         "verify_after_execution": False,
@@ -99,7 +103,9 @@ def build_remediation_fallback(*, operating_mode: str, error: str) -> dict[str, 
     }
 
 
-def build_postmortem_fallback(*, incident_id: str, operating_mode: str, error: str) -> dict[str, Any]:
+def build_postmortem_fallback(
+    *, incident_id: str, operating_mode: str, error: str
+) -> dict[str, Any]:
     return {
         "title": f"Degraded postmortem for incident {incident_id}",
         "content": (
@@ -108,7 +114,8 @@ def build_postmortem_fallback(*, incident_id: str, operating_mode: str, error: s
             f"- Operating mode: `{operating_mode}`\n"
             "- Result: workflow completed in degraded mode\n"
             f"- Postmortem synthesis failure: {error}\n"
-            "- Recommendation: operator should replace this draft with a manually reviewed postmortem.\n"
+            "- Recommendation: operator should replace this draft"
+            " with a manually reviewed postmortem.\n"
         ),
         "degraded": True,
         "failure_reason": error,

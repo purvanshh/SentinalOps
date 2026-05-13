@@ -8,16 +8,13 @@ Validates:
 - Schema validity
 - Deterministic loading (reproducibility)
 """
-import json
-import pytest
-from pathlib import Path
 
+import pytest
 from evaluation.benchmark_suite import (
-    BenchmarkIncident,
-    BenchmarkSuite,
+    OPERATOR_ACTIONS,
     REMEDIATION_CLASSES,
     RISK_TIERS,
-    OPERATOR_ACTIONS,
+    BenchmarkSuite,
     load_benchmark_suite,
     validate_suite,
 )
@@ -33,9 +30,9 @@ class TestBenchmarkSuiteLoading:
         assert suite is not None
 
     def test_suite_has_at_least_100_incidents(self, suite: BenchmarkSuite) -> None:
-        assert suite.total_incidents >= 100, (
-            f"Expected >= 100 incidents, got {suite.total_incidents}"
-        )
+        assert (
+            suite.total_incidents >= 100
+        ), f"Expected >= 100 incidents, got {suite.total_incidents}"
 
     def test_suite_incident_count_matches_metadata(self, suite: BenchmarkSuite) -> None:
         assert suite.total_incidents == len(suite.incidents)
@@ -76,33 +73,29 @@ class TestBenchmarkIncidentSchema:
 
     def test_all_incidents_have_valid_remediation_class(self, suite: BenchmarkSuite) -> None:
         for inc in suite.incidents:
-            assert inc.golden_remediation_class in REMEDIATION_CLASSES, (
-                f"{inc.id}: invalid remediation class '{inc.golden_remediation_class}'"
-            )
+            assert (
+                inc.golden_remediation_class in REMEDIATION_CLASSES
+            ), f"{inc.id}: invalid remediation class '{inc.golden_remediation_class}'"
 
     def test_all_incidents_have_valid_risk_tier(self, suite: BenchmarkSuite) -> None:
         for inc in suite.incidents:
-            assert inc.risk_tier in RISK_TIERS, (
-                f"{inc.id}: invalid risk tier '{inc.risk_tier}'"
-            )
+            assert inc.risk_tier in RISK_TIERS, f"{inc.id}: invalid risk tier '{inc.risk_tier}'"
 
     def test_all_incidents_have_valid_operator_action(self, suite: BenchmarkSuite) -> None:
         for inc in suite.incidents:
-            assert inc.golden_operator_action in OPERATOR_ACTIONS, (
-                f"{inc.id}: invalid operator action '{inc.golden_operator_action}'"
-            )
+            assert (
+                inc.golden_operator_action in OPERATOR_ACTIONS
+            ), f"{inc.id}: invalid operator action '{inc.golden_operator_action}'"
 
     def test_all_incidents_have_confidence_range(self, suite: BenchmarkSuite) -> None:
         for inc in suite.incidents:
-            assert 0.0 <= inc.confidence_min <= inc.confidence_max <= 1.0, (
-                f"{inc.id}: invalid confidence range {inc.expected_confidence_range}"
-            )
+            assert (
+                0.0 <= inc.confidence_min <= inc.confidence_max <= 1.0
+            ), f"{inc.id}: invalid confidence range {inc.expected_confidence_range}"
 
     def test_all_incidents_have_non_negative_blast_radius(self, suite: BenchmarkSuite) -> None:
         for inc in suite.incidents:
-            assert inc.golden_expected_blast_radius_mean >= 0, (
-                f"{inc.id}: negative blast radius"
-            )
+            assert inc.golden_expected_blast_radius_mean >= 0, f"{inc.id}: negative blast radius"
 
     def test_all_incidents_have_alert_payload(self, suite: BenchmarkSuite) -> None:
         for inc in suite.incidents:
@@ -113,11 +106,20 @@ class TestBenchmarkIncidentSchema:
 
 class TestBenchmarkCoverage:
     REQUIRED_CATEGORIES = {
-        "latency_spike", "deployment_regression", "memory_leak",
-        "cpu_saturation", "redis_outage", "postgresql_failure",
-        "networking_failure", "cascading_failure", "noisy_alert",
-        "false_positive", "disk_exhaustion", "kubernetes_pod_failure",
-        "dns_failure", "intermittent_outage",
+        "latency_spike",
+        "deployment_regression",
+        "memory_leak",
+        "cpu_saturation",
+        "redis_outage",
+        "postgresql_failure",
+        "networking_failure",
+        "cascading_failure",
+        "noisy_alert",
+        "false_positive",
+        "disk_exhaustion",
+        "kubernetes_pod_failure",
+        "dns_failure",
+        "intermittent_outage",
     }
 
     def test_all_required_categories_present(self, suite: BenchmarkSuite) -> None:
@@ -127,21 +129,17 @@ class TestBenchmarkCoverage:
 
     def test_suite_has_dangerous_incidents(self, suite: BenchmarkSuite) -> None:
         dangerous = suite.dangerous_incidents()
-        assert len(dangerous) >= 5, (
-            f"Expected >= 5 DANGEROUS incidents, got {len(dangerous)}"
-        )
+        assert len(dangerous) >= 5, f"Expected >= 5 DANGEROUS incidents, got {len(dangerous)}"
 
     def test_suite_has_hallucinated_incidents(self, suite: BenchmarkSuite) -> None:
         hallucinated = suite.hallucinated_incidents()
-        assert len(hallucinated) >= 2, (
-            f"Expected >= 2 HALLUCINATED incidents, got {len(hallucinated)}"
-        )
+        assert (
+            len(hallucinated) >= 2
+        ), f"Expected >= 2 HALLUCINATED incidents, got {len(hallucinated)}"
 
     def test_suite_has_false_positives(self, suite: BenchmarkSuite) -> None:
         fp = suite.false_positives()
-        assert len(fp) >= 5, (
-            f"Expected >= 5 false positive incidents, got {len(fp)}"
-        )
+        assert len(fp) >= 5, f"Expected >= 5 false positive incidents, got {len(fp)}"
 
     def test_suite_has_escalation_incidents(self, suite: BenchmarkSuite) -> None:
         escalations = suite.requires_escalation_incidents()
@@ -154,9 +152,9 @@ class TestBenchmarkCoverage:
     def test_each_category_has_multiple_incidents(self, suite: BenchmarkSuite) -> None:
         for category in self.REQUIRED_CATEGORIES:
             incidents = suite.by_category(category)
-            assert len(incidents) >= 4, (
-                f"Category '{category}' has only {len(incidents)} incidents (need >= 4)"
-            )
+            assert (
+                len(incidents) >= 4
+            ), f"Category '{category}' has only {len(incidents)} incidents (need >= 4)"
 
     def test_runner_format_compatibility(self, suite: BenchmarkSuite) -> None:
         for inc in suite.incidents[:5]:

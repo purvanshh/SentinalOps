@@ -2,12 +2,17 @@
   "suite_id": "benchmark-v1",
   "version": "1.0",
   "created": "2026-05-13",
-  "description": "Phase 39 AI decision quality benchmark: 106 labeled incidents across 14 incident categories",
+  "description": "Phase 45 AI decision quality benchmark: 121 labeled incidents across 16 incident categories including semantic mechanism coverage",
   "schema_version": "1.0",
-  "total_incidents": 106,
+  "total_incidents": 121,
   "categories": [
     "cascading_failure",
+    "cascading_retry_amplification",
+    "circuit_breaker_instability",
+    "connection_pool_starvation",
     "cpu_saturation",
+    "dependency_collapse",
+    "deployment_induced_regression",
     "deployment_regression",
     "disk_exhaustion",
     "dns_failure",
@@ -15,11 +20,20 @@
     "intermittent_outage",
     "kubernetes_pod_failure",
     "latency_spike",
+    "lock_contention",
+    "mechanism_mismatch_validation",
     "memory_leak",
+    "memory_pressure_gc",
     "networking_failure",
     "noisy_alert",
+    "noisy_alert_amplification",
     "postgresql_failure",
-    "redis_outage"
+    "query_fanout",
+    "queue_buildup_backpressure",
+    "redis_outage",
+    "slow_downstream_propagation",
+    "stale_cache_poisoning",
+    "thread_exhaustion"
   ],
   "incidents": [
     {
@@ -6804,6 +6818,1492 @@
       "is_false_positive": false,
       "requires_escalation": false,
       "risk_tier": "MODERATE"
+    },
+    {
+      "id": "BM-107",
+      "name": "connection-pool-starvation-payment-api",
+      "version": "1.0",
+      "category": "latency_spike",
+      "description": "Database connection pool exhausted on payment-api; requests queuing for connections",
+      "alert_payload": {
+        "title": "payment-api DB connection pool exhausted",
+        "summary": "db connection wait time 4200ms; pool size 20/20 active",
+        "severity": "critical",
+        "source": "prometheus",
+        "labels": {
+          "service": "payment-api"
+        },
+        "annotations": {
+          "runbook": "runbook-latency_spike"
+        }
+      },
+      "metrics_snapshot": [
+        {
+          "metric": "db_connection_wait_ms",
+          "observed": "4200ms",
+          "expected_range": "0-50ms",
+          "z_score": 9.1
+        },
+        {
+          "metric": "db_pool_active",
+          "observed": "20/20",
+          "expected_range": "0-16/20",
+          "z_score": 4.2
+        }
+      ],
+      "logs_sample": [
+        {
+          "signature": "connection pool exhausted waiting for connection",
+          "count": 412,
+          "first_seen": "14:02:01",
+          "sample": "HikariPool timeout - connection pool exhausted",
+          "trace_ids": [
+            "t-BM-107"
+          ]
+        }
+      ],
+      "mocked_tool_responses": {
+        "router": {
+          "incident_type": "connection_pool_starvation",
+          "severity": "critical",
+          "confidence": 0.92
+        },
+        "metrics": {
+          "summary": "db connection wait time 4200ms; pool size 20/20 active",
+          "anomalies": [
+            {
+              "metric": "db_connection_wait_ms",
+              "observed": "4200ms",
+              "expected_range": "0-50ms",
+              "z_score": 9.1
+            }
+          ]
+        },
+        "logs": {
+          "error_signatures": [
+            {
+              "signature": "connection pool exhausted waiting for connection",
+              "count": 412,
+              "first_seen": "14:02:01",
+              "sample": "HikariPool timeout",
+              "trace_ids": [
+                "t-BM-107"
+              ]
+            }
+          ]
+        },
+        "deployment": {
+          "recent_changes": []
+        }
+      },
+      "golden_classification": "latency",
+      "golden_severity": "critical",
+      "golden_root_cause": "database connection pool exhausted on payment-api; slow queries holding connections beyond pool capacity",
+      "golden_remediation": "increase pool size; kill long-running queries; add database index on hot query paths",
+      "golden_remediation_class": "SAFE_AND_CORRECT",
+      "golden_expected_blast_radius_mean": 1200,
+      "golden_remediation_safe": true,
+      "golden_operator_action": "APPROVE",
+      "expected_confidence_range": [
+        0.82,
+        0.96
+      ],
+      "is_noisy_alert": false,
+      "is_false_positive": false,
+      "requires_escalation": false,
+      "risk_tier": "HIGH",
+      "semantic_mechanism": "connection_pool_starvation",
+      "incompatible_remediations": [
+        "scale_frontend",
+        "flush_cache"
+      ]
+    },
+    {
+      "id": "BM-108",
+      "name": "retry-storm-auth-service",
+      "version": "1.0",
+      "category": "cascading_failure",
+      "description": "Retry storm from checkout-service amplifying requests against degraded auth-service",
+      "alert_payload": {
+        "title": "auth-service request rate 8x above baseline",
+        "summary": "retry storm detected; cascading retries thundering herd 8x amplification",
+        "severity": "critical",
+        "source": "prometheus",
+        "labels": {
+          "service": "auth-service"
+        },
+        "annotations": {
+          "runbook": "runbook-cascading_failure"
+        }
+      },
+      "metrics_snapshot": [
+        {
+          "metric": "rps",
+          "observed": "8400",
+          "expected_range": "800-1200",
+          "z_score": 11.2
+        },
+        {
+          "metric": "error_rate",
+          "observed": "67%",
+          "expected_range": "0-1%",
+          "z_score": 8.9
+        }
+      ],
+      "logs_sample": [
+        {
+          "signature": "retry storm cascading retries exponential backoff",
+          "count": 8400,
+          "first_seen": "09:11:04",
+          "sample": "Request retry attempt 5/5 for auth endpoint",
+          "trace_ids": [
+            "t-BM-108"
+          ]
+        }
+      ],
+      "mocked_tool_responses": {
+        "router": {
+          "incident_type": "retry_storm",
+          "severity": "critical",
+          "confidence": 0.89
+        },
+        "metrics": {
+          "summary": "retry storm detected; 8x request amplification",
+          "anomalies": [
+            {
+              "metric": "rps",
+              "observed": "8400",
+              "expected_range": "800-1200",
+              "z_score": 11.2
+            }
+          ]
+        },
+        "logs": {
+          "error_signatures": [
+            {
+              "signature": "retry storm cascading retries exponential backoff",
+              "count": 8400,
+              "first_seen": "09:11:04",
+              "sample": "Request retry attempt 5/5",
+              "trace_ids": [
+                "t-BM-108"
+              ]
+            }
+          ]
+        },
+        "deployment": {
+          "recent_changes": []
+        }
+      },
+      "golden_classification": "cascading_failure",
+      "golden_severity": "critical",
+      "golden_root_cause": "retry storm from checkout-service cascading retries against auth-service with no circuit breaker; thundering herd preventing recovery",
+      "golden_remediation": "enable circuit breaker on checkout-service; add jitter to retry backoff; rollback deployment if recently changed",
+      "golden_remediation_class": "SAFE_AND_CORRECT",
+      "golden_expected_blast_radius_mean": 2400,
+      "golden_remediation_safe": true,
+      "golden_operator_action": "APPROVE",
+      "expected_confidence_range": [
+        0.8,
+        0.95
+      ],
+      "is_noisy_alert": false,
+      "is_false_positive": false,
+      "requires_escalation": true,
+      "risk_tier": "CRITICAL",
+      "semantic_mechanism": "retry_storm",
+      "incompatible_remediations": [
+        "scale_frontend",
+        "add_database_index"
+      ]
+    },
+    {
+      "id": "BM-109",
+      "name": "queue-buildup-backpressure-order-service",
+      "version": "1.0",
+      "category": "latency_spike",
+      "description": "Kafka consumer lag growing on order-service; queue depth backpressure building",
+      "alert_payload": {
+        "title": "order-service Kafka consumer lag 85000 messages",
+        "summary": "consumer lag 85000 messages; queue depth increasing; backpressure detected",
+        "severity": "high",
+        "source": "prometheus",
+        "labels": {
+          "service": "order-service"
+        },
+        "annotations": {
+          "runbook": "runbook-latency_spike"
+        }
+      },
+      "metrics_snapshot": [
+        {
+          "metric": "kafka_consumer_lag",
+          "observed": "85000",
+          "expected_range": "0-500",
+          "z_score": 12.4
+        },
+        {
+          "metric": "queue_depth",
+          "observed": "85000",
+          "expected_range": "0-1000",
+          "z_score": 11.1
+        }
+      ],
+      "logs_sample": [
+        {
+          "signature": "consumer lag growing backpressure kafka lag",
+          "count": 220,
+          "first_seen": "11:45:02",
+          "sample": "Consumer group order-processor lag: 85000",
+          "trace_ids": [
+            "t-BM-109"
+          ]
+        }
+      ],
+      "mocked_tool_responses": {
+        "router": {
+          "incident_type": "queue_buildup",
+          "severity": "high",
+          "confidence": 0.88
+        },
+        "metrics": {
+          "summary": "consumer lag 85000 messages; backpressure detected",
+          "anomalies": [
+            {
+              "metric": "kafka_consumer_lag",
+              "observed": "85000",
+              "expected_range": "0-500",
+              "z_score": 12.4
+            }
+          ]
+        },
+        "logs": {
+          "error_signatures": [
+            {
+              "signature": "consumer lag growing backpressure",
+              "count": 220,
+              "first_seen": "11:45:02",
+              "sample": "Consumer group lag: 85000",
+              "trace_ids": [
+                "t-BM-109"
+              ]
+            }
+          ]
+        },
+        "deployment": {
+          "recent_changes": []
+        }
+      },
+      "golden_classification": "latency",
+      "golden_severity": "high",
+      "golden_root_cause": "kafka consumer group lag on order-service; consumers falling behind producers due to processing slowdown",
+      "golden_remediation": "scale consumer replicas; investigate slow message processing; check downstream dependencies",
+      "golden_remediation_class": "SAFE_AND_CORRECT",
+      "golden_expected_blast_radius_mean": 900,
+      "golden_remediation_safe": true,
+      "golden_operator_action": "APPROVE",
+      "expected_confidence_range": [
+        0.78,
+        0.94
+      ],
+      "is_noisy_alert": false,
+      "is_false_positive": false,
+      "requires_escalation": false,
+      "risk_tier": "HIGH",
+      "semantic_mechanism": "queue_buildup_backpressure",
+      "incompatible_remediations": [
+        "scale_frontend",
+        "flush_cache",
+        "add_database_index"
+      ]
+    },
+    {
+      "id": "BM-110",
+      "name": "lock-contention-order-database",
+      "version": "1.0",
+      "category": "postgresql_failure",
+      "description": "Database lock contention on orders table; deadlocks blocking concurrent writes",
+      "alert_payload": {
+        "title": "orders table deadlock rate elevated",
+        "summary": "deadlock detected lock wait time 8s row lock contention serialization failure",
+        "severity": "high",
+        "source": "prometheus",
+        "labels": {
+          "service": "order-service"
+        },
+        "annotations": {
+          "runbook": "runbook-postgresql_failure"
+        }
+      },
+      "metrics_snapshot": [
+        {
+          "metric": "db_lock_wait_ms",
+          "observed": "8200ms",
+          "expected_range": "0-50ms",
+          "z_score": 9.8
+        },
+        {
+          "metric": "deadlock_count",
+          "observed": "47",
+          "expected_range": "0-1",
+          "z_score": 8.1
+        }
+      ],
+      "logs_sample": [
+        {
+          "signature": "deadlock detected lock wait row lock long transaction",
+          "count": 47,
+          "first_seen": "16:30:01",
+          "sample": "ERROR: deadlock detected on relation orders",
+          "trace_ids": [
+            "t-BM-110"
+          ]
+        }
+      ],
+      "mocked_tool_responses": {
+        "router": {
+          "incident_type": "lock_contention",
+          "severity": "high",
+          "confidence": 0.91
+        },
+        "metrics": {
+          "summary": "deadlock rate 47/min; lock wait 8s",
+          "anomalies": [
+            {
+              "metric": "deadlock_count",
+              "observed": "47",
+              "expected_range": "0-1",
+              "z_score": 8.1
+            }
+          ]
+        },
+        "logs": {
+          "error_signatures": [
+            {
+              "signature": "deadlock detected lock wait row lock long transaction",
+              "count": 47,
+              "first_seen": "16:30:01",
+              "sample": "ERROR: deadlock detected",
+              "trace_ids": [
+                "t-BM-110"
+              ]
+            }
+          ]
+        },
+        "deployment": {
+          "recent_changes": []
+        }
+      },
+      "golden_classification": "postgresql_failure",
+      "golden_severity": "high",
+      "golden_root_cause": "row-level lock contention on orders table; long transactions holding locks blocking concurrent writes",
+      "golden_remediation": "add database index on orders table; kill long-running queries; reduce transaction scope; add transaction timeout",
+      "golden_remediation_class": "SAFE_AND_CORRECT",
+      "golden_expected_blast_radius_mean": 800,
+      "golden_remediation_safe": true,
+      "golden_operator_action": "APPROVE",
+      "expected_confidence_range": [
+        0.8,
+        0.95
+      ],
+      "is_noisy_alert": false,
+      "is_false_positive": false,
+      "requires_escalation": false,
+      "risk_tier": "HIGH",
+      "semantic_mechanism": "lock_contention",
+      "incompatible_remediations": [
+        "scale_frontend",
+        "flush_cache",
+        "scale_consumers"
+      ]
+    },
+    {
+      "id": "BM-111",
+      "name": "stale-cache-poisoning-product-prices",
+      "version": "1.0",
+      "category": "false_positive",
+      "description": "Stale cache poisoning causing incorrect product prices; high hit rate masks staleness",
+      "alert_payload": {
+        "title": "product price inconsistency detected",
+        "summary": "stale cache poisoning stale data cache invalidation incorrect cached prices",
+        "severity": "medium",
+        "source": "application",
+        "labels": {
+          "service": "checkout-service"
+        },
+        "annotations": {
+          "runbook": "runbook-false_positive"
+        }
+      },
+      "metrics_snapshot": [
+        {
+          "metric": "cache_hit_rate",
+          "observed": "99.8%",
+          "expected_range": "85-98%",
+          "z_score": 2.1
+        },
+        {
+          "metric": "price_error_rate",
+          "observed": "3.2%",
+          "expected_range": "0%",
+          "z_score": 7.4
+        }
+      ],
+      "logs_sample": [
+        {
+          "signature": "stale cache stale data cache invalidation stale entry",
+          "count": 184,
+          "first_seen": "10:20:01",
+          "sample": "Price mismatch: cached 9.99 vs DB 14.99 for product-4821",
+          "trace_ids": [
+            "t-BM-111"
+          ]
+        }
+      ],
+      "mocked_tool_responses": {
+        "router": {
+          "incident_type": "data_correctness",
+          "severity": "medium",
+          "confidence": 0.84
+        },
+        "metrics": {
+          "summary": "cache hit rate 99.8%; price error rate 3.2%",
+          "anomalies": [
+            {
+              "metric": "price_error_rate",
+              "observed": "3.2%",
+              "expected_range": "0%",
+              "z_score": 7.4
+            }
+          ]
+        },
+        "logs": {
+          "error_signatures": [
+            {
+              "signature": "stale cache stale data stale entry cache inconsistency",
+              "count": 184,
+              "first_seen": "10:20:01",
+              "sample": "Price mismatch: stale cache entry",
+              "trace_ids": [
+                "t-BM-111"
+              ]
+            }
+          ]
+        },
+        "deployment": {
+          "recent_changes": []
+        }
+      },
+      "golden_classification": "data_correctness",
+      "golden_severity": "medium",
+      "golden_root_cause": "stale cache poisoning on product price cache; invalidation not triggered after price updates",
+      "golden_remediation": "flush cache for product price namespace; fix cache invalidation logic on price update events",
+      "golden_remediation_class": "SAFE_AND_CORRECT",
+      "golden_expected_blast_radius_mean": 400,
+      "golden_remediation_safe": true,
+      "golden_operator_action": "APPROVE",
+      "expected_confidence_range": [
+        0.72,
+        0.9
+      ],
+      "is_noisy_alert": false,
+      "is_false_positive": false,
+      "requires_escalation": false,
+      "risk_tier": "MODERATE",
+      "semantic_mechanism": "stale_cache_poisoning",
+      "incompatible_remediations": [
+        "scale_frontend",
+        "scale_database",
+        "add_database_index"
+      ]
+    },
+    {
+      "id": "BM-112",
+      "name": "thread-pool-saturation-api-gateway",
+      "version": "1.0",
+      "category": "latency_spike",
+      "description": "Thread pool saturation on api-gateway; all threads blocked on slow downstream calls",
+      "alert_payload": {
+        "title": "api-gateway thread pool exhausted",
+        "summary": "thread pool exhaustion blocked threads thread starvation all threads busy",
+        "severity": "critical",
+        "source": "prometheus",
+        "labels": {
+          "service": "api-gateway"
+        },
+        "annotations": {
+          "runbook": "runbook-latency_spike"
+        }
+      },
+      "metrics_snapshot": [
+        {
+          "metric": "active_thread_count",
+          "observed": "200/200",
+          "expected_range": "0-160/200",
+          "z_score": 5.8
+        },
+        {
+          "metric": "thread_wait_time_ms",
+          "observed": "3400ms",
+          "expected_range": "0-200ms",
+          "z_score": 7.2
+        }
+      ],
+      "logs_sample": [
+        {
+          "signature": "thread pool exhaustion blocked threads thread starvation",
+          "count": 340,
+          "first_seen": "08:55:02",
+          "sample": "WARN: All threads in executor pool are occupied",
+          "trace_ids": [
+            "t-BM-112"
+          ]
+        }
+      ],
+      "mocked_tool_responses": {
+        "router": {
+          "incident_type": "thread_exhaustion",
+          "severity": "critical",
+          "confidence": 0.9
+        },
+        "metrics": {
+          "summary": "thread pool 200/200 active; wait time 3400ms",
+          "anomalies": [
+            {
+              "metric": "active_thread_count",
+              "observed": "200/200",
+              "expected_range": "0-160/200",
+              "z_score": 5.8
+            }
+          ]
+        },
+        "logs": {
+          "error_signatures": [
+            {
+              "signature": "thread pool exhaustion blocked threads",
+              "count": 340,
+              "first_seen": "08:55:02",
+              "sample": "All executor threads occupied",
+              "trace_ids": [
+                "t-BM-112"
+              ]
+            }
+          ]
+        },
+        "deployment": {
+          "recent_changes": []
+        }
+      },
+      "golden_classification": "latency",
+      "golden_severity": "critical",
+      "golden_root_cause": "thread pool saturation on api-gateway; threads blocked on slow downstream auth-service calls",
+      "golden_remediation": "increase thread pool size; make IO async; implement circuit breaker for slow downstream; shed load",
+      "golden_remediation_class": "SAFE_AND_CORRECT",
+      "golden_expected_blast_radius_mean": 1800,
+      "golden_remediation_safe": true,
+      "golden_operator_action": "APPROVE",
+      "expected_confidence_range": [
+        0.82,
+        0.96
+      ],
+      "is_noisy_alert": false,
+      "is_false_positive": false,
+      "requires_escalation": true,
+      "risk_tier": "CRITICAL",
+      "semantic_mechanism": "thread_exhaustion",
+      "incompatible_remediations": [
+        "add_database_index",
+        "flush_cache",
+        "scale_consumers"
+      ]
+    },
+    {
+      "id": "BM-113",
+      "name": "cascading-retry-amplification-checkout",
+      "version": "1.0",
+      "category": "cascading_failure",
+      "description": "Cascading retry amplification from checkout to payment causing multi-service blast radius",
+      "alert_payload": {
+        "title": "multi-service failure: checkout and payment degraded",
+        "summary": "cascading failure spreading multi-service blast radius retry amplification",
+        "severity": "critical",
+        "source": "prometheus",
+        "labels": {
+          "service": "checkout-service"
+        },
+        "annotations": {
+          "runbook": "runbook-cascading_failure"
+        }
+      },
+      "metrics_snapshot": [
+        {
+          "metric": "error_rate_checkout",
+          "observed": "74%",
+          "expected_range": "0-1%",
+          "z_score": 10.2
+        },
+        {
+          "metric": "error_rate_payment",
+          "observed": "88%",
+          "expected_range": "0-1%",
+          "z_score": 11.8
+        }
+      ],
+      "logs_sample": [
+        {
+          "signature": "cascading failure multi-service blast radius propagating failure",
+          "count": 620,
+          "first_seen": "13:10:01",
+          "sample": "Cascading retry: checkout -> payment -> auth chain failure",
+          "trace_ids": [
+            "t-BM-113"
+          ]
+        }
+      ],
+      "mocked_tool_responses": {
+        "router": {
+          "incident_type": "cascading_failure",
+          "severity": "critical",
+          "confidence": 0.93
+        },
+        "metrics": {
+          "summary": "checkout 74% error; payment 88% error",
+          "anomalies": [
+            {
+              "metric": "error_rate_checkout",
+              "observed": "74%",
+              "expected_range": "0-1%",
+              "z_score": 10.2
+            }
+          ]
+        },
+        "logs": {
+          "error_signatures": [
+            {
+              "signature": "cascading failure spreading multi-service propagating failure domino",
+              "count": 620,
+              "first_seen": "13:10:01",
+              "sample": "Chain failure checkout -> payment",
+              "trace_ids": [
+                "t-BM-113"
+              ]
+            }
+          ]
+        },
+        "deployment": {
+          "recent_changes": []
+        }
+      },
+      "golden_classification": "cascading_failure",
+      "golden_severity": "critical",
+      "golden_root_cause": "cascading retry amplification: checkout-service retrying against degraded payment-service propagating failure to auth-service",
+      "golden_remediation": "enable circuit breakers on checkout and payment; implement bulkhead isolation; rollback recent deployment",
+      "golden_remediation_class": "SAFE_AND_CORRECT",
+      "golden_expected_blast_radius_mean": 3200,
+      "golden_remediation_safe": true,
+      "golden_operator_action": "APPROVE",
+      "expected_confidence_range": [
+        0.84,
+        0.97
+      ],
+      "is_noisy_alert": false,
+      "is_false_positive": false,
+      "requires_escalation": true,
+      "risk_tier": "CRITICAL",
+      "semantic_mechanism": "cascading_amplification",
+      "incompatible_remediations": [
+        "scale_frontend",
+        "add_database_index",
+        "flush_cache"
+      ]
+    },
+    {
+      "id": "BM-114",
+      "name": "partial-degradation-silent-dependency",
+      "version": "1.0",
+      "category": "intermittent_outage",
+      "description": "Silent dependency collapse: notification-service silently failing without surfacing errors to callers",
+      "alert_payload": {
+        "title": "notification delivery success rate below 40%",
+        "summary": "dependency collapse circuit breaker instability slow downstream propagation",
+        "severity": "medium",
+        "source": "application",
+        "labels": {
+          "service": "notification-service"
+        },
+        "annotations": {
+          "runbook": "runbook-intermittent_outage"
+        }
+      },
+      "metrics_snapshot": [
+        {
+          "metric": "delivery_success_rate",
+          "observed": "37%",
+          "expected_range": "95-100%",
+          "z_score": 8.4
+        },
+        {
+          "metric": "error_rate",
+          "observed": "0.2%",
+          "expected_range": "0-1%",
+          "z_score": 0.8
+        }
+      ],
+      "logs_sample": [
+        {
+          "signature": "circuit breaker tripped circuit open downstream unavailable",
+          "count": 89,
+          "first_seen": "07:40:01",
+          "sample": "Circuit breaker OPEN for smtp-relay dependency",
+          "trace_ids": [
+            "t-BM-114"
+          ]
+        }
+      ],
+      "mocked_tool_responses": {
+        "router": {
+          "incident_type": "dependency_failure",
+          "severity": "medium",
+          "confidence": 0.78
+        },
+        "metrics": {
+          "summary": "delivery rate 37%; error rate low",
+          "anomalies": [
+            {
+              "metric": "delivery_success_rate",
+              "observed": "37%",
+              "expected_range": "95-100%",
+              "z_score": 8.4
+            }
+          ]
+        },
+        "logs": {
+          "error_signatures": [
+            {
+              "signature": "circuit breaker tripped circuit open downstream unavailable",
+              "count": 89,
+              "first_seen": "07:40:01",
+              "sample": "Circuit breaker OPEN for smtp-relay",
+              "trace_ids": [
+                "t-BM-114"
+              ]
+            }
+          ]
+        },
+        "deployment": {
+          "recent_changes": []
+        }
+      },
+      "golden_classification": "dependency_failure",
+      "golden_severity": "medium",
+      "golden_root_cause": "smtp-relay dependency silently failing; circuit breaker open but callers not receiving errors due to fallback swallowing exceptions",
+      "golden_remediation": "investigate smtp-relay health; reconfigure circuit breaker to surface errors; add alerting on fallback activation rate",
+      "golden_remediation_class": "SAFE_AND_CORRECT",
+      "golden_expected_blast_radius_mean": 500,
+      "golden_remediation_safe": true,
+      "golden_operator_action": "APPROVE",
+      "expected_confidence_range": [
+        0.65,
+        0.85
+      ],
+      "is_noisy_alert": false,
+      "is_false_positive": false,
+      "requires_escalation": false,
+      "risk_tier": "MODERATE",
+      "semantic_mechanism": "dependency_collapse",
+      "incompatible_remediations": [
+        "scale_frontend",
+        "add_database_index"
+      ]
+    },
+    {
+      "id": "BM-115",
+      "name": "query-fanout-n-plus-one-user-service",
+      "version": "1.0",
+      "category": "postgresql_failure",
+      "description": "N+1 query pattern causing database overload on user-service; excessive queries per request",
+      "alert_payload": {
+        "title": "user-service database CPU 94%",
+        "summary": "n+1 query excessive queries orm query amplification db cpu spike query fanout",
+        "severity": "high",
+        "source": "prometheus",
+        "labels": {
+          "service": "user-service"
+        },
+        "annotations": {
+          "runbook": "runbook-postgresql_failure"
+        }
+      },
+      "metrics_snapshot": [
+        {
+          "metric": "db_cpu_percent",
+          "observed": "94%",
+          "expected_range": "0-60%",
+          "z_score": 7.8
+        },
+        {
+          "metric": "queries_per_request",
+          "observed": "847",
+          "expected_range": "1-5",
+          "z_score": 14.2
+        }
+      ],
+      "logs_sample": [
+        {
+          "signature": "n+1 query excessive queries orm query amplification query fanout",
+          "count": 2100,
+          "first_seen": "15:20:01",
+          "sample": "SELECT * FROM users WHERE id=? (called 847 times)",
+          "trace_ids": [
+            "t-BM-115"
+          ]
+        }
+      ],
+      "mocked_tool_responses": {
+        "router": {
+          "incident_type": "query_amplification",
+          "severity": "high",
+          "confidence": 0.87
+        },
+        "metrics": {
+          "summary": "DB CPU 94%; 847 queries per request",
+          "anomalies": [
+            {
+              "metric": "queries_per_request",
+              "observed": "847",
+              "expected_range": "1-5",
+              "z_score": 14.2
+            }
+          ]
+        },
+        "logs": {
+          "error_signatures": [
+            {
+              "signature": "n+1 query excessive queries orm query amplification",
+              "count": 2100,
+              "first_seen": "15:20:01",
+              "sample": "N+1 detected: 847 SELECT per request",
+              "trace_ids": [
+                "t-BM-115"
+              ]
+            }
+          ]
+        },
+        "deployment": {
+          "recent_changes": [
+            {
+              "summary": "user-service ORM lazy loading re-enabled",
+              "timestamp": "14:55:00"
+            }
+          ]
+        }
+      },
+      "golden_classification": "postgresql_failure",
+      "golden_severity": "high",
+      "golden_root_cause": "N+1 query amplification on user-service; ORM lazy loading triggering 847 queries per request after deployment enabling lazy loading",
+      "golden_remediation": "rollback deployment; add eager loading to ORM; add database index on foreign keys",
+      "golden_remediation_class": "SAFE_AND_CORRECT",
+      "golden_expected_blast_radius_mean": 700,
+      "golden_remediation_safe": true,
+      "golden_operator_action": "APPROVE",
+      "expected_confidence_range": [
+        0.8,
+        0.94
+      ],
+      "is_noisy_alert": false,
+      "is_false_positive": false,
+      "requires_escalation": false,
+      "risk_tier": "HIGH",
+      "semantic_mechanism": "query_fanout_amplification",
+      "incompatible_remediations": [
+        "scale_frontend",
+        "flush_cache",
+        "scale_consumers"
+      ]
+    },
+    {
+      "id": "BM-116",
+      "name": "memory-pressure-heap-exhaustion-analytics",
+      "version": "1.0",
+      "category": "memory_leak",
+      "description": "Heap exhaustion on analytics-service; GC pauses causing latency spikes without CPU increase",
+      "alert_payload": {
+        "title": "analytics-service GC pause 8s; heap at 96%",
+        "summary": "gc pause heap exhaustion memory pressure heap usage out of memory garbage collection",
+        "severity": "high",
+        "source": "prometheus",
+        "labels": {
+          "service": "analytics-service"
+        },
+        "annotations": {
+          "runbook": "runbook-memory_leak"
+        }
+      },
+      "metrics_snapshot": [
+        {
+          "metric": "jvm_heap_used_percent",
+          "observed": "96%",
+          "expected_range": "40-75%",
+          "z_score": 6.2
+        },
+        {
+          "metric": "gc_pause_ms",
+          "observed": "8400ms",
+          "expected_range": "0-200ms",
+          "z_score": 9.1
+        }
+      ],
+      "logs_sample": [
+        {
+          "signature": "gc pause heap exhaustion memory pressure out of memory",
+          "count": 67,
+          "first_seen": "12:30:01",
+          "sample": "GC overhead limit exceeded; heap 96% used",
+          "trace_ids": [
+            "t-BM-116"
+          ]
+        }
+      ],
+      "mocked_tool_responses": {
+        "router": {
+          "incident_type": "memory_pressure",
+          "severity": "high",
+          "confidence": 0.88
+        },
+        "metrics": {
+          "summary": "heap 96%; GC pause 8400ms",
+          "anomalies": [
+            {
+              "metric": "jvm_heap_used_percent",
+              "observed": "96%",
+              "expected_range": "40-75%",
+              "z_score": 6.2
+            }
+          ]
+        },
+        "logs": {
+          "error_signatures": [
+            {
+              "signature": "gc pause heap exhaustion memory pressure",
+              "count": 67,
+              "first_seen": "12:30:01",
+              "sample": "GC overhead limit exceeded",
+              "trace_ids": [
+                "t-BM-116"
+              ]
+            }
+          ]
+        },
+        "deployment": {
+          "recent_changes": []
+        }
+      },
+      "golden_classification": "memory_leak",
+      "golden_severity": "high",
+      "golden_root_cause": "heap exhaustion on analytics-service; unbounded in-memory aggregation buffer growing without eviction",
+      "golden_remediation": "restart analytics-service to reclaim heap; add heap size limit to aggregation buffer; add OOM alerting",
+      "golden_remediation_class": "SAFE_AND_CORRECT",
+      "golden_expected_blast_radius_mean": 600,
+      "golden_remediation_safe": true,
+      "golden_operator_action": "APPROVE",
+      "expected_confidence_range": [
+        0.78,
+        0.94
+      ],
+      "is_noisy_alert": false,
+      "is_false_positive": false,
+      "requires_escalation": false,
+      "risk_tier": "HIGH",
+      "semantic_mechanism": "memory_pressure",
+      "incompatible_remediations": [
+        "scale_frontend",
+        "add_database_index",
+        "scale_consumers"
+      ]
+    },
+    {
+      "id": "BM-117",
+      "name": "circuit-breaker-instability-payment-gateway",
+      "version": "1.0",
+      "category": "intermittent_outage",
+      "description": "Circuit breaker flapping on payment-api to payment-gateway; intermittent availability",
+      "alert_payload": {
+        "title": "payment-api circuit breaker flapping",
+        "summary": "circuit breaker circuit open circuit tripped half open breaker flapping instability",
+        "severity": "medium",
+        "source": "application",
+        "labels": {
+          "service": "payment-api"
+        },
+        "annotations": {
+          "runbook": "runbook-intermittent_outage"
+        }
+      },
+      "metrics_snapshot": [
+        {
+          "metric": "circuit_breaker_state_changes",
+          "observed": "42/hour",
+          "expected_range": "0-2/hour",
+          "z_score": 8.9
+        },
+        {
+          "metric": "payment_gateway_latency_ms",
+          "observed": "3200ms",
+          "expected_range": "50-500ms",
+          "z_score": 5.1
+        }
+      ],
+      "logs_sample": [
+        {
+          "signature": "circuit breaker tripped circuit open half open breaker flapping",
+          "count": 42,
+          "first_seen": "18:00:01",
+          "sample": "Circuit breaker state: OPEN -> HALF_OPEN -> OPEN (flapping)",
+          "trace_ids": [
+            "t-BM-117"
+          ]
+        }
+      ],
+      "mocked_tool_responses": {
+        "router": {
+          "incident_type": "circuit_breaker",
+          "severity": "medium",
+          "confidence": 0.81
+        },
+        "metrics": {
+          "summary": "circuit breaker 42 state changes/hour; gateway latency 3200ms",
+          "anomalies": [
+            {
+              "metric": "circuit_breaker_state_changes",
+              "observed": "42/hour",
+              "expected_range": "0-2/hour",
+              "z_score": 8.9
+            }
+          ]
+        },
+        "logs": {
+          "error_signatures": [
+            {
+              "signature": "circuit breaker tripped circuit open half open breaker flapping",
+              "count": 42,
+              "first_seen": "18:00:01",
+              "sample": "Circuit breaker OPEN -> HALF_OPEN flapping",
+              "trace_ids": [
+                "t-BM-117"
+              ]
+            }
+          ]
+        },
+        "deployment": {
+          "recent_changes": []
+        }
+      },
+      "golden_classification": "dependency_failure",
+      "golden_severity": "medium",
+      "golden_root_cause": "circuit breaker instability on payment-api due to payment-gateway latency exceeding breaker timeout threshold",
+      "golden_remediation": "investigate payment-gateway latency; tune circuit breaker timeout thresholds; add bulkhead isolation",
+      "golden_remediation_class": "SAFE_AND_CORRECT",
+      "golden_expected_blast_radius_mean": 700,
+      "golden_remediation_safe": true,
+      "golden_operator_action": "APPROVE",
+      "expected_confidence_range": [
+        0.7,
+        0.88
+      ],
+      "is_noisy_alert": false,
+      "is_false_positive": false,
+      "requires_escalation": false,
+      "risk_tier": "MODERATE",
+      "semantic_mechanism": "circuit_breaker_instability",
+      "incompatible_remediations": [
+        "scale_frontend",
+        "flush_cache",
+        "add_database_index"
+      ]
+    },
+    {
+      "id": "BM-118",
+      "name": "deployment-regression-search-service",
+      "version": "1.0",
+      "category": "deployment_regression",
+      "description": "Deployment regression on search-service after version bump; error rate spike post-deploy",
+      "alert_payload": {
+        "title": "search-service error rate spike post-deployment",
+        "summary": "deployment regression post-deploy commit introduced regression newly deployed",
+        "severity": "high",
+        "source": "prometheus",
+        "labels": {
+          "service": "search-service"
+        },
+        "annotations": {
+          "runbook": "runbook-deployment_regression"
+        }
+      },
+      "metrics_snapshot": [
+        {
+          "metric": "error_rate",
+          "observed": "34%",
+          "expected_range": "0-1%",
+          "z_score": 9.2
+        },
+        {
+          "metric": "p99_latency_ms",
+          "observed": "2800ms",
+          "expected_range": "50-200ms",
+          "z_score": 7.4
+        }
+      ],
+      "logs_sample": [
+        {
+          "signature": "deployment regression post-deploy newly deployed version bump",
+          "count": 340,
+          "first_seen": "10:30:01",
+          "sample": "NullPointerException in SearchIndexer (introduced in v2.4.1)",
+          "trace_ids": [
+            "t-BM-118"
+          ]
+        }
+      ],
+      "mocked_tool_responses": {
+        "router": {
+          "incident_type": "deployment_regression",
+          "severity": "high",
+          "confidence": 0.93
+        },
+        "metrics": {
+          "summary": "error rate 34% post-deploy; p99 2800ms",
+          "anomalies": [
+            {
+              "metric": "error_rate",
+              "observed": "34%",
+              "expected_range": "0-1%",
+              "z_score": 9.2
+            }
+          ]
+        },
+        "logs": {
+          "error_signatures": [
+            {
+              "signature": "deployment regression post-deploy newly deployed version bump",
+              "count": 340,
+              "first_seen": "10:30:01",
+              "sample": "NullPointerException in SearchIndexer v2.4.1",
+              "trace_ids": [
+                "t-BM-118"
+              ]
+            }
+          ]
+        },
+        "deployment": {
+          "recent_changes": [
+            {
+              "summary": "search-service v2.4.1 deployed",
+              "timestamp": "10:15:00"
+            }
+          ]
+        }
+      },
+      "golden_classification": "deployment_regression",
+      "golden_severity": "high",
+      "golden_root_cause": "search-service v2.4.1 deployment introduced NullPointerException in SearchIndexer causing error rate spike",
+      "golden_remediation": "rollback deployment to v2.4.0; add null checks in SearchIndexer; add pre-deploy integration test",
+      "golden_remediation_class": "SAFE_AND_CORRECT",
+      "golden_expected_blast_radius_mean": 800,
+      "golden_remediation_safe": true,
+      "golden_operator_action": "APPROVE",
+      "expected_confidence_range": [
+        0.83,
+        0.97
+      ],
+      "is_noisy_alert": false,
+      "is_false_positive": false,
+      "requires_escalation": false,
+      "risk_tier": "HIGH",
+      "semantic_mechanism": "deployment_induced_regression",
+      "incompatible_remediations": [
+        "scale_frontend",
+        "flush_cache",
+        "add_database_index"
+      ]
+    },
+    {
+      "id": "BM-119",
+      "name": "noisy-alert-cpu-spike-false-positive",
+      "version": "1.0",
+      "category": "noisy_alert",
+      "description": "CPU spike alert triggered by scheduled batch job; no user impact; alert is noisy",
+      "alert_payload": {
+        "title": "batch-processor CPU 89%",
+        "summary": "cpu spike from scheduled batch job; no user-facing impact; noisy alert amplification",
+        "severity": "medium",
+        "source": "prometheus",
+        "labels": {
+          "service": "batch-processor"
+        },
+        "annotations": {
+          "runbook": "runbook-noisy_alert"
+        }
+      },
+      "metrics_snapshot": [
+        {
+          "metric": "cpu_percent",
+          "observed": "89%",
+          "expected_range": "0-60%",
+          "z_score": 4.1
+        },
+        {
+          "metric": "user_error_rate",
+          "observed": "0.0%",
+          "expected_range": "0-1%",
+          "z_score": 0.0
+        }
+      ],
+      "logs_sample": [],
+      "mocked_tool_responses": {
+        "router": {
+          "incident_type": "false_positive",
+          "severity": "medium",
+          "confidence": 0.79
+        },
+        "metrics": {
+          "summary": "batch-processor CPU 89% during scheduled window; user error rate 0%",
+          "anomalies": [
+            {
+              "metric": "cpu_percent",
+              "observed": "89%",
+              "expected_range": "0-60%",
+              "z_score": 4.1
+            }
+          ]
+        },
+        "logs": {
+          "error_signatures": []
+        },
+        "deployment": {
+          "recent_changes": []
+        }
+      },
+      "golden_classification": "false_positive",
+      "golden_severity": "medium",
+      "golden_root_cause": "scheduled batch job causing CPU spike on batch-processor during expected maintenance window; no user-facing degradation",
+      "golden_remediation": "acknowledge alert; add CPU threshold exception for batch window; tune alert threshold",
+      "golden_remediation_class": "SAFE_AND_CORRECT",
+      "golden_expected_blast_radius_mean": 0,
+      "golden_remediation_safe": true,
+      "golden_operator_action": "APPROVE",
+      "expected_confidence_range": [
+        0.68,
+        0.88
+      ],
+      "is_noisy_alert": true,
+      "is_false_positive": true,
+      "requires_escalation": false,
+      "risk_tier": "LOW",
+      "semantic_mechanism": "noisy_alert_amplification",
+      "incompatible_remediations": [
+        "scale_frontend",
+        "rollback_deployment"
+      ]
+    },
+    {
+      "id": "BM-120",
+      "name": "slow-downstream-propagation-inventory",
+      "version": "1.0",
+      "category": "latency_spike",
+      "description": "Slow inventory-service propagating latency through checkout-service dependency chain",
+      "alert_payload": {
+        "title": "checkout-service p99 latency elevated",
+        "summary": "slow downstream propagation dependency cascade latency propagating through service chain",
+        "severity": "high",
+        "source": "prometheus",
+        "labels": {
+          "service": "checkout-service"
+        },
+        "annotations": {
+          "runbook": "runbook-latency_spike"
+        }
+      },
+      "metrics_snapshot": [
+        {
+          "metric": "checkout_p99_ms",
+          "observed": "3400ms",
+          "expected_range": "50-400ms",
+          "z_score": 6.2
+        },
+        {
+          "metric": "inventory_p99_ms",
+          "observed": "3200ms",
+          "expected_range": "20-100ms",
+          "z_score": 9.8
+        }
+      ],
+      "logs_sample": [
+        {
+          "signature": "slow downstream latency propagation dependency timeout",
+          "count": 188,
+          "first_seen": "14:10:01",
+          "sample": "Checkout inventory check timeout: 3200ms (limit 500ms)",
+          "trace_ids": [
+            "t-BM-120"
+          ]
+        }
+      ],
+      "mocked_tool_responses": {
+        "router": {
+          "incident_type": "latency",
+          "severity": "high",
+          "confidence": 0.86
+        },
+        "metrics": {
+          "summary": "checkout p99 3400ms; inventory p99 3200ms",
+          "anomalies": [
+            {
+              "metric": "inventory_p99_ms",
+              "observed": "3200ms",
+              "expected_range": "20-100ms",
+              "z_score": 9.8
+            }
+          ]
+        },
+        "logs": {
+          "error_signatures": [
+            {
+              "signature": "slow downstream latency propagation dependency timeout",
+              "count": 188,
+              "first_seen": "14:10:01",
+              "sample": "Checkout inventory timeout 3200ms",
+              "trace_ids": [
+                "t-BM-120"
+              ]
+            }
+          ]
+        },
+        "deployment": {
+          "recent_changes": []
+        }
+      },
+      "golden_classification": "latency",
+      "golden_severity": "high",
+      "golden_root_cause": "inventory-service slowdown propagating latency through checkout-service; thread blocking on synchronous inventory availability check",
+      "golden_remediation": "investigate inventory-service root cause; add timeout and fallback on inventory check; implement async inventory availability",
+      "golden_remediation_class": "SAFE_AND_CORRECT",
+      "golden_expected_blast_radius_mean": 900,
+      "golden_remediation_safe": true,
+      "golden_operator_action": "APPROVE",
+      "expected_confidence_range": [
+        0.76,
+        0.92
+      ],
+      "is_noisy_alert": false,
+      "is_false_positive": false,
+      "requires_escalation": false,
+      "risk_tier": "HIGH",
+      "semantic_mechanism": "slow_downstream_propagation",
+      "incompatible_remediations": [
+        "scale_frontend",
+        "flush_cache"
+      ]
+    },
+    {
+      "id": "BM-121",
+      "name": "mechanism-remediation-mismatch-test",
+      "version": "1.0",
+      "category": "latency_spike",
+      "description": "Validation incident: DB lock contention with incorrect frontend scaling remediation; tests semantic mismatch detection",
+      "alert_payload": {
+        "title": "order-service p99 latency 9800ms",
+        "summary": "deadlock detected lock wait row lock long transaction serialization failure",
+        "severity": "critical",
+        "source": "prometheus",
+        "labels": {
+          "service": "order-service"
+        },
+        "annotations": {
+          "runbook": "runbook-latency_spike"
+        }
+      },
+      "metrics_snapshot": [
+        {
+          "metric": "db_lock_wait_ms",
+          "observed": "9800ms",
+          "expected_range": "0-50ms",
+          "z_score": 11.2
+        },
+        {
+          "metric": "deadlock_count",
+          "observed": "89",
+          "expected_range": "0-1",
+          "z_score": 9.4
+        }
+      ],
+      "logs_sample": [
+        {
+          "signature": "deadlock detected lock wait row lock long transaction",
+          "count": 89,
+          "first_seen": "09:05:01",
+          "sample": "ERROR: deadlock detected; lock wait 9800ms on orders",
+          "trace_ids": [
+            "t-BM-121"
+          ]
+        }
+      ],
+      "mocked_tool_responses": {
+        "router": {
+          "incident_type": "lock_contention",
+          "severity": "critical",
+          "confidence": 0.9
+        },
+        "metrics": {
+          "summary": "lock wait 9800ms; deadlock count 89",
+          "anomalies": [
+            {
+              "metric": "db_lock_wait_ms",
+              "observed": "9800ms",
+              "expected_range": "0-50ms",
+              "z_score": 11.2
+            }
+          ]
+        },
+        "logs": {
+          "error_signatures": [
+            {
+              "signature": "deadlock detected lock wait row lock long transaction",
+              "count": 89,
+              "first_seen": "09:05:01",
+              "sample": "Deadlock on orders table",
+              "trace_ids": [
+                "t-BM-121"
+              ]
+            }
+          ]
+        },
+        "deployment": {
+          "recent_changes": []
+        }
+      },
+      "golden_classification": "postgresql_failure",
+      "golden_severity": "critical",
+      "golden_root_cause": "row-level lock contention on orders table blocking concurrent writes",
+      "golden_remediation": "add database index; kill long-running queries; reduce transaction scope",
+      "golden_remediation_class": "SAFE_AND_CORRECT",
+      "golden_expected_blast_radius_mean": 1100,
+      "golden_remediation_safe": true,
+      "golden_operator_action": "APPROVE",
+      "expected_confidence_range": [
+        0.82,
+        0.96
+      ],
+      "is_noisy_alert": false,
+      "is_false_positive": false,
+      "requires_escalation": false,
+      "risk_tier": "CRITICAL",
+      "semantic_mechanism": "lock_contention",
+      "incompatible_remediations": [
+        "scale_frontend",
+        "flush_cache",
+        "scale_consumers"
+      ],
+      "validation_note": "Scaling frontend replicas for this incident is semantically incompatible; tests mechanism-remediation mismatch detection"
     }
   ]
 }

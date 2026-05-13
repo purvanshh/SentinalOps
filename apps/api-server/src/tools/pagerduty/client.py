@@ -15,5 +15,5 @@ async def sync_incident_status(
         "severity": severity,
         "status": status,
         "synced": False,
-        "message": "PagerDuty integration stub recorded the requested sync.",
+        "unavailable_reason": "PagerDuty integration not configured for this environment",
     }

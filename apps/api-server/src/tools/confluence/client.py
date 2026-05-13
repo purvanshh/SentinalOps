@@ -15,5 +15,5 @@ async def export_postmortem(
         "title": title,
         "exported": False,
         "content_length": len(content),
-        "message": "Confluence export stub captured the postmortem payload.",
+        "unavailable_reason": "Confluence integration not configured for this environment",
     }

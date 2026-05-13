@@ -6864,7 +6864,7 @@
       ],
       "mocked_tool_responses": {
         "router": {
-          "incident_type": "connection_pool_starvation",
+          "incident_type": "latency",
           "severity": "critical",
           "confidence": 0.92
         },
@@ -6963,7 +6963,7 @@
       ],
       "mocked_tool_responses": {
         "router": {
-          "incident_type": "retry_storm",
+          "incident_type": "cascading_failure",
           "severity": "critical",
           "confidence": 0.89
         },
@@ -7062,7 +7062,7 @@
       ],
       "mocked_tool_responses": {
         "router": {
-          "incident_type": "queue_buildup",
+          "incident_type": "latency",
           "severity": "high",
           "confidence": 0.88
         },
@@ -7162,7 +7162,7 @@
       ],
       "mocked_tool_responses": {
         "router": {
-          "incident_type": "lock_contention",
+          "incident_type": "postgresql_failure",
           "severity": "high",
           "confidence": 0.91
         },
@@ -7362,7 +7362,7 @@
       ],
       "mocked_tool_responses": {
         "router": {
-          "incident_type": "thread_exhaustion",
+          "incident_type": "latency",
           "severity": "critical",
           "confidence": 0.9
         },
@@ -7661,7 +7661,7 @@
       ],
       "mocked_tool_responses": {
         "router": {
-          "incident_type": "query_amplification",
+          "incident_type": "postgresql_failure",
           "severity": "high",
           "confidence": 0.87
         },
@@ -7692,8 +7692,12 @@
         "deployment": {
           "recent_changes": [
             {
-              "summary": "user-service ORM lazy loading re-enabled",
-              "timestamp": "14:55:00"
+              "deployment_id": "DEP-BM-115",
+              "service": "user-service",
+              "version": "v3.1.0-lazy-load",
+              "time": "2026-05-13T14:55:00Z",
+              "commit_summary": "user-service ORM lazy loading re-enabled",
+              "risk_score": 0.72
             }
           ]
         }
@@ -7766,7 +7770,7 @@
       ],
       "mocked_tool_responses": {
         "router": {
-          "incident_type": "memory_pressure",
+          "incident_type": "memory_leak",
           "severity": "high",
           "confidence": 0.88
         },
@@ -7866,7 +7870,7 @@
       ],
       "mocked_tool_responses": {
         "router": {
-          "incident_type": "circuit_breaker",
+          "incident_type": "intermittent_outage",
           "severity": "medium",
           "confidence": 0.81
         },
@@ -7997,8 +8001,12 @@
         "deployment": {
           "recent_changes": [
             {
-              "summary": "search-service v2.4.1 deployed",
-              "timestamp": "10:15:00"
+              "deployment_id": "DEP-BM-118",
+              "service": "search-service",
+              "version": "v2.4.1",
+              "time": "2026-05-13T10:15:00Z",
+              "commit_summary": "search-service v2.4.1 deployed with SearchIndexer changes",
+              "risk_score": 0.68
             }
           ]
         }
@@ -8249,7 +8257,7 @@
       ],
       "mocked_tool_responses": {
         "router": {
-          "incident_type": "lock_contention",
+          "incident_type": "postgresql_failure",
           "severity": "critical",
           "confidence": 0.9
         },

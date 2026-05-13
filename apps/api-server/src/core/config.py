@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     approval_auto_reject_minutes: int = Field(default=30)
     api_rate_limit_per_minute: int = Field(default=120)
 
+    embedding_model: str = Field(default="text-embedding-3-small")
+    embedding_fallback_model: str = Field(default="bge-small-en-v1.5")
+
     celery_broker_url: str = Field(default="redis://localhost:6379/1")
     celery_result_backend: str = Field(default="redis://localhost:6379/2")
     default_agent_timeout_seconds: int = Field(default=30)

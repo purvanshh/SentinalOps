@@ -15,7 +15,7 @@ from agents.rootcause_agent.scorer import score_assessment
 from db.models.incident import Incident
 from db.repositories.incident_repo import IncidentRepository
 from orchestration.state.topology import load_topology
-from retrieval.embeddings.pattern_searcher import PatternSearcher
+from retrieval.hybrid_retrieval import HybridRetriever
 
 
 def _build_hypothesis_text(title: str, cause_service: str, affected_service: str) -> str:
@@ -43,10 +43,10 @@ async def analyze_root_cause(
     incident: Incident,
     *,
     db_session: AsyncSession,
-    pattern_searcher: PatternSearcher | None = None,
+    hybrid_retriever: HybridRetriever | None = None,
 ) -> RootCauseAnalysis:
     repository = IncidentRepository(db_session)
-    owned_pattern_searcher = pattern_searcher or PatternSearcher()
+    retriever = hybrid_retriever or HybridRetriever()
     executions = await repository.list_agent_executions(incident.id)
     evidence_payloads = normalize_agent_executions(executions)
     evidence_rows = await repository.replace_evidence_items(incident.id, evidence_payloads)
@@ -64,7 +64,11 @@ async def analyze_root_cause(
     service = incident.raw_payload.get("labels", {}).get("service", "payment-api")
     timed_events = build_timed_events(simplified_evidence, service)
     topology = load_topology()
-    pattern_hints = owned_pattern_searcher.search(f"{incident.title}\n{incident.summary}")
+    pattern_hints = retriever.retrieve(
+        f"{incident.title}\n{incident.summary}",
+        service=service,
+        topology=topology,
+    )
     candidates = build_candidate_causes(
         service=service,
         events=timed_events,
@@ -72,10 +76,11 @@ async def analyze_root_cause(
         pattern_hints=pattern_hints,
     )
 
+    grounding = retriever.grounding_score(pattern_hints)
     hypotheses: list[RootCauseHypothesis] = []
     investigation_steps: list[str] = [
         f"normalized {len(timed_events)} evidence events",
-        f"retrieved {len(pattern_hints)} pattern hints",
+        f"retrieved {len(pattern_hints)} pattern hints (grounding={grounding:.2f})",
         f"generated {len(candidates)} candidate causes",
     ]
 

@@ -8,6 +8,8 @@ Detects:
 - Temporal inconsistencies in reasoning chains
 - Invented infrastructure components
 - Confidence-evidence mismatch (high confidence + weak evidence)
+- Mechanism plausibility mismatch (Phase 45 semantic layer)
+- Confident-nonsense: high hypothesis confidence + weak mechanism alignment
 """
 
 from __future__ import annotations
@@ -16,6 +18,9 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
+from semantics.hallucination_checker import SemanticHallucinationChecker
+from semantics.semantic_engine import MechanismInference
 
 
 class HallucinationType(str, Enum):
@@ -217,6 +222,78 @@ def score_hallucination_risk(
     all_findings.extend(detect_unsupported_claims(combined_text, evidence_keys))
     all_findings.extend(detect_dangerous_remediations(remediation_text))
     all_findings.extend(detect_confidence_evidence_mismatch(confidence, len(evidence_keys)))
+
+    total_penalty = sum(f.confidence_penalty for f in all_findings)
+    adjusted_confidence = max(0.0, confidence - total_penalty)
+    raw_score = min(1.0, total_penalty)
+
+    has_critical = any(f.severity == "CRITICAL" for f in all_findings)
+    has_high = any(f.severity == "HIGH" for f in all_findings)
+
+    if has_critical or raw_score > 0.5:
+        risk_level = "CRITICAL"
+    elif has_high or raw_score > 0.25:
+        risk_level = "HIGH"
+    elif all_findings:
+        risk_level = "MEDIUM"
+    else:
+        risk_level = "LOW"
+
+    return HallucinationReport(
+        findings=all_findings,
+        hallucination_detected=bool(all_findings),
+        raw_hallucination_score=raw_score,
+        adjusted_confidence=adjusted_confidence,
+        risk_level=risk_level,
+    )
+
+
+def score_hallucination_with_semantics(
+    rca_text: str,
+    remediation_text: str,
+    causal_chain: str,
+    confidence: float,
+    evidence_keys: set[str],
+    evidence_items: list[dict[str, Any]],
+    inference: MechanismInference | None,
+    known_services: set[str] | None = None,
+) -> HallucinationReport:
+    """
+    Combined lexical + semantic hallucination detection.
+
+    Runs the existing lexical checks (fabricated services, dangerous remediations,
+    unsupported claims, confidence-evidence mismatch) then adds the Phase 45
+    semantic layer (mechanism plausibility, causal chain coherence, remediation
+    plausibility, latent state consistency).
+    """
+    all_findings: list[HallucinationFinding] = []
+    combined_text = f"{rca_text}\n{remediation_text}"
+
+    all_findings.extend(detect_fabricated_services(combined_text, known_services or set()))
+    all_findings.extend(detect_unsupported_claims(combined_text, evidence_keys))
+    all_findings.extend(detect_dangerous_remediations(remediation_text))
+    all_findings.extend(detect_confidence_evidence_mismatch(confidence, len(evidence_keys)))
+
+    # Phase 45 semantic layer
+    semantic_checker = SemanticHallucinationChecker()
+    semantic_report = semantic_checker.check(
+        hypothesis_text=rca_text,
+        causal_chain=causal_chain,
+        remediation_text=remediation_text,
+        confidence=confidence,
+        evidence_items=evidence_items,
+        inference=inference,
+    )
+    for semantic_finding in semantic_report.findings:
+        all_findings.append(
+            HallucinationFinding(
+                type=HallucinationType.CONFIDENCE_EVIDENCE_MISMATCH,
+                description=semantic_finding.description,
+                severity=semantic_finding.severity,
+                evidence_fragment=semantic_finding.evidence_fragment,
+                confidence_penalty=semantic_finding.confidence_penalty,
+            )
+        )
 
     total_penalty = sum(f.confidence_penalty for f in all_findings)
     adjusted_confidence = max(0.0, confidence - total_penalty)

@@ -76,6 +76,45 @@ REMEDIATION_ACTIONS_TOTAL = Counter(
     "Total remediation actions attempted",
     labelnames=("outcome",),
 )
+CONFIDENCE_RELIABILITY = Histogram(
+    "confidence_reliability",
+    "Observed confidence reliability for probabilistic reasoning outputs",
+    labelnames=("component",),
+    buckets=(0.0, 0.25, 0.5, 0.65, 0.75, 0.85, 0.95, 1.0),
+)
+CALIBRATION_ERROR = Histogram(
+    "calibration_error",
+    "Observed calibration error for confidence-producing components",
+    labelnames=("component",),
+    buckets=(0.0, 0.02, 0.05, 0.1, 0.15, 0.25, 0.4, 1.0),
+)
+UNCERTAINTY_QUALITY = Histogram(
+    "uncertainty_quality",
+    "Quality of uncertainty estimates emitted by the reasoning engine",
+    labelnames=("component",),
+    buckets=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
+)
+ESCALATION_APPROPRIATENESS = Counter(
+    "escalation_appropriateness_total",
+    "Escalation recommendations emitted by uncertainty-aware reasoning",
+    labelnames=("decision", "reason"),
+)
+OPERATOR_OVERRIDES_TOTAL = Counter(
+    "operator_overrides_total",
+    "Operator overrides observed after AI recommendations",
+    labelnames=("component", "outcome"),
+)
+HYPOTHESIS_STABILITY = Histogram(
+    "hypothesis_stability",
+    "Stability margin between leading competing hypotheses",
+    labelnames=("component",),
+    buckets=(0.0, 0.05, 0.1, 0.2, 0.35, 0.5, 1.0),
+)
+CONTRADICTIONS_TOTAL = Counter(
+    "contradictions_total",
+    "Contradictions detected while reasoning about incidents",
+    labelnames=("category",),
+)
 
 _METRIC_SNAPSHOT: dict[str, float] = {
     "api_requests_total": 0.0,
@@ -89,6 +128,9 @@ _METRIC_SNAPSHOT: dict[str, float] = {
     "dead_letter_tasks_total": 0.0,
     "execution_guard_blocks_total": 0.0,
     "remediation_actions_total": 0.0,
+    "escalation_appropriateness_total": 0.0,
+    "operator_overrides_total": 0.0,
+    "contradictions_total": 0.0,
 }
 
 
@@ -153,6 +195,37 @@ def observe_execution_guard_block(reason: str) -> None:
 def observe_remediation_action(outcome: str) -> None:
     REMEDIATION_ACTIONS_TOTAL.labels(outcome=outcome).inc()
     _METRIC_SNAPSHOT["remediation_actions_total"] += 1
+
+
+def observe_confidence_reliability(component: str, reliability: float) -> None:
+    CONFIDENCE_RELIABILITY.labels(component=component).observe(reliability)
+
+
+def observe_calibration_error(component: str, error: float) -> None:
+    CALIBRATION_ERROR.labels(component=component).observe(error)
+
+
+def observe_uncertainty_quality(component: str, quality: float) -> None:
+    UNCERTAINTY_QUALITY.labels(component=component).observe(quality)
+
+
+def observe_escalation_appropriateness(decision: str, reason: str) -> None:
+    ESCALATION_APPROPRIATENESS.labels(decision=decision, reason=reason).inc()
+    _METRIC_SNAPSHOT["escalation_appropriateness_total"] += 1
+
+
+def observe_operator_override(component: str, outcome: str) -> None:
+    OPERATOR_OVERRIDES_TOTAL.labels(component=component, outcome=outcome).inc()
+    _METRIC_SNAPSHOT["operator_overrides_total"] += 1
+
+
+def observe_hypothesis_stability(component: str, stability: float) -> None:
+    HYPOTHESIS_STABILITY.labels(component=component).observe(stability)
+
+
+def observe_contradiction(category: str) -> None:
+    CONTRADICTIONS_TOTAL.labels(category=category).inc()
+    _METRIC_SNAPSHOT["contradictions_total"] += 1
 
 
 def build_metrics_snapshot() -> dict[str, float]:

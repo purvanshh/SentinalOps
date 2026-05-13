@@ -10,15 +10,15 @@ Proves:
   - Structured log context vars inject incident fields
   - Tracing provider initialises without error
 """
+
 from __future__ import annotations
 
-import pytest
 from prometheus_client import REGISTRY
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _counter_value(metric_name: str, **labels) -> float:
     """Read the current value of a Prometheus counter or histogram count sample.
@@ -40,6 +40,7 @@ def _counter_value(metric_name: str, **labels) -> float:
 # API request counter
 # ---------------------------------------------------------------------------
 
+
 def test_observe_api_request_increments_counter():
     from observability.metrics import observe_api_request
 
@@ -53,6 +54,7 @@ def test_observe_api_request_increments_counter():
 # Incident created counter
 # ---------------------------------------------------------------------------
 
+
 def test_observe_incident_created_increments_counter():
     from observability.metrics import observe_incident_created
 
@@ -65,6 +67,7 @@ def test_observe_incident_created_increments_counter():
 # ---------------------------------------------------------------------------
 # Agent execution counter and histogram
 # ---------------------------------------------------------------------------
+
 
 def test_observe_agent_execution_increments_counter():
     from observability.metrics import observe_agent_execution
@@ -88,6 +91,7 @@ def test_observe_agent_execution_records_histogram_when_latency_provided():
 # ---------------------------------------------------------------------------
 # Pipeline lifecycle metrics (new)
 # ---------------------------------------------------------------------------
+
 
 def test_observe_pipeline_completed_increments_counter():
     from observability.metrics import observe_pipeline_completed
@@ -118,6 +122,7 @@ def test_observe_pipeline_completed_no_duration_does_not_crash():
 # Approval decision metrics (new)
 # ---------------------------------------------------------------------------
 
+
 def test_observe_approval_decision_increments_approved_counter():
     from observability.metrics import observe_approval_decision
 
@@ -139,6 +144,7 @@ def test_observe_approval_decision_increments_rejected_counter():
 # ---------------------------------------------------------------------------
 # Snapshot
 # ---------------------------------------------------------------------------
+
 
 def test_metrics_snapshot_includes_all_required_keys():
     from observability.metrics import build_metrics_snapshot
@@ -169,6 +175,7 @@ def test_metrics_snapshot_increments_with_observations():
 # Prometheus exposition format
 # ---------------------------------------------------------------------------
 
+
 def test_render_metrics_returns_bytes_and_content_type():
     from observability.metrics import render_metrics
 
@@ -196,12 +203,13 @@ def test_render_metrics_contains_all_metric_names():
 # Structured log context injection
 # ---------------------------------------------------------------------------
 
+
 def test_bind_incident_context_sets_context_vars():
     from observability.logging.formatter import (
+        agent_var,
         bind_incident_context,
         incident_id_var,
         thread_id_var,
-        agent_var,
     )
 
     bind_incident_context(incident_id="inc-123", thread_id="thr-456", agent="router")
@@ -221,10 +229,11 @@ def test_bind_request_id_sets_context_var():
 # Tracing provider
 # ---------------------------------------------------------------------------
 
+
 def test_configure_tracing_does_not_raise():
     from observability.tracing import configure_tracing
-    from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry import trace
+    from opentelemetry.sdk.trace import TracerProvider
 
     configure_tracing()
     assert isinstance(trace.get_tracer_provider(), TracerProvider)

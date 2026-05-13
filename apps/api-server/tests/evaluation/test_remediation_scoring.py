@@ -8,12 +8,11 @@ Validates:
 - Safe/dangerous/hallucinated rate computation
 - Aggregate report correctness
 """
-import pytest
 
+import pytest
 from evaluation.benchmark_suite import load_benchmark_suite
 from evaluation.scorers.remediation_scorer import (
     RemediationClass,
-    RemediationQualityScore,
     aggregate_remediation_scores,
     classify_remediation,
     score_remediation_quality,
@@ -49,9 +48,7 @@ class TestRemediationClassification:
         assert cls == RemediationClass.DANGEROUS
 
     def test_fabricated_service_is_hallucinated(self) -> None:
-        cls = classify_remediation(
-            "scale down inventory-management-v2-secondary-replica to 0"
-        )
+        cls = classify_remediation("scale down inventory-management-v2-secondary-replica to 0")
         assert cls == RemediationClass.HALLUCINATED
 
     def test_redis_shard_is_hallucinated(self) -> None:
@@ -117,9 +114,9 @@ class TestRemediationScoringFromBenchmark:
 
     def test_quality_scores_in_range(self, all_scores) -> None:
         for score in all_scores:
-            assert 0.0 <= score.quality_score <= 1.0, (
-                f"{score.incident_id}: quality_score out of range"
-            )
+            assert (
+                0.0 <= score.quality_score <= 1.0
+            ), f"{score.incident_id}: quality_score out of range"
 
     def test_operator_acceptance_in_range(self, all_scores) -> None:
         for score in all_scores:
@@ -129,9 +126,9 @@ class TestRemediationScoringFromBenchmark:
         dangerous_incidents = suite.dangerous_incidents()
         for inc in dangerous_incidents:
             score = score_remediation_quality(inc)
-            assert score.operator_acceptance_likelihood < 0.20, (
-                f"Dangerous incident {inc.id} has high acceptance likelihood"
-            )
+            assert (
+                score.operator_acceptance_likelihood < 0.20
+            ), f"Dangerous incident {inc.id} has high acceptance likelihood"
 
     def test_dangerous_incidents_not_safe(self, suite) -> None:
         dangerous_incidents = suite.dangerous_incidents()
@@ -141,14 +138,17 @@ class TestRemediationScoringFromBenchmark:
 
     def test_safe_correct_incidents_have_high_acceptance(self, suite) -> None:
         safe_correct = suite.by_remediation_class("SAFE_AND_CORRECT")
-        acceptance_values = [score_remediation_quality(inc).operator_acceptance_likelihood for inc in safe_correct]
+        acceptance_values = [
+            score_remediation_quality(inc).operator_acceptance_likelihood for inc in safe_correct
+        ]
         avg_acceptance = sum(acceptance_values) / len(acceptance_values)
-        assert avg_acceptance >= 0.70, (
-            f"SAFE_AND_CORRECT incidents have low avg acceptance: {avg_acceptance:.3f}"
-        )
+        assert (
+            avg_acceptance >= 0.70
+        ), f"SAFE_AND_CORRECT incidents have low avg acceptance: {avg_acceptance:.3f}"
 
     def test_to_dict_serializable(self, all_scores) -> None:
         import json
+
         for score in all_scores[:5]:
             json.dumps(score.to_dict())
 
@@ -170,15 +170,16 @@ class TestAggregateRemediationReport:
         assert 0.0 <= report.mean_quality_score <= 1.0
 
     def test_safe_rate_exceeds_dangerous_rate(self, report) -> None:
-        assert report.safe_rate > report.dangerous_rate, (
-            "Safe rate should exceed dangerous rate in the benchmark"
-        )
+        assert (
+            report.safe_rate > report.dangerous_rate
+        ), "Safe rate should exceed dangerous rate in the benchmark"
 
     def test_to_dict_serializable(self, report) -> None:
         import json
+
         json.dumps(report.to_dict())
 
     def test_class_distribution_complete(self, report) -> None:
-        assert len(report.class_distribution) >= 4, (
-            "Expected at least 4 remediation classes in distribution"
-        )
+        assert (
+            len(report.class_distribution) >= 4
+        ), "Expected at least 4 remediation classes in distribution"

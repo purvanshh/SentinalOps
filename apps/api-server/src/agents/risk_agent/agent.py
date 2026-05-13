@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from agents.risk_agent.action_risk import score_remediation_action
+from agents.risk_agent.blast_radius import compute_blast_radius
 from agents.risk_agent.data_fetcher import build_runtime_inputs
 from agents.risk_agent.schemas import RiskAssessment
 from db.models.incident import Incident
 from db.repositories.incident_repo import IncidentRepository
 from db.repositories.risk_repo import RiskRepository
-from agents.risk_agent.blast_radius import compute_blast_radius
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def _default_remediation_history() -> list[dict]:
@@ -39,15 +38,20 @@ def _default_remediation_history() -> list[dict]:
 
 def _candidate_actions(root_cause_execution: dict | None) -> list[str]:
     payload = root_cause_execution or {}
+    contributing_causes = " ".join(payload.get("contributing_causes", []))
     hypotheses = payload.get("hypotheses", [])
-    if not hypotheses:
+    if not hypotheses and not contributing_causes:
         return ["restart payment-api"]
     top = hypotheses[payload.get("strongest_hypothesis_index", 0)] if hypotheses else {}
-    text = f"{top.get('hypothesis', '')} {top.get('causal_chain', '')}".lower()
+    text = (
+        f"{top.get('hypothesis', '')} " f"{top.get('causal_chain', '')} " f"{contributing_causes}"
+    ).lower()
     actions: list[str] = []
     if "deploy" in text or "regression" in text:
         actions.append("rollback deployment")
     if "pool" in text or "latency" in text:
+        actions.append("restart payment-api")
+    if "postgres" in text or "database" in text:
         actions.append("restart payment-api")
     actions.append("scale payment-api")
     return list(dict.fromkeys(actions))
@@ -76,7 +80,11 @@ async def assess_risk(
     historical_incidents = runtime_inputs["historical_incidents"]
 
     rootcause_execution = next(
-        (execution.output for execution in incident.agent_executions if execution.agent_name == "rootcause_agent"),
+        (
+            execution.output
+            for execution in incident.agent_executions
+            if execution.agent_name == "rootcause_agent"
+        ),
         None,
     )
     severity_factor = _severity_factor(incident.incident_type, historical_incidents)
@@ -102,7 +110,9 @@ async def assess_risk(
 
     remediation_risks = []
     for action in _candidate_actions(rootcause_execution):
-        remediation_risks.append({"action": action, **score_remediation_action(action, serialized_history)})
+        remediation_risks.append(
+            {"action": action, **score_remediation_action(action, serialized_history)}
+        )
 
     result = RiskAssessment.model_validate(
         {

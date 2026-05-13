@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from agents.rootcause_agent.causal_validator import is_valid_path
+from agents.rootcause_agent.causal_validator import is_valid_path, service_exists
 from agents.rootcause_agent.evidence_builder import TimedEvent
 from orchestration.state.topology_schema import ServiceNode
 
@@ -30,6 +30,15 @@ def build_candidate_causes(
     for pattern in pattern_hints:
         cause_service = pattern.get("cause_service") or service
         affected_service = pattern.get("effect_service") or service
+
+        # Reject candidates that reference services not registered in the topology.
+        # This is a hard hallucination boundary: we must not reason over infrastructure
+        # that does not exist, even if a pattern hint names it.
+        if topology_graph and not service_exists(cause_service, topology_graph):
+            continue
+        if topology_graph and not service_exists(affected_service, topology_graph):
+            continue
+
         if not is_valid_path(cause_service, affected_service, topology_graph):
             continue
 

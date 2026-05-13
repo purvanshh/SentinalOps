@@ -1,7 +1,31 @@
 from collections import deque
+from dataclasses import dataclass
 from datetime import datetime
 
 from orchestration.state.topology_schema import ServiceNode
+
+
+@dataclass(slots=True)
+class HallucinationViolation:
+    service: str
+    reason: str
+
+
+def service_exists(service: str, topology_graph: dict[str, ServiceNode]) -> bool:
+    """Return True only when service is registered in the topology."""
+    return service in topology_graph
+
+
+def check_service_references(
+    service_names: list[str],
+    topology_graph: dict[str, ServiceNode],
+) -> list[HallucinationViolation]:
+    """Return a violation for every service name that does not exist in the topology."""
+    return [
+        HallucinationViolation(service=name, reason="service not found in topology")
+        for name in service_names
+        if not service_exists(name, topology_graph)
+    ]
 
 
 def is_valid_path(
@@ -9,6 +33,8 @@ def is_valid_path(
     effect_service: str,
     topology_graph: dict[str, ServiceNode],
 ) -> bool:
+    if not topology_graph:
+        return True
     if cause_service == effect_service:
         return True
 

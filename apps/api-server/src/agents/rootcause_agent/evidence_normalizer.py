@@ -48,7 +48,9 @@ def normalize_agent_executions(executions: Iterable[AgentExecution]) -> list[dic
 
     for execution in executions:
         output = execution.output or {}
-        created_at = execution.created_at.isoformat() if execution.created_at else retrieval_timestamp
+        created_at = (
+            execution.created_at.isoformat() if execution.created_at else retrieval_timestamp
+        )
 
         if execution.agent_name == "metrics_agent":
             for index, anomaly in enumerate(output.get("anomalies", []), start=1):
@@ -63,7 +65,11 @@ def normalize_agent_executions(executions: Iterable[AgentExecution]) -> list[dic
                         "content": {
                             **anomaly,
                             "timestamp": created_at,
-                            "service": execution.input.get("messages", [{}])[-1] if execution.input else None,
+                            "service": (
+                                execution.input.get("messages", [{}])[-1]
+                                if execution.input
+                                else None
+                            ),
                         },
                     }
                 )

@@ -1,11 +1,9 @@
 import json
-import logging
 from typing import Any
 
 import structlog
-from redis.asyncio import Redis
-
 from core.config import get_settings
+from redis.asyncio import Redis
 
 logger = structlog.get_logger(__name__)
 
@@ -27,7 +25,9 @@ class IncidentStateStore:
         degraded mode without the short-term state cache.
         """
         try:
-            await self.redis.set(self._key(incident_id), json.dumps(state_dict), ex=self.ttl_seconds)
+            await self.redis.set(
+                self._key(incident_id), json.dumps(state_dict), ex=self.ttl_seconds
+            )
             return True
         except Exception as exc:
             logger.warning(

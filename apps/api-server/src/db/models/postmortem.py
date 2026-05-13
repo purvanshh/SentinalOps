@@ -1,9 +1,8 @@
 import uuid
 
+from db.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from sqlalchemy import ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from db.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class Postmortem(UUIDPrimaryKeyMixin, TimestampMixin, Base):

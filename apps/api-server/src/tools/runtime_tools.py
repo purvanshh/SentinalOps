@@ -97,7 +97,9 @@ def build_runtime_registry() -> ToolRegistry:
         },
         safety_level="approval_required",
     )
-    async def verify_metric_tool(metric_name: str, expected_min: float, expected_max: float) -> dict[str, Any]:
+    async def verify_metric_tool(
+        metric_name: str, expected_min: float, expected_max: float
+    ) -> dict[str, Any]:
         return await verify_metric(metric_name, expected_min, expected_max)
 
     return registry

@@ -1,5 +1,4 @@
 import httpx
-
 from core.config import get_settings
 
 

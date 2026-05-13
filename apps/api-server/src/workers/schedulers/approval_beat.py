@@ -1,7 +1,5 @@
 from celery.schedules import crontab
-
 from workers.queues import celery_app
-
 
 celery_app.conf.beat_schedule = {
     "scan-pending-approvals": {

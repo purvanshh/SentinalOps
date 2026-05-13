@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import suppress
-from uuid import UUID
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import structlog
-
-from db.session import SessionLocal
 from db.repositories.task_repo import PendingTaskRepository
+from db.session import SessionLocal
 from workers.async_utils import run_async
 from workers.queues import celery_app
 
@@ -63,13 +61,17 @@ async def _run_incident_pipeline(incident_id: UUID) -> None:
             incident_id=str(incident_id),
             status=result.get("status") if isinstance(result, dict) else "unknown",
             operating_mode=result.get("operating_mode") if isinstance(result, dict) else "unknown",
-            fallback_activated=result.get("fallback_activated") if isinstance(result, dict) else False,
+            fallback_activated=(
+                result.get("fallback_activated") if isinstance(result, dict) else False
+            ),
         )
         async with SessionLocal() as session:
             await PendingTaskRepository(session).mark_completed_by_incident(
                 incident_id,
                 _TASK_NAME,
-                final_status=result.get("status", "completed") if isinstance(result, dict) else "completed",
+                final_status=(
+                    result.get("status", "completed") if isinstance(result, dict) else "completed"
+                ),
             )
     except Exception as exc:
         logger.error(

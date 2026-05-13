@@ -1,13 +1,13 @@
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from db.session import SessionLocal
+from core.config import get_settings
 from db.repositories.incident_repo import IncidentRepository
+from db.session import SessionLocal
 from orchestration.interrupts.approval_store import ApprovalStore
 from tools.slack.notifier import notify_approval_escalation
 from workers.async_utils import run_async
 from workers.queues import celery_app
-from core.config import get_settings
 
 
 @celery_app.task(name="workers.tasks.escalate_approval", reject_on_worker_lost=True, acks_late=True)
@@ -30,7 +30,9 @@ async def _escalate_approval(incident_id: UUID) -> None:
         if incident is None:
             return
 
-        if now >= expires_at + timedelta(minutes=settings.approval_auto_reject_minutes - settings.approval_timeout_minutes):
+        if now >= expires_at + timedelta(
+            minutes=settings.approval_auto_reject_minutes - settings.approval_timeout_minutes
+        ):
             await store.record_approval(
                 incident_id,
                 approved=False,
@@ -39,7 +41,9 @@ async def _escalate_approval(incident_id: UUID) -> None:
             )
             incident.status = "approval_rejected"
             await session.commit()
-            await notify_approval_escalation(str(incident_id), "Auto-rejected after 30 minute timeout")
+            await notify_approval_escalation(
+                str(incident_id), "Auto-rejected after 30 minute timeout"
+            )
             return
 
         await notify_approval_escalation(

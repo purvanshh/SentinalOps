@@ -6,6 +6,7 @@ Combines pattern-based retrieval with:
   - Temporal decay weighting (recent incidents rank higher)
   - Provenance-scored result merging
 """
+
 from __future__ import annotations
 
 import math
@@ -14,7 +15,6 @@ from typing import Any
 
 from retrieval.embeddings.pattern_searcher import PatternSearcher
 from retrieval.provenance import RetrievalProvenance, attach_provenance, compute_grounding_score
-
 
 _TOPOLOGY_NEIGHBOR_BOOST = 0.10
 _TIME_DECAY_HALF_LIFE_DAYS = 90.0

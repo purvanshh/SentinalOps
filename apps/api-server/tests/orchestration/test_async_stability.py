@@ -4,12 +4,12 @@ Tests that run_async() is free of event loop lifecycle bugs.
 These are synchronous tests — asyncio loops must not be running when we call
 run_async(), which is the exact Celery worker context we are targeting.
 """
+
 from __future__ import annotations
 
 import asyncio
 
 import pytest
-
 from workers.async_utils import run_async
 
 
@@ -38,6 +38,7 @@ def test_run_async_clears_thread_local_loop():
     on a non-main thread, or creates a new closed one. Both outcomes prove
     the original loop is no longer accessible.
     """
+
     async def noop():
         pass
 
@@ -103,6 +104,7 @@ def test_run_async_cleans_up_pending_tasks_on_exception():
 
 def test_run_async_second_call_after_exception_succeeds():
     """After an exception, the next call must still work (simulates retry after failure)."""
+
     async def fail():
         raise OSError("transient error")
 
@@ -133,5 +135,7 @@ async def test_run_async_rejects_running_event_loop():
     async def payload():
         return 1
 
-    with pytest.raises(RuntimeError, match="cannot be called while an event loop is already running"):
+    with pytest.raises(
+        RuntimeError, match="cannot be called while an event loop is already running"
+    ):
         run_async(payload())

@@ -1,9 +1,8 @@
 import uuid
 
+from db.models.base import Base, JsonDict, TimestampMixin, UUIDPrimaryKeyMixin
 from sqlalchemy import Boolean, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from db.models.base import Base, JsonDict, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class RemediationAction(UUIDPrimaryKeyMixin, TimestampMixin, Base):

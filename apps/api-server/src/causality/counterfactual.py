@@ -15,6 +15,7 @@ A candidate cause FAILS the counterfactual test (is NOT the cause) when:
   - It has no topology path to the affected service
   - The incident would exist regardless (alternative cause covers it fully)
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -26,6 +27,7 @@ from causality.temporal_engine import _elapsed_seconds
 @dataclass
 class CounterfactualResult:
     """Result of testing one causal candidate counterfactually."""
+
     candidate_id: str
     candidate_description: str
     passes_counterfactual: bool
@@ -101,15 +103,14 @@ def check_redundancy(
         return True, "no alternative causes to compare against"
 
     stronger = [
-        a for a in alternative_causes
-        if a.get("id") != candidate_id
-        and float(a.get("confidence", 0.0)) > 0.80
+        a
+        for a in alternative_causes
+        if a.get("id") != candidate_id and float(a.get("confidence", 0.0)) > 0.80
     ]
     if stronger:
         alt_descs = [a.get("description", a.get("id", "?")) for a in stronger[:2]]
         return False, (
-            f"candidate is redundant given higher-confidence alternatives: "
-            + ", ".join(alt_descs)
+            "candidate is redundant given higher-confidence alternatives: " + ", ".join(alt_descs)
         )
     return True, "no stronger alternative cause found"
 
@@ -172,6 +173,7 @@ def evaluate_counterfactual(
 @dataclass
 class CausalConfidenceScore:
     """Evidence-weighted causality confidence for one causal hypothesis."""
+
     candidate_id: str
     base_confidence: float
     temporal_score: float

@@ -114,6 +114,7 @@ class OperatingModeManager:
 
             try:
                 from observability.metrics import observe_degraded_mode
+
                 observe_degraded_mode(old_mode.value, new_mode.value)
             except Exception:  # noqa: BLE001
                 pass

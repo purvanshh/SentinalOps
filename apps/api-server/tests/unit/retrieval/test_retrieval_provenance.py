@@ -9,13 +9,12 @@ Proves:
   - compute_grounding_score aggregates across multiple provenances.
   - PatternSearcher.search() returns provenance in every result.
 """
+
 from __future__ import annotations
 
 import pytest
-
 from retrieval.provenance import (
     RetrievalProvenance,
-    GroundingStatus,
     attach_provenance,
     compute_grounding_score,
 )
@@ -79,9 +78,18 @@ def test_is_actionable_false_when_ungrounded() -> None:
 def test_to_dict_includes_all_required_fields() -> None:
     p = _make_provenance(0.80)
     d = p.to_dict()
-    required = {"incident_id", "similarity_score", "retrieval_reason", "matched_dimensions",
-                 "embedding_model", "retrieved_at", "collection", "grounding_status",
-                 "is_reliable", "is_actionable"}
+    required = {
+        "incident_id",
+        "similarity_score",
+        "retrieval_reason",
+        "matched_dimensions",
+        "embedding_model",
+        "retrieved_at",
+        "collection",
+        "grounding_status",
+        "is_reliable",
+        "is_actionable",
+    }
     assert required.issubset(set(d.keys()))
 
 
@@ -116,8 +124,20 @@ def test_from_retrieval_result_handles_legacy_score_field() -> None:
 
 def test_attach_provenance_adds_provenance_field_to_all_results() -> None:
     results = [
-        {"incident_id": "A", "similarity_score": 0.90, "retrieval_reason": "good", "matched_dimensions": [], "embedding_model": "m"},
-        {"incident_id": "B", "similarity_score": 0.50, "retrieval_reason": "ok", "matched_dimensions": [], "embedding_model": "m"},
+        {
+            "incident_id": "A",
+            "similarity_score": 0.90,
+            "retrieval_reason": "good",
+            "matched_dimensions": [],
+            "embedding_model": "m",
+        },
+        {
+            "incident_id": "B",
+            "similarity_score": 0.50,
+            "retrieval_reason": "ok",
+            "matched_dimensions": [],
+            "embedding_model": "m",
+        },
     ]
     enriched = attach_provenance(results, collection="test", query_text="latency spike")
     assert all("provenance" in r for r in enriched)
@@ -126,7 +146,16 @@ def test_attach_provenance_adds_provenance_field_to_all_results() -> None:
 
 
 def test_attach_provenance_preserves_original_fields() -> None:
-    results = [{"incident_id": "X", "title": "Latency", "similarity_score": 0.8, "retrieval_reason": "", "matched_dimensions": [], "embedding_model": "m"}]
+    results = [
+        {
+            "incident_id": "X",
+            "title": "Latency",
+            "similarity_score": 0.8,
+            "retrieval_reason": "",
+            "matched_dimensions": [],
+            "embedding_model": "m",
+        }
+    ]
     enriched = attach_provenance(results)
     assert enriched[0]["title"] == "Latency"
     assert enriched[0]["incident_id"] == "X"

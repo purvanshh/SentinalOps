@@ -2,13 +2,12 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from fastapi import HTTPException, Request, status
-from jose import JWTError, jwt
-from starlette.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
-
 from core.config import get_settings
 from core.security.permissions import has_permission
+from fastapi import HTTPException, Request, status
+from jose import JWTError, jwt
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 
 
 @dataclass(slots=True)
@@ -33,13 +32,19 @@ def decode_access_token(token: str) -> AuthenticatedUser:
         payload = jwt.decode(
             token,
             settings.auth0_secret_key,
-            algorithms=[algorithm.strip() for algorithm in settings.auth0_algorithms.split(",") if algorithm.strip()],
+            algorithms=[
+                algorithm.strip()
+                for algorithm in settings.auth0_algorithms.split(",")
+                if algorithm.strip()
+            ],
             audience=settings.auth0_audience,
             issuer=settings.auth_issuer,
             options={"require_exp": True, "verify_exp": True, "verify_aud": True},
         )
     except JWTError as exc:  # noqa: PERF203
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token") from exc
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token"
+        ) from exc
 
     # Explicit aud check — some jose versions don't raise when aud is missing
     if settings.auth0_audience and payload.get("aud") != settings.auth0_audience:
@@ -48,7 +53,9 @@ def decode_access_token(token: str) -> AuthenticatedUser:
     user_id = str(payload.get("sub") or "")
     roles = _extract_roles(payload)
     if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token missing subject")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token missing subject"
+        )
     if not roles:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token missing roles")
     return AuthenticatedUser(user_id=user_id, roles=roles, token_payload=payload)
@@ -62,7 +69,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
         try:
             header = request.headers.get("authorization", "")
             if not header.startswith("Bearer "):
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token"
+                )
 
             token = header.split(" ", 1)[1].strip()
             user = decode_access_token(token)
@@ -78,7 +87,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
 def require_role(request: Request, required_role: str) -> AuthenticatedUser:
     user = getattr(request.state, "user", None)
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
+        )
     if not any(has_permission(role, required_role) for role in user.roles):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

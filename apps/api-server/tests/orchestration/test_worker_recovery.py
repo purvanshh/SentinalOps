@@ -7,24 +7,23 @@ Covers:
   - reject_on_worker_lost prevents message loss on worker crash
   - Bootstrap checkpoint is persisted before graph execution
 """
+
 from __future__ import annotations
 
 import asyncio
 from uuid import uuid4
 
 import pytest
-
 from workers.tasks.incident_pipeline import (
     _MAX_REPLAY_ATTEMPTS,
     _replay_pending_incidents,
-    _store_deferred_task,
     enqueue_incident_pipeline,
 )
-
 
 # ---------------------------------------------------------------------------
 # Deferred-task persistence
 # ---------------------------------------------------------------------------
+
 
 def test_enqueue_stores_deferred_task_when_broker_fails(monkeypatch):
     recorded: dict = {}
@@ -49,6 +48,7 @@ def test_enqueue_stores_deferred_task_when_broker_fails(monkeypatch):
 # ---------------------------------------------------------------------------
 # Replay max-attempt budget
 # ---------------------------------------------------------------------------
+
 
 class _FakeTask:
     def __init__(self, *, attempts: int, incident_id: str | None = None):
@@ -129,6 +129,7 @@ async def test_replay_skips_healthy_tasks_not_exceeding_budget(monkeypatch):
     class _SessionCtx:
         async def __aenter__(self):
             return self
+
         async def __aexit__(self, *_):
             pass
 
@@ -145,6 +146,7 @@ async def test_replay_skips_healthy_tasks_not_exceeding_budget(monkeypatch):
 # ---------------------------------------------------------------------------
 # Task configuration — reject_on_worker_lost and acks_late
 # ---------------------------------------------------------------------------
+
 
 def test_run_incident_pipeline_task_has_reject_on_worker_lost():
     from workers.tasks.incident_pipeline import run_incident_pipeline
@@ -167,6 +169,7 @@ def test_escalate_approval_task_has_reject_on_worker_lost():
 # ---------------------------------------------------------------------------
 # Celery queue configuration
 # ---------------------------------------------------------------------------
+
 
 def test_celery_app_has_time_limits():
     from workers.queues import celery_app

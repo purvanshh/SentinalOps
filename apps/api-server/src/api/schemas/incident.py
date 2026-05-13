@@ -2,9 +2,8 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
-
 from api.schemas.common import TimestampedResponse
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AlertPayload(BaseModel):

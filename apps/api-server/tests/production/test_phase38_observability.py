@@ -12,19 +12,19 @@ Proves:
   - Prometheus text format includes new metric names
   - Snapshot dict contains all 11 required metric keys
 """
+
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
-
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helper: read a prometheus counter value by name
 # ---------------------------------------------------------------------------
 
+
 def _counter_value(metric_name: str, **labels) -> float:
     from prometheus_client import REGISTRY
+
     for metric in REGISTRY.collect():
         if metric.name in {metric_name, metric_name.removesuffix("_total")}:
             for sample in metric.samples:
@@ -37,6 +37,7 @@ def _counter_value(metric_name: str, **labels) -> float:
 # ---------------------------------------------------------------------------
 # New metrics exist and increment
 # ---------------------------------------------------------------------------
+
 
 def test_degraded_mode_activations_counter_increments():
     from observability.metrics import observe_degraded_mode
@@ -59,9 +60,13 @@ def test_task_replays_counter_increments():
 def test_dead_letter_tasks_counter_increments():
     from observability.metrics import observe_dead_letter
 
-    before = _counter_value("dead_letter_tasks_total", task_name="workers.tasks.run_incident_pipeline")
+    before = _counter_value(
+        "dead_letter_tasks_total", task_name="workers.tasks.run_incident_pipeline"
+    )
     observe_dead_letter("workers.tasks.run_incident_pipeline")
-    after = _counter_value("dead_letter_tasks_total", task_name="workers.tasks.run_incident_pipeline")
+    after = _counter_value(
+        "dead_letter_tasks_total", task_name="workers.tasks.run_incident_pipeline"
+    )
     assert after == before + 1
 
 
@@ -96,6 +101,7 @@ def test_remediation_actions_counter_increments():
 # Snapshot dict completeness
 # ---------------------------------------------------------------------------
 
+
 def test_metrics_snapshot_contains_all_required_keys():
     from observability.metrics import build_metrics_snapshot
 
@@ -121,13 +127,16 @@ def test_metrics_snapshot_contains_all_required_keys():
 # Degraded mode metric fires on OperatingModeManager.transition_to
 # ---------------------------------------------------------------------------
 
+
 def test_operating_mode_transition_fires_metric():
     from core.resilience.operating_mode import OperatingMode, OperatingModeManager
 
     mgr = OperatingModeManager()
     mgr.reset()
 
-    before = _counter_value("degraded_mode_activations_total", from_mode="FULL", to_mode="SAFE_MODE")
+    before = _counter_value(
+        "degraded_mode_activations_total", from_mode="FULL", to_mode="SAFE_MODE"
+    )
     mgr.transition_to(OperatingMode.SAFE_MODE, "test: all providers failed")
     after = _counter_value("degraded_mode_activations_total", from_mode="FULL", to_mode="SAFE_MODE")
     assert after == before + 1
@@ -138,6 +147,7 @@ def test_operating_mode_transition_fires_metric():
 # ---------------------------------------------------------------------------
 # execution_id context var
 # ---------------------------------------------------------------------------
+
 
 def test_execution_id_var_is_accessible():
     from observability.logging.formatter import execution_id_var
@@ -171,6 +181,7 @@ def test_bind_incident_context_accepts_execution_id():
 # Prometheus text format includes new metric names
 # ---------------------------------------------------------------------------
 
+
 def test_prometheus_output_includes_degraded_mode_metric():
     from observability.metrics import render_metrics
 
@@ -199,9 +210,10 @@ def test_prometheus_output_includes_execution_guard_metric():
 # Execution guard emits metric when blocking
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_guard_block_emits_metric_not_allowlisted(monkeypatch):
-    from tools.execution_guard import enforce_tool_execution_policy, ExecutionGuardError
+    from tools.execution_guard import ExecutionGuardError, enforce_tool_execution_policy
 
     monkeypatch.setattr(
         "tools.execution_guard.load_tool_allowlist",

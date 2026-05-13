@@ -1,10 +1,9 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
+from db.models import ApprovalRequest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from db.models import ApprovalRequest
 
 
 class ApprovalStore:
@@ -62,7 +61,9 @@ class ApprovalStore:
 
     async def list_pending_approvals(self) -> list[ApprovalRequest]:
         result = await self.session.execute(
-            select(ApprovalRequest).where(ApprovalRequest.status == "pending").order_by(ApprovalRequest.created_at.asc())
+            select(ApprovalRequest)
+            .where(ApprovalRequest.status == "pending")
+            .order_by(ApprovalRequest.created_at.asc())
         )
         return list(result.scalars().all())
 

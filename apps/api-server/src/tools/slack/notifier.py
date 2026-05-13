@@ -10,6 +10,4 @@ async def notify_approval_required(incident_id: str, summary: str) -> None:
 
 async def notify_approval_escalation(incident_id: str, reason: str) -> None:
     client = SlackClient()
-    await client.send_message(
-        f"Approval escalation for incident {incident_id}: {reason}"
-    )
+    await client.send_message(f"Approval escalation for incident {incident_id}: {reason}")

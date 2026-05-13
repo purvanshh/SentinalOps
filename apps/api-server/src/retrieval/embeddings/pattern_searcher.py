@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from core.config import get_settings
-from retrieval.embeddings.collection_manager import CollectionSpec, QdrantCollectionManager
+from retrieval.embeddings.collection_manager import QdrantCollectionManager
 from retrieval.embeddings.embedding_client import EmbeddingClient
 
 
@@ -28,8 +28,10 @@ class PatternSearcher:
             "embedding_model": self.embedding_client.active_model,
             "retrieved_at": datetime.now(UTC).isoformat(),
             "source": source,
-            "grounding_status": "grounded" if score >= 0.70 else (
-                "weakly_grounded" if score >= 0.45 else "ungrounded"
+            "grounding_status": (
+                "grounded"
+                if score >= 0.70
+                else ("weakly_grounded" if score >= 0.45 else "ungrounded")
             ),
         }
 

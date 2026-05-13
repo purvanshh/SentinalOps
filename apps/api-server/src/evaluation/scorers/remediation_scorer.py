@@ -9,6 +9,7 @@ Classifies AI-generated remediation plans as:
   HALLUCINATED           - references non-existent infrastructure
   OPERATIONALLY_INVALID  - technically invalid (wrong order, missing deps, infeasible)
 """
+
 from __future__ import annotations
 
 import re
@@ -90,18 +91,18 @@ class RemediationQualityScore:
 
 _ROLLBACK_KEYWORDS = frozenset({"rollback", "revert", "restore", "undo", "previous version"})
 _INFEASIBLE_PATTERNS = [
-    re.compile(r'\b(redis|postgres|postgresql)\s+flush\s+all\b', re.IGNORECASE),
-    re.compile(r'\bdrop\s+(all|production)\b', re.IGNORECASE),
-    re.compile(r'\bdelete\s+all\s+(pods?|nodes?|data|records?)\b', re.IGNORECASE),
+    re.compile(r"\b(redis|postgres|postgresql)\s+flush\s+all\b", re.IGNORECASE),
+    re.compile(r"\bdrop\s+(all|production)\b", re.IGNORECASE),
+    re.compile(r"\bdelete\s+all\s+(pods?|nodes?|data|records?)\b", re.IGNORECASE),
 ]
 _SUSPICIOUS_INFRASTRUCTURE_PATTERNS = [
-    re.compile(r'\b\w+-v\d+-secondary-replica\b', re.IGNORECASE),
-    re.compile(r'\b\w+_cache_v\d+_production_shard\d+\b', re.IGNORECASE),
+    re.compile(r"\b\w+-v\d+-secondary-replica\b", re.IGNORECASE),
+    re.compile(r"\b\w+_cache_v\d+_production_shard\d+\b", re.IGNORECASE),
 ]
 _NO_OP_PATTERNS = [
-    re.compile(r'\bno action required\b', re.IGNORECASE),
-    re.compile(r'\backnowledge and close\b', re.IGNORECASE),
-    re.compile(r'\bwait for.*to (complete|stabilize|finish)\b', re.IGNORECASE),
+    re.compile(r"\bno action required\b", re.IGNORECASE),
+    re.compile(r"\backnowledge and close\b", re.IGNORECASE),
+    re.compile(r"\bwait for.*to (complete|stabilize|finish)\b", re.IGNORECASE),
 ]
 
 

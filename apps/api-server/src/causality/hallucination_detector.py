@@ -15,6 +15,7 @@ Each violation is a CausalHallucination with:
   - evidence: why this is a hallucination
   - severity: "critical" (fundamentally wrong) or "warning" (suspicious)
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -36,6 +37,7 @@ class HallucinationType(str, Enum):
 @dataclass
 class CausalHallucination:
     """A detected hallucination in causal attribution."""
+
     violation_type: HallucinationType
     claimed_cause_id: str
     claimed_effect_id: str
@@ -46,6 +48,7 @@ class CausalHallucination:
 @dataclass
 class HallucinationReport:
     """Aggregated results of hallucination detection."""
+
     violations: list[CausalHallucination] = field(default_factory=list)
     suppressed_candidates: list[str] = field(default_factory=list)
 
@@ -97,16 +100,18 @@ def detect_topology_violations(
         if not cause_svc or not effect_svc or not topology:
             continue
         if not has_path(cause_svc, effect_svc):
-            violations.append(CausalHallucination(
-                violation_type=HallucinationType.TOPOLOGY_VIOLATION,
-                claimed_cause_id=claim.get("cause_id", ""),
-                claimed_effect_id=claim.get("effect_id", ""),
-                evidence=(
-                    f"no dependency path from '{cause_svc}' to '{effect_svc}' "
-                    "in the service topology — propagation is impossible"
-                ),
-                severity="critical",
-            ))
+            violations.append(
+                CausalHallucination(
+                    violation_type=HallucinationType.TOPOLOGY_VIOLATION,
+                    claimed_cause_id=claim.get("cause_id", ""),
+                    claimed_effect_id=claim.get("effect_id", ""),
+                    evidence=(
+                        f"no dependency path from '{cause_svc}' to '{effect_svc}' "
+                        "in the service topology — propagation is impossible"
+                    ),
+                    severity="critical",
+                )
+            )
     return violations
 
 
@@ -127,16 +132,18 @@ def detect_temporal_contradictions(
             continue
         elapsed = _elapsed_seconds(cause_ts, effect_ts)
         if elapsed < 0:
-            violations.append(CausalHallucination(
-                violation_type=HallucinationType.TEMPORAL_CONTRADICTION,
-                claimed_cause_id=claim.get("cause_id", ""),
-                claimed_effect_id=claim.get("effect_id", ""),
-                evidence=(
-                    f"claimed cause at {cause_ts} occurred "
-                    f"{abs(elapsed):.0f}s AFTER the effect at {effect_ts}"
-                ),
-                severity="critical",
-            ))
+            violations.append(
+                CausalHallucination(
+                    violation_type=HallucinationType.TEMPORAL_CONTRADICTION,
+                    claimed_cause_id=claim.get("cause_id", ""),
+                    claimed_effect_id=claim.get("effect_id", ""),
+                    evidence=(
+                        f"claimed cause at {cause_ts} occurred "
+                        f"{abs(elapsed):.0f}s AFTER the effect at {effect_ts}"
+                    ),
+                    severity="critical",
+                )
+            )
     return violations
 
 
@@ -157,17 +164,19 @@ def detect_deployment_misattribution(
             continue
         elapsed = _elapsed_seconds(incident_onset_timestamp, deploy_ts)
         if elapsed > 0:
-            violations.append(CausalHallucination(
-                violation_type=HallucinationType.DEPLOYMENT_AFTER_INCIDENT,
-                claimed_cause_id=deploy.get("id", "deployment"),
-                claimed_effect_id="incident",
-                evidence=(
-                    f"deployment at {deploy_ts} occurred {elapsed:.0f}s "
-                    f"after incident onset at {incident_onset_timestamp} "
-                    "— cannot be the root cause"
-                ),
-                severity="critical",
-            ))
+            violations.append(
+                CausalHallucination(
+                    violation_type=HallucinationType.DEPLOYMENT_AFTER_INCIDENT,
+                    claimed_cause_id=deploy.get("id", "deployment"),
+                    claimed_effect_id="incident",
+                    evidence=(
+                        f"deployment at {deploy_ts} occurred {elapsed:.0f}s "
+                        f"after incident onset at {incident_onset_timestamp} "
+                        "— cannot be the root cause"
+                    ),
+                    severity="critical",
+                )
+            )
     return violations
 
 
@@ -196,16 +205,18 @@ def detect_alert_storm_misattribution(
         if not attributed_to or not alert_service or not topology:
             continue
         if attributed_to == causal_service and not connected(alert_service, causal_service):
-            violations.append(CausalHallucination(
-                violation_type=HallucinationType.ALERT_STORM_MISATTRIBUTION,
-                claimed_cause_id=causal_service,
-                claimed_effect_id=alert.get("id", "alert"),
-                evidence=(
-                    f"alert from '{alert_service}' attributed to '{causal_service}' "
-                    "but no topology connection exists — likely collateral noise"
-                ),
-                severity="warning",
-            ))
+            violations.append(
+                CausalHallucination(
+                    violation_type=HallucinationType.ALERT_STORM_MISATTRIBUTION,
+                    claimed_cause_id=causal_service,
+                    claimed_effect_id=alert.get("id", "alert"),
+                    evidence=(
+                        f"alert from '{alert_service}' attributed to '{causal_service}' "
+                        "but no topology connection exists — likely collateral noise"
+                    ),
+                    severity="warning",
+                )
+            )
     return violations
 
 
@@ -222,9 +233,7 @@ def run_hallucination_detection(
     report = HallucinationReport()
 
     if topology:
-        report.violations.extend(
-            detect_topology_violations(causal_claims, topology)
-        )
+        report.violations.extend(detect_topology_violations(causal_claims, topology))
 
     report.violations.extend(detect_temporal_contradictions(causal_claims))
 

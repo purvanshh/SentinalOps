@@ -13,15 +13,14 @@ This makes retrieval transparent to operators and enables hallucination
 suppression: the root cause agent can cite the retrieval provenance rather than
 inventing historical context.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Any
 
 import httpx
-
 from retrieval.incident_history.searcher import IncidentHistorySearcher
-
 
 _OPERATIONAL_DIMENSIONS = [
     "latency",
@@ -45,16 +44,15 @@ _OPERATIONAL_DIMENSIONS = [
 def _extract_matched_dimensions(query: str, payload: dict[str, Any]) -> list[str]:
     """Identify which operational domains appear in both query and retrieved incident."""
     query_lower = query.lower()
-    combined = " ".join([
-        payload.get("title", ""),
-        payload.get("summary", ""),
-        payload.get("root_cause", ""),
-    ]).lower()
+    combined = " ".join(
+        [
+            payload.get("title", ""),
+            payload.get("summary", ""),
+            payload.get("root_cause", ""),
+        ]
+    ).lower()
 
-    return [
-        dim for dim in _OPERATIONAL_DIMENSIONS
-        if dim in query_lower and dim in combined
-    ]
+    return [dim for dim in _OPERATIONAL_DIMENSIONS if dim in query_lower and dim in combined]
 
 
 def _build_retrieval_reason(score: float, matched: list[str], payload: dict[str, Any]) -> str:
@@ -137,15 +135,17 @@ class SemanticIncidentRetriever:
             if score < min_score:
                 continue
             matched = _extract_matched_dimensions(query, item)
-            results.append({
-                **item,
-                "similarity_score": round(score, 4),
-                "retrieval_reason": _build_retrieval_reason(score, matched, item),
-                "matched_dimensions": matched,
-                "embedding_model": model,
-                "retrieved_at": retrieved_at,
-                "meets_threshold": score >= min_score,
-            })
+            results.append(
+                {
+                    **item,
+                    "similarity_score": round(score, 4),
+                    "retrieval_reason": _build_retrieval_reason(score, matched, item),
+                    "matched_dimensions": matched,
+                    "embedding_model": model,
+                    "retrieved_at": retrieved_at,
+                    "meets_threshold": score >= min_score,
+                }
+            )
 
         results.sort(key=lambda r: r["similarity_score"], reverse=True)
         return results[:limit]

@@ -14,7 +14,9 @@ def test_compute_blast_radius_returns_distribution() -> None:
         "checkout-api": {"rps": 200},
     }
 
-    result = compute_blast_radius("postgres-db", topology, traffic, severity_factor=0.2, samples=200)
+    result = compute_blast_radius(
+        "postgres-db", topology, traffic, severity_factor=0.2, samples=200
+    )
 
     assert "payment-api" in result["affected_services"]
     assert result["users_at_risk"]["mean"] > 0

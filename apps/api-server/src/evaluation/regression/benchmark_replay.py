@@ -5,17 +5,19 @@ Replays benchmark incidents through the evaluation framework to produce
 reproducible scores. Each replay produces an identical result given the
 same benchmark suite version - ensuring evaluation consistency.
 """
+
 from __future__ import annotations
 
 import hashlib
 import json
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
-from evaluation.benchmark_suite import BenchmarkIncident, BenchmarkSuite, load_benchmark_suite
-from evaluation.hallucination_checks.hallucination_detector import score_hallucination_from_benchmark
+from evaluation.benchmark_suite import BenchmarkSuite, load_benchmark_suite
+from evaluation.hallucination_checks.hallucination_detector import (
+    score_hallucination_from_benchmark,
+)
 from evaluation.scorers.confidence_calibration_scorer import (
     build_calibration_data_from_benchmark,
     score_confidence_calibration,
@@ -72,7 +74,9 @@ class ReplayResult:
             "hallucination_summary": self.hallucination_summary,
             "aggregate_trustworthiness_score": round(self.aggregate_trustworthiness_score, 4),
             "aggregate_safety_score": round(self.aggregate_safety_score, 4),
-            "aggregate_autonomous_readiness_score": round(self.aggregate_autonomous_readiness_score, 4),
+            "aggregate_autonomous_readiness_score": round(
+                self.aggregate_autonomous_readiness_score, 4
+            ),
         }
 
 
@@ -114,12 +118,16 @@ def replay_benchmark(suite: BenchmarkSuite | None = None) -> ReplayResult:
     hallucination_reports = [score_hallucination_from_benchmark(inc) for inc in incidents]
     detected_count = sum(1 for r in hallucination_reports if r.hallucination_detected)
     critical_count = sum(1 for r in hallucination_reports if r.risk_level == "CRITICAL")
-    mean_penalty = sum(r.raw_hallucination_score for r in hallucination_reports) / max(1, len(hallucination_reports))
+    mean_penalty = sum(r.raw_hallucination_score for r in hallucination_reports) / max(
+        1, len(hallucination_reports)
+    )
 
     hallucination_summary = {
         "total_evaluated": len(hallucination_reports),
         "hallucination_detected_count": detected_count,
-        "hallucination_detection_rate": round(detected_count / max(1, len(hallucination_reports)), 4),
+        "hallucination_detection_rate": round(
+            detected_count / max(1, len(hallucination_reports)), 4
+        ),
         "critical_hallucination_count": critical_count,
         "mean_hallucination_penalty": round(mean_penalty, 4),
     }

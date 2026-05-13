@@ -11,10 +11,10 @@ This test proves that:
 This is the PROOF that the resilience implementation works.
 """
 
+import httpx
 import pytest
 import respx
-import httpx
-
+from agents.router_agent.output_schema import RouterOutput
 from core.resilience.fallback_classifier import (
     DeterministicFallbackClassifier,
     FallbackClassification,
@@ -22,7 +22,6 @@ from core.resilience.fallback_classifier import (
 from core.resilience.operating_mode import OperatingMode, OperatingModeManager
 from core.resilience.provider_chain import ProviderChain, ProviderConfig
 from core.resilience.resilient_llm_client import ResilientLLMClient
-from agents.router_agent.output_schema import RouterOutput
 
 
 @pytest.fixture(autouse=True)
@@ -131,9 +130,9 @@ class TestIncidentSurvivability:
         # ASSERTIONS: The system MUST produce a valid classification
         assert result is not None, "Classification must not be None"
         assert isinstance(result, FallbackClassification), "Must use deterministic fallback"
-        assert result.incident_type == "database", (
-            f"Expected 'database', got '{result.incident_type}'"
-        )
+        assert (
+            result.incident_type == "database"
+        ), f"Expected 'database', got '{result.incident_type}'"
         assert result.severity == "high"
         assert result.fallback is True
         assert result.provider_used == "deterministic_fallback"
@@ -214,17 +213,19 @@ class TestIncidentSurvivability:
         ]
 
         valid_llm_response = {
-            "choices": [{
-                "message": {
-                    "role": "assistant",
-                    "content": (
-                        '{"incident_type": "memory", "severity": "high", "confidence": 0.85,'
-                        ' "requires_immediate_investigation": true,'
-                        ' "recommended_workflow": "full_investigation",'
-                        ' "rationale": "OOM kill detected"}'
-                    )
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": (
+                            '{"incident_type": "memory", "severity": "high", "confidence": 0.85,'
+                            ' "requires_immediate_investigation": true,'
+                            ' "recommended_workflow": "full_investigation",'
+                            ' "rationale": "OOM kill detected"}'
+                        ),
+                    }
                 }
-            }]
+            ]
         }
 
         with respx.mock:

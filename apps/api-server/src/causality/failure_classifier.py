@@ -16,6 +16,7 @@ Classification algorithm:
   4. Events at depth >= 2 in the causal chain are CASCADING_FAILURE.
   5. Events with no path to any primary are COLLATERAL_NOISE.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -36,6 +37,7 @@ class FailureType(str, Enum):
 @dataclass
 class ClassifiedEvent:
     """A causal graph node with its assigned failure type."""
+
     node: CausalNode
     failure_type: FailureType
     causal_depth: int
@@ -92,9 +94,7 @@ def classify_failures(
 
         elif depth >= 2:
             failure_type = FailureType.CASCADING_FAILURE
-            rationale = (
-                f"causal depth {depth} — propagated through multiple service hops"
-            )
+            rationale = f"causal depth {depth} — propagated through multiple service hops"
 
         elif depth == 1:
             failure_type = FailureType.SECONDARY_EFFECT
@@ -104,12 +104,14 @@ def classify_failures(
             failure_type = FailureType.COLLATERAL_NOISE
             rationale = "no causal path to or from any other event"
 
-        results.append(ClassifiedEvent(
-            node=node,
-            failure_type=failure_type,
-            causal_depth=depth,
-            rationale=rationale,
-        ))
+        results.append(
+            ClassifiedEvent(
+                node=node,
+                failure_type=failure_type,
+                causal_depth=depth,
+                rationale=rationale,
+            )
+        )
 
     return results
 
@@ -139,13 +141,21 @@ def to_classification_dict(classified: list[ClassifiedEvent]) -> dict[str, Any]:
     """Serialize classification results for API/report output."""
     return {
         "primary_causes": [
-            {"node_id": c.node.node_id, "service": c.node.service,
-             "description": c.node.description, "rationale": c.rationale}
+            {
+                "node_id": c.node.node_id,
+                "service": c.node.service,
+                "description": c.node.description,
+                "rationale": c.rationale,
+            }
             for c in primary_causes(classified)
         ],
         "secondary_effects": [
-            {"node_id": c.node.node_id, "service": c.node.service,
-             "description": c.node.description, "causal_depth": c.causal_depth}
+            {
+                "node_id": c.node.node_id,
+                "service": c.node.service,
+                "description": c.node.description,
+                "causal_depth": c.causal_depth,
+            }
             for c in secondary_effects(classified)
         ],
         "collateral_noise": [

@@ -5,6 +5,7 @@ Each benchmark replay persists an EvaluationTrace containing the full
 execution details. These are stored separately from production incident
 traces and enable regression analysis across releases.
 """
+
 from __future__ import annotations
 
 import time

@@ -1,7 +1,5 @@
 from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from agents.base_agent import agent_loop
 from agents.deployment_agent.output_schema import DeploymentSummary
 from agents.deployment_agent.prompts import (
@@ -11,6 +9,7 @@ from agents.deployment_agent.prompts import (
 from agents.deployment_agent.risk_calculator import calculate_deployment_risk
 from core.llm_client import LLMClient
 from db.models.incident import Incident
+from sqlalchemy.ext.asyncio import AsyncSession
 from tools.github.client import GitHubClient
 from tools.github.tools import build_github_registry
 
@@ -27,7 +26,9 @@ async def analyze_deployments(
 
     @registry.tool(
         name="score_deployment_risk",
-        description="Estimate deployment risk from change type, recency, and historical similarity.",
+        description=(
+            "Estimate deployment risk from change type, recency, " "and historical similarity."
+        ),
         parameters={
             "type": "object",
             "properties": {

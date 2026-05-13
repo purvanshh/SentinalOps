@@ -22,10 +22,9 @@ from typing import Any
 
 import httpx
 import structlog
-from pydantic import BaseModel
-
 from core.resilience.circuit_breaker import CircuitBreaker
 from core.resilience.operating_mode import OperatingMode, OperatingModeManager
+from pydantic import BaseModel
 
 logger = structlog.get_logger(__name__)
 
@@ -146,12 +145,14 @@ class ProviderChain:
 
             # Skip if circuit is open
             if not cb.is_available:
-                attempts.append(ProviderAttempt(
-                    provider_name=provider.name,
-                    layer=provider.layer,
-                    success=False,
-                    error="circuit_breaker_open",
-                ))
+                attempts.append(
+                    ProviderAttempt(
+                        provider_name=provider.name,
+                        layer=provider.layer,
+                        success=False,
+                        error="circuit_breaker_open",
+                    )
+                )
                 logger.info(
                     "provider_skipped_circuit_open",
                     provider=provider.name,
@@ -160,7 +161,9 @@ class ProviderChain:
                 continue
 
             # Try this provider with retries and exponential backoff
-            attempt = await self._try_provider(provider, cb, messages, temperature, tools, structured_output_model)
+            attempt = await self._try_provider(
+                provider, cb, messages, temperature, tools, structured_output_model
+            )
             attempts.append(attempt)
 
             if attempt.success:
@@ -337,4 +340,5 @@ class ProviderChain:
 
 class ProviderRateLimitError(Exception):
     """Raised when a provider returns 429 Too Many Requests."""
+
     pass

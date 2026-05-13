@@ -5,8 +5,6 @@ import time
 from uuid import uuid4
 
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from core.resilience.operating_mode import OperatingModeManager
 from db.repositories.incident_repo import IncidentRepository
 from db.session import SessionLocal
@@ -28,6 +26,7 @@ from orchestration.nodes.risk_node import risk_node
 from orchestration.nodes.rootcause_node import rootcause_node
 from orchestration.nodes.router_node import router_node
 from orchestration.state.incident_state import IncidentState, append_unique
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger(__name__)
 _GRAPH_LOCK = threading.Lock()

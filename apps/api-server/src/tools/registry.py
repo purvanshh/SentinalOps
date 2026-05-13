@@ -1,10 +1,9 @@
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from observability.metrics import observe_tool_execution
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from observability.metrics import observe_tool_execution
 from tools.base import SafetyLevel, ToolCall, ToolResult
 from tools.execution_guard import enforce_tool_execution_policy
 
@@ -59,8 +58,10 @@ class ToolRegistry:
         return self._tools[name]
 
     def list_schemas(self, tool_names: list[str] | None = None) -> list[dict[str, Any]]:
-        selected = self._tools.values() if tool_names is None else (
-            self._tools[name] for name in tool_names if name in self._tools
+        selected = (
+            self._tools.values()
+            if tool_names is None
+            else (self._tools[name] for name in tool_names if name in self._tools)
         )
         return [tool.openai_schema() for tool in selected]
 

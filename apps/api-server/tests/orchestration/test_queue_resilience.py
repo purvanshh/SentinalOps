@@ -9,19 +9,19 @@ Covers:
   - mark_dead_letter transitions task status correctly
   - list_dead_letter_tasks returns only dead-letter entries
 """
+
 from __future__ import annotations
 
 import asyncio
 from uuid import uuid4
 
 import pytest
-
 from workers.tasks.incident_pipeline import _MAX_REPLAY_ATTEMPTS, enqueue_incident_pipeline
-
 
 # ---------------------------------------------------------------------------
 # Celery configuration assertions
 # ---------------------------------------------------------------------------
+
 
 def test_celery_serializer_is_json():
     from workers.queues import celery_app
@@ -49,6 +49,7 @@ def test_incident_pipeline_queue_routing():
 # ---------------------------------------------------------------------------
 # Dead-letter repository operations
 # ---------------------------------------------------------------------------
+
 
 class _FakePendingTask:
     def __init__(self, status="pending", attempts=0):
@@ -135,6 +136,7 @@ async def test_list_dead_letter_tasks_returns_only_dead_letter():
 # MAX_REPLAY_ATTEMPTS constant
 # ---------------------------------------------------------------------------
 
+
 def test_max_replay_attempts_is_bounded():
     """Budget must be finite and reasonable — not zero, not unbounded."""
     assert 1 <= _MAX_REPLAY_ATTEMPTS <= 20
@@ -143,6 +145,7 @@ def test_max_replay_attempts_is_bounded():
 # ---------------------------------------------------------------------------
 # Broker outage — task is persisted durably
 # ---------------------------------------------------------------------------
+
 
 def test_broker_outage_persists_task_to_pending_store(monkeypatch):
     stored: dict = {}
@@ -154,12 +157,8 @@ def test_broker_outage_persists_task_to_pending_store(monkeypatch):
         stored["incident_id"] = str(incident_id)
         stored["error"] = str(error)
 
-    monkeypatch.setattr(
-        "workers.tasks.incident_pipeline.run_incident_pipeline.delay", fail_delay
-    )
-    monkeypatch.setattr(
-        "workers.tasks.incident_pipeline._store_deferred_task", capture_store
-    )
+    monkeypatch.setattr("workers.tasks.incident_pipeline.run_incident_pipeline.delay", fail_delay)
+    monkeypatch.setattr("workers.tasks.incident_pipeline._store_deferred_task", capture_store)
 
     incident_id = str(uuid4())
     asyncio.run(enqueue_incident_pipeline(incident_id))
@@ -177,7 +176,9 @@ async def test_mark_replay_scheduled_tracks_recovery_metadata():
     session._store[task.id] = task
 
     repo = PendingTaskRepository(session)
-    result = await repo.mark_replay_scheduled(task.id, replayer_id="replayer-1", reason="stale-after-20s")
+    result = await repo.mark_replay_scheduled(
+        task.id, replayer_id="replayer-1", reason="stale-after-20s"
+    )
 
     assert result.status == "replaying"
     assert result.payload["recovery"]["replay_count"] == 1

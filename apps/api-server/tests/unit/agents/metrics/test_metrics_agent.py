@@ -1,11 +1,9 @@
 import json
-from datetime import UTC, datetime
 from types import SimpleNamespace
 from uuid import uuid4
 
 import httpx
 import pytest
-
 from agents.metrics_agent.agent import analyze_metrics
 from core.llm_client import LLMClient
 from tools.prometheus.client import PrometheusClient
@@ -79,7 +77,9 @@ async def test_metrics_agent_uses_prometheus_tools() -> None:
         return httpx.Response(200, json={"status": "success", "data": {"result": []}})
 
     llm_client = LLMClient(base_url="http://test", transport=httpx.MockTransport(llm_handler))
-    prom_client = PrometheusClient(base_url="http://test", transport=httpx.MockTransport(prom_handler))
+    prom_client = PrometheusClient(
+        base_url="http://test", transport=httpx.MockTransport(prom_handler)
+    )
 
     result = await analyze_metrics(incident, llm_client=llm_client, prometheus_client=prom_client)
 

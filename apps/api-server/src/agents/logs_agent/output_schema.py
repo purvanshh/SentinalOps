@@ -1,8 +1,7 @@
 import hashlib
 
-from pydantic import BaseModel, Field, model_validator
-
 from agents.uncertainty import UncertaintyIndicator
+from pydantic import BaseModel, Field, model_validator
 
 
 class ErrorSignature(BaseModel):
@@ -29,9 +28,7 @@ class TemporalCorrelation(BaseModel):
 class LogsSummary(BaseModel):
     error_signatures: list[ErrorSignature] = Field(default_factory=list)
     temporal_correlations: list[TemporalCorrelation] = Field(default_factory=list)
-    evidence_quality: UncertaintyIndicator = Field(
-        default_factory=UncertaintyIndicator.present
-    )
+    evidence_quality: UncertaintyIndicator = Field(default_factory=UncertaintyIndicator.present)
 
     @model_validator(mode="after")
     def _deduplicate_and_assess_quality(self) -> "LogsSummary":

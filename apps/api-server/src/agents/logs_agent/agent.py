@@ -1,12 +1,11 @@
 from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from agents.base_agent import agent_loop
 from agents.logs_agent.output_schema import LogsSummary
 from agents.logs_agent.prompts import build_logs_system_prompt, build_logs_user_prompt
 from core.llm_client import LLMClient
 from db.models.incident import Incident
+from sqlalchemy.ext.asyncio import AsyncSession
 from tools.loki.client import LokiClient
 from tools.loki.tools import build_loki_registry
 

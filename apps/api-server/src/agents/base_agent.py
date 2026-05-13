@@ -1,14 +1,12 @@
 import json
-from collections.abc import Sequence
 from time import perf_counter
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from core.llm_client import LLMClient
 from db.repositories.incident_repo import IncidentRepository
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 from tools.base import ToolCall
 from tools.registry import ToolRegistry
 
@@ -32,7 +30,9 @@ async def agent_loop(
         {"role": "user", "content": user_message},
     ]
     if state:
-        messages.append({"role": "system", "content": f"Current state: {json.dumps(state, default=str)}"})
+        messages.append(
+            {"role": "system", "content": f"Current state: {json.dumps(state, default=str)}"}
+        )
 
     iteration_count = 0
     started_at = perf_counter()

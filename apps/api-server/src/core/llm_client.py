@@ -3,11 +3,10 @@ from collections.abc import Sequence
 from typing import Any
 
 import httpx
-from pydantic import BaseModel, ValidationError
-
 from core.config import get_settings
 from core.exceptions import SentinelOpsError
 from memory.short_term.llm_cache import get_cached, set_cached
+from pydantic import BaseModel, ValidationError
 
 
 class LLMClientError(SentinelOpsError):
@@ -80,7 +79,9 @@ class LLMClient:
             except (httpx.HTTPError, KeyError, ValidationError, json.JSONDecodeError) as exc:
                 last_error = exc
 
-        raise LLMClientError(f"Unable to generate response after retries: {last_error}") from last_error
+        raise LLMClientError(
+            f"Unable to generate response after retries: {last_error}"
+        ) from last_error
 
     def _parse_structured_output(
         self,

@@ -1,5 +1,4 @@
 import structlog
-
 from observability.logging import configure_logging
 
 

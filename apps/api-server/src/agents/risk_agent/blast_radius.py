@@ -58,6 +58,9 @@ def compute_blast_radius(
         "users_at_risk": {
             "mean": mean,
             "p90": p90,
-            "description": f"If {affected_service} remains degraded, downstream services may impact about {mean} users.",
+            "description": (
+                f"If {affected_service} remains degraded, downstream services "
+                f"may impact about {mean} users."
+            ),
         },
     }

@@ -5,6 +5,7 @@ These replace live Qdrant, Prometheus, Loki, and GitHub clients during
 evaluation. They return empty results without making any network calls,
 enforcing the zero-external-side-effects requirement.
 """
+
 from __future__ import annotations
 
 from typing import Any

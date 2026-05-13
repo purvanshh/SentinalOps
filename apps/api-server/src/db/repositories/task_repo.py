@@ -1,10 +1,9 @@
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import select
-
 from db.models import PendingTask
 from db.repositories import BaseRepository
+from sqlalchemy import select
 
 
 class PendingTaskRepository(BaseRepository):
@@ -12,7 +11,9 @@ class PendingTaskRepository(BaseRepository):
     def _now_iso() -> str:
         return datetime.now(timezone.utc).isoformat()
 
-    def _build_recovery_metadata(self, row: PendingTask | None, *, payload: dict | None = None) -> dict:
+    def _build_recovery_metadata(
+        self, row: PendingTask | None, *, payload: dict | None = None
+    ) -> dict:
         source = payload if payload is not None else (row.payload if row is not None else {})
         recovery = dict(source.get("recovery", {}))
         recovery.setdefault("execution_lineage", [])
@@ -114,7 +115,9 @@ class PendingTaskRepository(BaseRepository):
         result = await self.session.execute(query.order_by(PendingTask.created_at.asc()))
         return list(result.scalars().all())
 
-    async def mark_replay_scheduled(self, task_id, *, replayer_id: str, reason: str) -> PendingTask | None:
+    async def mark_replay_scheduled(
+        self, task_id, *, replayer_id: str, reason: str
+    ) -> PendingTask | None:
         row = await self.session.get(PendingTask, task_id)
         if row is None:
             return None

@@ -8,5 +8,5 @@ async def record_fallback(incident_id: str, session, node_name: str, error: Exce
         agent_name=f"{node_name}_fallback",
         input_payload={"node_name": node_name},
         output_payload={"error": str(error)},
-        status="failed"
+        status="failed",
     )

@@ -1,12 +1,11 @@
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from core.config import get_settings
 from db.repositories.incident_repo import IncidentRepository
 from orchestration.interrupts.approval_store import ApprovalStore
+from sqlalchemy.ext.asyncio import AsyncSession
 from tools.slack.notifier import notify_approval_required
-from core.config import get_settings
 
 
 async def start_approval_workflow(

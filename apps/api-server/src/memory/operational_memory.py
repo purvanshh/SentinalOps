@@ -19,14 +19,14 @@ Each memory category supports:
 This layer is intentionally stateless at construction: all persistence is
 delegated to Qdrant collections via the retrieval layer.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
 import httpx
-
 from core.config import get_settings
 from retrieval.embeddings.collection_manager import CollectionSpec, QdrantCollectionManager
 from retrieval.embeddings.embedding_client import EmbeddingClient
@@ -35,6 +35,7 @@ from retrieval.embeddings.embedding_client import EmbeddingClient
 @dataclass
 class MemoryItem:
     """A retrieved memory entry with full provenance."""
+
     key: str
     category: str
     payload: dict[str, Any]

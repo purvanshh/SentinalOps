@@ -1,6 +1,5 @@
-from pydantic import BaseModel, Field, model_validator
-
 from agents.uncertainty import UncertaintyIndicator
+from pydantic import BaseModel, Field, model_validator
 
 
 class MetricAnomaly(BaseModel):
@@ -15,9 +14,7 @@ class MetricsSummary(BaseModel):
     anomalies: list[MetricAnomaly] = Field(default_factory=list)
     correlation_hints: list[str] = Field(default_factory=list)
     raw_query_links: list[str] = Field(default_factory=list)
-    evidence_quality: UncertaintyIndicator = Field(
-        default_factory=UncertaintyIndicator.present
-    )
+    evidence_quality: UncertaintyIndicator = Field(default_factory=UncertaintyIndicator.present)
 
     @model_validator(mode="after")
     def _assess_evidence_quality(self) -> "MetricsSummary":

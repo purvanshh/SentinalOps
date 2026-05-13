@@ -3,11 +3,11 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
+from agents.risk_agent.action_mapper import map_action_to_category
 from core.resilience.operating_mode import OperatingMode
 from db.repositories.incident_repo import IncidentRepository
 from db.repositories.risk_repo import RiskRepository
 from db.session import SessionLocal
-from agents.risk_agent.action_mapper import map_action_to_category
 from observability.logging import bind_execution_id
 from observability.metrics import observe_remediation_action
 from tools.action_mapping import map_action_to_tool

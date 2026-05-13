@@ -1,8 +1,7 @@
+import inspect
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from agents.router_agent import classify_incident
 from api.dependencies import get_db, require_role
 from api.middleware.auth import AuthenticatedUser
 from api.schemas.incident import (
@@ -12,13 +11,18 @@ from api.schemas.incident import (
     IncidentSummary,
     PostmortemResponse,
 )
-from agents.router_agent import classify_incident
 from db.repositories.incident_repo import IncidentRepository
 from db.repositories.postmortem_repo import PostmortemRepository
+from fastapi import APIRouter, Depends, HTTPException, status
 from memory.short_term.incident_state import IncidentStateStore
+from sqlalchemy.ext.asyncio import AsyncSession
 from workers.tasks.incident_pipeline import enqueue_incident_pipeline
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
+DB_DEPENDENCY = Depends(get_db)
+VIEWER_ROLE_DEPENDENCY = Depends(require_role(["viewer"]))
+OPERATOR_ROLE_DEPENDENCY = Depends(require_role(["operator"]))
+ADMIN_ROLE_DEPENDENCY = Depends(require_role(["admin"]))
 
 
 def _merge_runtime_state(incident, runtime_state: dict | None) -> dict:
@@ -35,8 +39,8 @@ def _merge_runtime_state(incident, runtime_state: dict | None) -> dict:
 @router.post("/webhook", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
 async def create_incident_from_webhook(
     payload: AlertPayload,
-    db: AsyncSession = Depends(get_db),
-    _: AuthenticatedUser = Depends(require_role(["admin"])),
+    db: AsyncSession = DB_DEPENDENCY,
+    _: AuthenticatedUser = ADMIN_ROLE_DEPENDENCY,
 ) -> IncidentResponse:
     repository = IncidentRepository(db)
     incident = await repository.create_from_alert(
@@ -48,15 +52,17 @@ async def create_incident_from_webhook(
             raw_payload=payload.model_dump(mode="json"),
         )
     )
-    await enqueue_incident_pipeline(str(incident.id))
+    enqueue_result = enqueue_incident_pipeline(str(incident.id))
+    if inspect.isawaitable(enqueue_result):
+        await enqueue_result
     return IncidentResponse.model_validate(incident)
 
 
 @router.get("", response_model=list[IncidentSummary])
 async def list_incidents(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = DB_DEPENDENCY,
     status_filter: str | None = None,
-    _: AuthenticatedUser = Depends(require_role(["viewer"])),
+    _: AuthenticatedUser = VIEWER_ROLE_DEPENDENCY,
 ) -> list[IncidentSummary]:
     repository = IncidentRepository(db)
     incidents = await repository.list(status_filter=status_filter)
@@ -66,8 +72,8 @@ async def list_incidents(
 @router.get("/{incident_id}", response_model=IncidentResponse)
 async def get_incident(
     incident_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    _: AuthenticatedUser = Depends(require_role(["viewer"])),
+    db: AsyncSession = DB_DEPENDENCY,
+    _: AuthenticatedUser = VIEWER_ROLE_DEPENDENCY,
 ) -> IncidentResponse:
     repository = IncidentRepository(db)
     incident = await repository.get_with_agent_executions(incident_id)
@@ -89,8 +95,8 @@ async def get_incident(
 @router.post("/{incident_id}/classify", response_model=IncidentResponse)
 async def classify_existing_incident(
     incident_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    _: AuthenticatedUser = Depends(require_role(["operator"])),
+    db: AsyncSession = DB_DEPENDENCY,
+    _: AuthenticatedUser = OPERATOR_ROLE_DEPENDENCY,
 ) -> IncidentResponse:
     repository = IncidentRepository(db)
     incident = await repository.get(incident_id)
@@ -107,8 +113,8 @@ async def classify_existing_incident(
 @router.get("/{incident_id}/postmortems", response_model=list[PostmortemResponse])
 async def list_postmortems(
     incident_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    _: AuthenticatedUser = Depends(require_role(["viewer"])),
+    db: AsyncSession = DB_DEPENDENCY,
+    _: AuthenticatedUser = VIEWER_ROLE_DEPENDENCY,
 ) -> list[PostmortemResponse]:
     repository = IncidentRepository(db)
     incident = await repository.get(incident_id)

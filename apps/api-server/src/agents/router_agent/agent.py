@@ -1,8 +1,4 @@
 from time import perf_counter
-from typing import Any
-from uuid import UUID
-
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from agents.router_agent.output_schema import RouterOutput
 from agents.router_agent.prompts import build_router_system_prompt, build_router_user_prompt
@@ -10,6 +6,7 @@ from core.llm_client import LLMClient
 from db.models.incident import Incident
 from db.repositories.incident_repo import IncidentRepository
 from retrieval.incident_history.searcher import IncidentHistorySearcher
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def classify_incident(

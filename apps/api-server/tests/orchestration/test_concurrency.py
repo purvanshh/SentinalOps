@@ -7,28 +7,26 @@ Validates:
   - append_unique reducer handles concurrent list updates correctly
   - Graph singleton is safe for concurrent use (distinct thread configs)
 """
+
 from __future__ import annotations
 
 import asyncio
 from uuid import uuid4
 
 import pytest
-
-from orchestration.state.incident_state import IncidentState, append_unique
 from orchestration.graphs.main_graph import reset_graph
-
+from orchestration.state.incident_state import IncidentState, append_unique
 
 # ---------------------------------------------------------------------------
 # State isolation — unique IDs per invocation
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_concurrent_invocations_get_distinct_thread_ids(monkeypatch):
     """Two concurrent runs must produce different thread_ids and execution_ids."""
     seen_thread_ids: set[str] = set()
     seen_execution_ids: set[str] = set()
-
-    original_uuid4 = __import__("uuid").uuid4
 
     class _FakeStateStore:
         async def save_state(self, _incident_id, state):
@@ -53,8 +51,6 @@ async def test_concurrent_invocations_get_distinct_thread_ids(monkeypatch):
     from orchestration.graphs import main_graph as mg
 
     monkeypatch.setattr(mg, "_GRAPH", None)
-
-    original_workflow_init = mg.LangGraphWorkflow.__init__
 
     def patched_init(self):
         self.state_store = _FakeStateStore()
@@ -83,6 +79,7 @@ async def test_concurrent_invocations_get_distinct_thread_ids(monkeypatch):
 # ---------------------------------------------------------------------------
 # append_unique reducer
 # ---------------------------------------------------------------------------
+
 
 def test_append_unique_merges_without_duplicates():
     current = ["a", "b"]
@@ -113,10 +110,15 @@ def test_append_unique_no_mutation_of_current():
 # State TypedDict — key safety
 # ---------------------------------------------------------------------------
 
+
 def test_incident_state_has_required_keys():
     required = {
-        "incident_id", "thread_id", "execution_id", "status",
-        "errors", "completed_nodes",
+        "incident_id",
+        "thread_id",
+        "execution_id",
+        "status",
+        "errors",
+        "completed_nodes",
     }
     annotations = IncidentState.__annotations__
     missing = required - set(annotations.keys())
@@ -125,7 +127,6 @@ def test_incident_state_has_required_keys():
 
 def test_incident_state_errors_uses_append_unique_reducer():
     """The errors field must use append_unique so concurrent node updates don't clobber."""
-    import typing
     hints = IncidentState.__annotations__
     errors_hint = hints.get("errors")
     assert errors_hint is not None
@@ -136,7 +137,6 @@ def test_incident_state_errors_uses_append_unique_reducer():
 
 
 def test_incident_state_completed_nodes_uses_append_unique_reducer():
-    import typing
     hints = IncidentState.__annotations__
     cn_hint = hints.get("completed_nodes")
     assert cn_hint is not None
@@ -150,11 +150,12 @@ def test_incident_state_completed_nodes_uses_append_unique_reducer():
 # Graph singleton reset
 # ---------------------------------------------------------------------------
 
+
 def test_reset_graph_forces_reconstruction(monkeypatch):
     from orchestration.graphs import main_graph as mg
 
     # Ensure singleton exists
-    original = mg.build_main_graph()
+    mg.build_main_graph()
     assert mg._GRAPH is not None
 
     reset_graph()

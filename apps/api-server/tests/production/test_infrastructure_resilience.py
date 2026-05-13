@@ -12,25 +12,23 @@ Proves:
   - Celery task configuration: reject_on_worker_lost + acks_late
   - Health endpoint does not raise when service URLs are unconfigured
 """
+
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import httpx
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # Qdrant resilience: HTTP failures are absorbed, not raised
 # ---------------------------------------------------------------------------
 
-def test_collection_manager_returns_false_on_http_error():
-    from retrieval.embeddings.collection_manager import QdrantCollectionManager, CollectionSpec
 
-    transport = httpx.MockTransport(
-        lambda request: httpx.Response(503, text="service unavailable")
-    )
+def test_collection_manager_returns_false_on_http_error():
+    from retrieval.embeddings.collection_manager import CollectionSpec, QdrantCollectionManager
+
+    transport = httpx.MockTransport(lambda request: httpx.Response(503, text="service unavailable"))
     manager = QdrantCollectionManager(base_url="http://qdrant-mock", transport=transport)
     spec = CollectionSpec(name="test_collection", vector_size=16)
     result = manager.ensure_collection(spec)
@@ -40,9 +38,7 @@ def test_collection_manager_returns_false_on_http_error():
 def test_collection_manager_upsert_returns_false_on_http_error():
     from retrieval.embeddings.collection_manager import QdrantCollectionManager
 
-    transport = httpx.MockTransport(
-        lambda request: httpx.Response(500, text="internal error")
-    )
+    transport = httpx.MockTransport(lambda request: httpx.Response(500, text="internal error"))
     manager = QdrantCollectionManager(base_url="http://qdrant-mock", transport=transport)
     result = manager.upsert_points("patterns", [{"id": "1", "vector": [0.1] * 16, "payload": {}}])
     assert result is False
@@ -51,9 +47,7 @@ def test_collection_manager_upsert_returns_false_on_http_error():
 def test_collection_manager_search_returns_empty_on_http_error():
     from retrieval.embeddings.collection_manager import QdrantCollectionManager
 
-    transport = httpx.MockTransport(
-        lambda request: httpx.Response(404, text="not found")
-    )
+    transport = httpx.MockTransport(lambda request: httpx.Response(404, text="not found"))
     manager = QdrantCollectionManager(base_url="http://qdrant-mock", transport=transport)
     results = manager.search("patterns", [0.1] * 16)
     assert results == []
@@ -103,6 +97,7 @@ def test_retrieval_orchestrator_runbooks_returns_false_for_empty_dir(tmp_path):
 # PendingTask dead-letter lifecycle (in-memory mock)
 # ---------------------------------------------------------------------------
 
+
 class _FakeTask:
     def __init__(self, attempts: int, status: str = "pending"):
         self.id = uuid4()
@@ -133,14 +128,15 @@ def test_task_below_max_attempts_is_eligible_for_replay():
 def test_max_replay_attempts_constant_is_bounded():
     from workers.tasks.incident_pipeline import _MAX_REPLAY_ATTEMPTS
 
-    assert 3 <= _MAX_REPLAY_ATTEMPTS <= 10, (
-        f"_MAX_REPLAY_ATTEMPTS={_MAX_REPLAY_ATTEMPTS} is outside safe range [3, 10]"
-    )
+    assert (
+        3 <= _MAX_REPLAY_ATTEMPTS <= 10
+    ), f"_MAX_REPLAY_ATTEMPTS={_MAX_REPLAY_ATTEMPTS} is outside safe range [3, 10]"
 
 
 # ---------------------------------------------------------------------------
 # Celery task hardening configuration
 # ---------------------------------------------------------------------------
+
 
 def test_incident_pipeline_task_has_reject_on_worker_lost():
     from workers.tasks.incident_pipeline import run_incident_pipeline
@@ -169,6 +165,7 @@ def test_approval_escalation_task_has_acks_late():
 # ---------------------------------------------------------------------------
 # Health endpoint: survives unconfigured services
 # ---------------------------------------------------------------------------
+
 
 def test_health_service_status_empty_string_is_missing():
     from api.routes.health import _service_status

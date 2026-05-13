@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import Select, select
-from sqlalchemy.orm import selectinload
-
 from api.schemas.incident import IncidentCreate
 from db.models import AgentExecution, EvidenceItem, Incident, RemediationAction
 from db.repositories import BaseRepository
 from observability.metrics import observe_agent_execution, observe_incident_created
+from sqlalchemy import Select, select
+from sqlalchemy.orm import selectinload
 
 
 class IncidentRepository(BaseRepository):
@@ -86,7 +85,9 @@ class IncidentRepository(BaseRepository):
         await self.session.refresh(incident)
         return incident
 
-    async def update_graph_thread_id(self, incident_id: UUID | str, thread_id: str) -> Incident | None:
+    async def update_graph_thread_id(
+        self, incident_id: UUID | str, thread_id: str
+    ) -> Incident | None:
         incident = await self.get(incident_id)
         if incident is None:
             return None

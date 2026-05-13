@@ -10,6 +10,7 @@ latency to hot paths.
 
 See apps/api-server/src/main.py lifespan for the startup call.
 """
+
 from __future__ import annotations
 
 import json
@@ -44,7 +45,9 @@ class RetrievalOrchestrator:
         for spec in specs:
             self.collection_manager.ensure_collection(spec)
 
-    def _point(self, payload: dict[str, Any], text: str, *, point_id: str | None = None) -> dict[str, Any]:
+    def _point(
+        self, payload: dict[str, Any], text: str, *, point_id: str | None = None
+    ) -> dict[str, Any]:
         return {
             "id": point_id or str(uuid.uuid4()),
             "vector": self.embedding_client.embed_text(text),
@@ -69,7 +72,9 @@ class RetrievalOrchestrator:
             )
             for pattern in patterns
         ]
-        return self.collection_manager.upsert_points(self.settings.qdrant_pattern_collection, points)
+        return self.collection_manager.upsert_points(
+            self.settings.qdrant_pattern_collection, points
+        )
 
     def index_runbooks_from_directory(self, path: str | Path) -> bool:
         directory = Path(path)
@@ -92,7 +97,9 @@ class RetrievalOrchestrator:
             )
         if not points:
             return False
-        return self.collection_manager.upsert_points(self.settings.qdrant_runbook_collection, points)
+        return self.collection_manager.upsert_points(
+            self.settings.qdrant_runbook_collection, points
+        )
 
     async def index_prevention_items(self, items: list[dict[str, Any]]) -> bool:
         points = [
@@ -108,7 +115,9 @@ class RetrievalOrchestrator:
         ]
         if not points:
             return False
-        return await self.collection_manager.upsert_points_async(self.settings.qdrant_prevention_collection, points)
+        return await self.collection_manager.upsert_points_async(
+            self.settings.qdrant_prevention_collection, points
+        )
 
     async def index_resolved_incident(
         self,
@@ -151,7 +160,9 @@ class RetrievalOrchestrator:
         )
         return [{"score": item.get("score"), **(item.get("payload") or {})} for item in results]
 
-    def load_pattern_file(self, path: str | Path = "configs/development/patterns.json") -> list[dict[str, Any]]:
+    def load_pattern_file(
+        self, path: str | Path = "configs/development/patterns.json"
+    ) -> list[dict[str, Any]]:
         file_path = Path(path)
         if not file_path.is_absolute():
             file_path = Path.cwd() / file_path

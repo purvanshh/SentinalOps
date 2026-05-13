@@ -8,12 +8,11 @@ Proves:
   - ConsistencyReport.is_trustworthy reflects grounding quality and unsupported claims.
   - UnsupportedClaim carries claim text, reason, and max_similarity.
 """
+
 from __future__ import annotations
 
 import pytest
-
 from retrieval.consistency_checker import (
-    ConsistencyReport,
     UnsupportedClaim,
     check_claim_support,
     run_consistency_check,

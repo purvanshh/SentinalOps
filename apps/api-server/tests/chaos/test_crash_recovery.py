@@ -19,7 +19,9 @@ def test_resume_path_recovers_from_interrupted_thread(monkeypatch) -> None:
     result = asyncio.run(
         fake_graph.resume(
             "thread-123",
-            ResumeCommand(approved=True, note="resume", approved_by="operator-1", approval_token="token"),
+            ResumeCommand(
+                approved=True, note="resume", approved_by="operator-1", approval_token="token"
+            ),
         )
     )
 

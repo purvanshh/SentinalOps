@@ -45,7 +45,9 @@ def _derive_summary(item: dict[str, Any]) -> str:
     return item.get("description", item.get("item_key", "evidence item"))
 
 
-def build_timed_events(evidence_items: list[dict[str, Any]], default_service: str) -> list[TimedEvent]:
+def build_timed_events(
+    evidence_items: list[dict[str, Any]], default_service: str
+) -> list[TimedEvent]:
     events: list[TimedEvent] = []
     for item in evidence_items:
         payload = dict(item)

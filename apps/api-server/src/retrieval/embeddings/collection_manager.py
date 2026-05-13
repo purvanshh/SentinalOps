@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
-
 from core.config import get_settings
 
 
@@ -25,8 +24,12 @@ class QdrantCollectionManager:
     ) -> None:
         settings = get_settings()
         self.base_url = (base_url or settings.qdrant_url).rstrip("/")
-        self._sync_client = httpx.Client(base_url=self.base_url, timeout=timeout, transport=transport)
-        self._async_client = httpx.AsyncClient(base_url=self.base_url, timeout=timeout, transport=transport)
+        self._sync_client = httpx.Client(
+            base_url=self.base_url, timeout=timeout, transport=transport
+        )
+        self._async_client = httpx.AsyncClient(
+            base_url=self.base_url, timeout=timeout, transport=transport
+        )
 
     def close(self) -> None:
         self._sync_client.close()
@@ -77,16 +80,22 @@ class QdrantCollectionManager:
     def search(self, collection: str, vector: list[float], limit: int = 3) -> list[dict[str, Any]]:
         payload = {"vector": vector, "limit": limit, "with_payload": True}
         try:
-            response = self._sync_client.post(f"/collections/{collection}/points/search", json=payload)
+            response = self._sync_client.post(
+                f"/collections/{collection}/points/search", json=payload
+            )
             response.raise_for_status()
             return response.json().get("result", [])
         except httpx.HTTPError:
             return []
 
-    async def search_async(self, collection: str, vector: list[float], limit: int = 3) -> list[dict[str, Any]]:
+    async def search_async(
+        self, collection: str, vector: list[float], limit: int = 3
+    ) -> list[dict[str, Any]]:
         payload = {"vector": vector, "limit": limit, "with_payload": True}
         try:
-            response = await self._async_client.post(f"/collections/{collection}/points/search", json=payload)
+            response = await self._async_client.post(
+                f"/collections/{collection}/points/search", json=payload
+            )
             response.raise_for_status()
             return response.json().get("result", [])
         except httpx.HTTPError:

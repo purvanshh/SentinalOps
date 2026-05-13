@@ -4,11 +4,11 @@ Router classification quality evaluation.
 Measures: confusion matrix, precision, recall, F1, confidence calibration,
 false positive rate, false negative rate.
 """
+
 from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from math import sqrt
 
 
 @dataclass
@@ -61,20 +61,20 @@ class ConfusionMatrix:
         return 2 * p * r / (p + r) if (p + r) > 0 else 0.0
 
     def accuracy(self) -> float:
-        correct = sum(self.matrix.get(l, {}).get(l, 0) for l in self.labels)
+        correct = sum(self.matrix.get(label, {}).get(label, 0) for label in self.labels)
         total = sum(sum(preds.values()) for preds in self.matrix.values())
         return correct / total if total > 0 else 0.0
 
     def macro_precision(self) -> float:
-        scores = [self.precision(l) for l in self.labels if self.matrix.get(l)]
+        scores = [self.precision(label) for label in self.labels if self.matrix.get(label)]
         return sum(scores) / len(scores) if scores else 0.0
 
     def macro_recall(self) -> float:
-        scores = [self.recall(l) for l in self.labels if self.matrix.get(l)]
+        scores = [self.recall(label) for label in self.labels if self.matrix.get(label)]
         return sum(scores) / len(scores) if scores else 0.0
 
     def macro_f1(self) -> float:
-        scores = [self.f1(l) for l in self.labels if self.matrix.get(l)]
+        scores = [self.f1(label) for label in self.labels if self.matrix.get(label)]
         return sum(scores) / len(scores) if scores else 0.0
 
 
@@ -138,8 +138,8 @@ def score_router_quality(predictions: list[RouterPrediction]) -> RouterQualityRe
             "false_negatives": float(cm.false_negatives(label)),
         }
 
-    total_fp = sum(cm.false_positives(l) for l in labels)
-    total_fn = sum(cm.false_negatives(l) for l in labels)
+    total_fp = sum(cm.false_positives(label) for label in labels)
+    total_fn = sum(cm.false_negatives(label) for label in labels)
     total = len(predictions)
     fp_rate = total_fp / total if total > 0 else 0.0
     fn_rate = total_fn / total if total > 0 else 0.0
@@ -181,12 +181,14 @@ def build_predictions_from_benchmark(incidents: list) -> list[RouterPrediction]:
         confidence = router.get("confidence", 0.5)
         is_fallback = confidence < 0.55
         is_degraded = inc.requires_escalation and confidence < 0.55
-        predictions.append(RouterPrediction(
-            incident_id=inc.id,
-            predicted_type=predicted_type,
-            actual_type=inc.golden_classification,
-            confidence=confidence,
-            is_fallback=is_fallback,
-            is_degraded_mode=is_degraded,
-        ))
+        predictions.append(
+            RouterPrediction(
+                incident_id=inc.id,
+                predicted_type=predicted_type,
+                actual_type=inc.golden_classification,
+                confidence=confidence,
+                is_fallback=is_fallback,
+                is_degraded_mode=is_degraded,
+            )
+        )
     return predictions

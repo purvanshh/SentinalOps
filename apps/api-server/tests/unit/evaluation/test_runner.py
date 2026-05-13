@@ -1,5 +1,4 @@
 import pytest
-
 from evaluation.runner import run_evaluation
 
 

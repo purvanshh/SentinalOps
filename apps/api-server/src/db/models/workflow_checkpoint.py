@@ -1,9 +1,8 @@
 import uuid
 
+from db.models.base import Base, JsonDict, TimestampMixin, UUIDPrimaryKeyMixin
 from sqlalchemy import ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
-
-from db.models.base import Base, JsonDict, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class WorkflowCheckpoint(UUIDPrimaryKeyMixin, TimestampMixin, Base):

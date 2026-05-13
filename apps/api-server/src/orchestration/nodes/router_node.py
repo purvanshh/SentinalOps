@@ -17,7 +17,6 @@ from __future__ import annotations
 import time
 
 import structlog
-
 from agents.router_agent.output_schema import RouterOutput
 from agents.router_agent.prompts import build_router_system_prompt, build_router_user_prompt
 from core.resilience.fallback_classifier import FallbackClassification
@@ -175,7 +174,9 @@ async def router_node(state: dict, session=None) -> dict:
         "operating_mode": mode_manager.current_mode.value,
         "provider_chain_result": chain_result.to_dict(),
         "provider_attempts": chain_result.to_dict().get("attempts", []),
-        "retry_count": sum(attempt.get("retry_count", 0) for attempt in chain_result.to_dict().get("attempts", [])),
+        "retry_count": sum(
+            attempt.get("retry_count", 0) for attempt in chain_result.to_dict().get("attempts", [])
+        ),
         "fallback_activated": fallback_activated,
         "last_successful_step": "router",
         "degraded_mode_activation": mode_manager.to_dict(),

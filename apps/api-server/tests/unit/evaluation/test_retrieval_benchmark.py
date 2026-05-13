@@ -10,20 +10,19 @@ Proves:
   - run_retrieval_benchmark aggregates across cases and computes F1.
   - RetrievalBenchmarkReport.passes_quality_bar reflects thresholds.
 """
+
 from __future__ import annotations
 
 import pytest
-
 from evaluation.retrieval_benchmark import (
     RetrievalBenchmarkCase,
-    RetrievalBenchmarkReport,
     run_retrieval_benchmark,
 )
 from evaluation.scorers.retrieval_quality_scorer import (
     score_retrieval_grounding,
     score_retrieval_precision,
-    score_retrieval_recall,
     score_retrieval_quality,
+    score_retrieval_recall,
     score_semantic_similarity_accuracy,
 )
 

@@ -13,14 +13,14 @@ Key concepts:
   - Temporal ordering: strict ISO-8601 comparison with timezone awareness.
   - Temporal contradiction: an event cannot cause something that preceded it.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from causality.event_graph import CausalEdge, CausalEventGraph, CausalNode, EdgeType, NodeType
-
+from causality.event_graph import CausalEdge, CausalEventGraph, EdgeType
 
 _DEFAULT_PROPAGATION_WINDOW_SECONDS = 300
 _DEPLOYMENT_LAG_SECONDS = 120
@@ -45,6 +45,7 @@ def _elapsed_seconds(earlier: str, later: str) -> float:
 @dataclass
 class TemporalOrderViolation:
     """A detected contradiction in event ordering."""
+
     source_id: str
     target_id: str
     reason: str
@@ -66,7 +67,7 @@ def build_temporal_edges(
     nodes = graph.nodes
     added: list[CausalEdge] = []
     for i, source in enumerate(nodes):
-        for target in nodes[i + 1:]:
+        for target in nodes[i + 1 :]:
             if source.node_id == target.node_id:
                 continue
             elapsed = _elapsed_seconds(source.timestamp_iso, target.timestamp_iso)
@@ -115,15 +116,17 @@ def detect_temporal_contradictions(
                     continue
                 elapsed = _elapsed_seconds(anomaly_ts, deploy_ts)
                 if elapsed > 0:
-                    violations.append(TemporalOrderViolation(
-                        source_id=deploy.get("event_id", "deployment"),
-                        target_id=anomaly.get("event_id", "anomaly"),
-                        reason=(
-                            f"deployment at {deploy_ts} occurred {elapsed:.0f}s "
-                            f"AFTER anomaly at {anomaly_ts} — cannot be root cause"
-                        ),
-                        elapsed_seconds=elapsed,
-                    ))
+                    violations.append(
+                        TemporalOrderViolation(
+                            source_id=deploy.get("event_id", "deployment"),
+                            target_id=anomaly.get("event_id", "anomaly"),
+                            reason=(
+                                f"deployment at {deploy_ts} occurred {elapsed:.0f}s "
+                                f"AFTER anomaly at {anomaly_ts} — cannot be root cause"
+                            ),
+                            elapsed_seconds=elapsed,
+                        )
+                    )
             except (ValueError, TypeError):
                 continue
     return violations
@@ -131,6 +134,7 @@ def detect_temporal_contradictions(
 
 def sequence_events_by_time(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Sort events by timestamp_iso ascending. Events without timestamp sort last."""
+
     def sort_key(e: dict[str, Any]) -> datetime:
         ts = e.get("timestamp_iso", "")
         try:

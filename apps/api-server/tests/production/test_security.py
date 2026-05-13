@@ -9,20 +9,21 @@ Proves:
   - Error handler does not leak internal exception details in production
   - Production secret validation identifies insecure defaults
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
 from jose import jwt
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_token(
     *,
@@ -34,6 +35,7 @@ def _make_token(
     omit_roles: bool = False,
 ) -> str:
     from core.config import get_settings
+
     settings = get_settings()
     payload: dict = {
         "aud": settings.auth0_audience,
@@ -52,6 +54,7 @@ def _make_token(
 # ---------------------------------------------------------------------------
 # JWT decoding — valid path
 # ---------------------------------------------------------------------------
+
 
 def test_valid_jwt_decodes_to_authenticated_user():
     from api.middleware.auth import decode_access_token
@@ -75,6 +78,7 @@ def test_valid_jwt_with_multiple_roles():
 # ---------------------------------------------------------------------------
 # JWT decoding — failure paths
 # ---------------------------------------------------------------------------
+
 
 def test_wrong_secret_raises_401():
     from api.middleware.auth import decode_access_token
@@ -107,6 +111,7 @@ def test_missing_roles_raises_403():
 # ---------------------------------------------------------------------------
 # RBAC role hierarchy
 # ---------------------------------------------------------------------------
+
 
 def test_admin_has_all_permissions():
     from core.security.permissions import has_permission
@@ -143,6 +148,7 @@ def test_unknown_role_has_no_permissions():
 # Approval token
 # ---------------------------------------------------------------------------
 
+
 def test_approval_token_round_trip():
     from tools.execution_guard import create_approval_token, decode_approval_token
 
@@ -166,6 +172,7 @@ def test_approval_token_with_wrong_secret_raises_guard_error():
     bad_token = jwt.encode({"incident_id": "x"}, "wrong-secret", algorithm="HS256")
 
     from tools.execution_guard import decode_approval_token
+
     with pytest.raises(ExecutionGuardError):
         decode_approval_token(bad_token)
 
@@ -174,6 +181,7 @@ def test_approval_token_with_wrong_secret_raises_guard_error():
 # Execution guard — tool allowlist and approval enforcement
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_execution_guard_blocks_tool_not_in_allowlist(monkeypatch, tmp_path):
     import yaml
@@ -181,9 +189,13 @@ async def test_execution_guard_blocks_tool_not_in_allowlist(monkeypatch, tmp_pat
 
     allowlist_file = tmp_path / "allowlist.yaml"
     allowlist_file.write_text(yaml.dump({"dangerous_tools": ["scale_deployment"]}))
-    monkeypatch.setattr("tools.execution_guard.load_tool_allowlist", lambda: {"dangerous_tools": ["scale_deployment"]})
+    monkeypatch.setattr(
+        "tools.execution_guard.load_tool_allowlist",
+        lambda: {"dangerous_tools": ["scale_deployment"]},
+    )
 
     from tools.execution_guard import ExecutionGuardError
+
     with pytest.raises(ExecutionGuardError, match="not allowlisted"):
         await enforce_tool_execution_policy(
             tool_name="drop_database",
@@ -195,7 +207,7 @@ async def test_execution_guard_blocks_tool_not_in_allowlist(monkeypatch, tmp_pat
 
 @pytest.mark.asyncio
 async def test_execution_guard_blocks_dangerous_tool_without_approval_token(monkeypatch):
-    from tools.execution_guard import enforce_tool_execution_policy, ExecutionGuardError
+    from tools.execution_guard import ExecutionGuardError, enforce_tool_execution_policy
 
     monkeypatch.setattr(
         "tools.execution_guard.load_tool_allowlist",
@@ -214,9 +226,9 @@ async def test_execution_guard_blocks_dangerous_tool_without_approval_token(monk
 @pytest.mark.asyncio
 async def test_execution_guard_blocks_token_with_incident_mismatch(monkeypatch):
     from tools.execution_guard import (
-        enforce_tool_execution_policy,
-        create_approval_token,
         ExecutionGuardError,
+        create_approval_token,
+        enforce_tool_execution_policy,
     )
 
     monkeypatch.setattr(
@@ -246,6 +258,7 @@ async def test_execution_guard_blocks_token_with_incident_mismatch(monkeypatch):
 # Error handler — no internal detail leak in production
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_error_handler_omits_error_detail_in_production(monkeypatch):
     from api.middleware.error_handler import unhandled_exception_handler
@@ -259,7 +272,9 @@ async def test_error_handler_omits_error_detail_in_production(monkeypatch):
     mock_request.url.path = "/test"
     mock_request.method = "GET"
 
-    response = await unhandled_exception_handler(mock_request, RuntimeError("secret DB password leaked"))
+    response = await unhandled_exception_handler(
+        mock_request, RuntimeError("secret DB password leaked")
+    )
     body = response.body.decode()
 
     assert "secret DB password leaked" not in body
@@ -288,6 +303,7 @@ async def test_error_handler_includes_error_detail_in_development(monkeypatch):
 # ---------------------------------------------------------------------------
 # Production secret validation
 # ---------------------------------------------------------------------------
+
 
 def test_production_secret_validation_catches_default_secrets():
     from core.config import Settings

@@ -6,6 +6,7 @@ For production with Tempo, install opentelemetry-exporter-otlp and configure:
   OTEL_EXPORTER_OTLP_ENDPOINT=http://<tempo-host>:4318
   OTEL_SERVICE_NAME=sentinelops-api
 """
+
 from __future__ import annotations
 
 import structlog
@@ -22,6 +23,7 @@ def configure_tracing() -> None:
         return
 
     from core.config import get_settings
+
     settings = get_settings()
 
     tracer_provider = TracerProvider()
@@ -30,7 +32,9 @@ def configure_tracing() -> None:
     # In development or when the package is absent, fall back to console.
     _exporter_added = False
     try:
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter  # type: ignore[import]
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+            OTLPSpanExporter,  # type: ignore[import]
+        )
 
         tempo_endpoint = settings.tempo_url.rstrip("/") + "/v1/traces"
         otlp_exporter = OTLPSpanExporter(endpoint=tempo_endpoint)

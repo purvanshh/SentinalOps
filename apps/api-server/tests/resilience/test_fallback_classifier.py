@@ -6,8 +6,10 @@ using only keyword/pattern matching with zero external dependencies.
 """
 
 import pytest
-
-from core.resilience.fallback_classifier import DeterministicFallbackClassifier, FallbackClassification
+from core.resilience.fallback_classifier import (
+    DeterministicFallbackClassifier,
+    FallbackClassification,
+)
 
 
 @pytest.fixture
@@ -124,7 +126,9 @@ class TestDeterministicFallbackClassifier:
         result = classifier.classify(payload)
         assert result.severity == "critical"
 
-    def test_deterministic_same_input_same_output(self, classifier: DeterministicFallbackClassifier):
+    def test_deterministic_same_input_same_output(
+        self, classifier: DeterministicFallbackClassifier
+    ):
         payload = {
             "title": "Database connection timeout",
             "summary": "Connection pool exhausted",

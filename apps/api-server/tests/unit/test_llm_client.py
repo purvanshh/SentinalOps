@@ -2,9 +2,8 @@ import json
 
 import httpx
 import pytest
-from pydantic import BaseModel
-
 from core.llm_client import LLMClient
+from pydantic import BaseModel
 
 
 class GreetingResponse(BaseModel):

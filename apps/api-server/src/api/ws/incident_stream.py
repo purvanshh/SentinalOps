@@ -1,10 +1,9 @@
 import asyncio
 from uuid import UUID
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-
-from db.session import SessionLocal
 from db.repositories.incident_repo import IncidentRepository
+from db.session import SessionLocal
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from orchestration.graphs.main_graph import build_main_graph
 
 router = APIRouter()
@@ -36,7 +35,9 @@ async def incident_stream(websocket: WebSocket, incident_id: UUID) -> None:
                     ],
                 }
                 if incident.graph_thread_id:
-                    payload["graph_state"] = await build_main_graph().get_state(incident.graph_thread_id)
+                    payload["graph_state"] = await build_main_graph().get_state(
+                        incident.graph_thread_id
+                    )
                 await websocket.send_json(payload)
             await asyncio.sleep(2)
     except WebSocketDisconnect:

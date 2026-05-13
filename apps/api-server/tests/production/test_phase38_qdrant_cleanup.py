@@ -10,35 +10,33 @@ Proves:
   - RetrievalOrchestrator.load_pattern_file returns [] for missing file
   - Pattern searcher falls back to in-memory search when Qdrant returns empty
 """
+
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # PatternSearcher: no ensure_collection on instantiation
 # ---------------------------------------------------------------------------
 
+
 def test_pattern_searcher_init_does_not_call_ensure_collection(tmp_path):
     from retrieval.embeddings.pattern_searcher import PatternSearcher
 
     patterns_file = tmp_path / "patterns.json"
-    patterns_file.write_text(json.dumps([
-        {"title": "High CPU", "description": "CPU spike", "symptoms": ["latency"]}
-    ]))
+    patterns_file.write_text(
+        json.dumps([{"title": "High CPU", "description": "CPU spike", "symptoms": ["latency"]}])
+    )
 
-    with patch(
-        "retrieval.embeddings.pattern_searcher.QdrantCollectionManager"
-    ) as mock_manager_cls:
+    with patch("retrieval.embeddings.pattern_searcher.QdrantCollectionManager") as mock_manager_cls:
         mock_manager = MagicMock()
         mock_manager_cls.return_value = mock_manager
 
-        searcher = PatternSearcher(path=str(patterns_file))
+        PatternSearcher(path=str(patterns_file))
 
         mock_manager.ensure_collection.assert_not_called()
 
@@ -47,9 +45,9 @@ def test_pattern_searcher_search_does_not_call_ensure_collection(tmp_path):
     from retrieval.embeddings.pattern_searcher import PatternSearcher
 
     patterns_file = tmp_path / "patterns.json"
-    patterns_file.write_text(json.dumps([
-        {"title": "CPU spike", "description": "high CPU", "symptoms": ["slow"]}
-    ]))
+    patterns_file.write_text(
+        json.dumps([{"title": "CPU spike", "description": "high CPU", "symptoms": ["slow"]}])
+    )
 
     with patch("retrieval.embeddings.pattern_searcher.QdrantCollectionManager") as mock_cls:
         mock_mgr = MagicMock()
@@ -65,6 +63,7 @@ def test_pattern_searcher_search_does_not_call_ensure_collection(tmp_path):
 # ---------------------------------------------------------------------------
 # RetrievalOrchestrator hot paths: no bootstrap/ensure_collection
 # ---------------------------------------------------------------------------
+
 
 def test_retrieval_orchestrator_index_patterns_no_bootstrap():
     from retrieval.retrieval_orchestrator import RetrievalOrchestrator
@@ -114,9 +113,9 @@ async def test_retrieval_orchestrator_index_resolved_incident_no_bootstrap():
 # Collection manager: HTTP error resilience (async paths)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_collection_manager_async_upsert_returns_false_on_503():
-    import httpx
     from retrieval.embeddings.collection_manager import QdrantCollectionManager
 
     async def mock_handler(request):
@@ -125,15 +124,14 @@ async def test_collection_manager_async_upsert_returns_false_on_503():
     transport = httpx.MockTransport(mock_handler)
     manager = QdrantCollectionManager(base_url="http://qdrant-mock", transport=transport)
 
-    result = await manager.upsert_points_async("patterns", [
-        {"id": "1", "vector": [0.1] * 16, "payload": {}}
-    ])
+    result = await manager.upsert_points_async(
+        "patterns", [{"id": "1", "vector": [0.1] * 16, "payload": {}}]
+    )
     assert result is False
 
 
 @pytest.mark.asyncio
 async def test_collection_manager_async_search_returns_empty_on_404():
-    import httpx
     from retrieval.embeddings.collection_manager import QdrantCollectionManager
 
     async def mock_handler(request):
@@ -149,6 +147,7 @@ async def test_collection_manager_async_search_returns_empty_on_404():
 # ---------------------------------------------------------------------------
 # load_pattern_file: missing file returns empty list
 # ---------------------------------------------------------------------------
+
 
 def test_load_pattern_file_returns_empty_for_missing_file(tmp_path):
     from retrieval.retrieval_orchestrator import RetrievalOrchestrator
@@ -166,11 +165,16 @@ def test_load_pattern_file_returns_empty_for_missing_file(tmp_path):
 # PatternSearcher fallback: uses in-memory search when Qdrant returns empty
 # ---------------------------------------------------------------------------
 
+
 def test_pattern_searcher_falls_back_to_in_memory_when_qdrant_empty(tmp_path):
     from retrieval.embeddings.pattern_searcher import PatternSearcher
 
     patterns = [
-        {"title": "High CPU", "description": "CPU utilization spike", "symptoms": ["latency", "slow"]},
+        {
+            "title": "High CPU",
+            "description": "CPU utilization spike",
+            "symptoms": ["latency", "slow"],
+        },
         {"title": "OOM Kill", "description": "Out of memory", "symptoms": ["crash"]},
     ]
     patterns_file = tmp_path / "patterns.json"
@@ -192,9 +196,11 @@ def test_pattern_searcher_falls_back_to_in_memory_when_qdrant_empty(tmp_path):
 # bootstrap() only called at startup (main.py), not per-request
 # ---------------------------------------------------------------------------
 
+
 def test_retrieval_orchestrator_bootstrap_called_in_startup(monkeypatch):
     """Verify main.py lifespan boots Qdrant collections at startup."""
     import inspect
+
     import main as main_module
 
     source = inspect.getsource(main_module)

@@ -1,7 +1,8 @@
-from jose import jwt
+from datetime import UTC, datetime, timedelta
 
 from api.middleware.auth import decode_access_token
 from core.config import get_settings
+from jose import jwt
 
 
 def _make_token(*, roles: list[str], sub: str = "user-1") -> str:
@@ -11,6 +12,7 @@ def _make_token(*, roles: list[str], sub: str = "user-1") -> str:
         "roles": roles,
         "aud": settings.auth0_audience,
         "iss": settings.auth_issuer,
+        "exp": datetime.now(UTC) + timedelta(hours=1),
     }
     return jwt.encode(
         payload,

@@ -2,7 +2,6 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
-
 from main import app
 from tests.auth_helpers import make_auth_header
 
@@ -32,7 +31,9 @@ def test_graph_start_route_returns_thread_id(monkeypatch) -> None:
     )
     monkeypatch.setattr("api.routes.graph.build_main_graph", lambda: FakeGraph())
 
-    response = client.post(f"/graph/incidents/{incident_id}/start", headers=make_auth_header("operator"))
+    response = client.post(
+        f"/graph/incidents/{incident_id}/start", headers=make_auth_header("operator")
+    )
 
     assert response.status_code == 200
     assert response.json()["thread_id"] == "thread-123"

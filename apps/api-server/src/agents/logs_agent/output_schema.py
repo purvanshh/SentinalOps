@@ -1,4 +1,6 @@
-from pydantic import BaseModel, Field
+import hashlib
+
+from pydantic import BaseModel, Field, model_validator
 
 
 class ErrorSignature(BaseModel):
@@ -7,6 +9,13 @@ class ErrorSignature(BaseModel):
     first_seen: str
     sample: str
     trace_ids: list[str] = Field(default_factory=list)
+    fingerprint: str = ""
+
+    @model_validator(mode="after")
+    def _derive_fingerprint(self) -> "ErrorSignature":
+        if not self.fingerprint and self.signature:
+            self.fingerprint = hashlib.sha1(self.signature.encode()).hexdigest()[:12]
+        return self
 
 
 class TemporalCorrelation(BaseModel):
@@ -18,3 +27,16 @@ class TemporalCorrelation(BaseModel):
 class LogsSummary(BaseModel):
     error_signatures: list[ErrorSignature] = Field(default_factory=list)
     temporal_correlations: list[TemporalCorrelation] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _deduplicate_signatures(self) -> "LogsSummary":
+        seen: dict[str, ErrorSignature] = {}
+        for sig in self.error_signatures:
+            key = sig.fingerprint or sig.signature
+            if key in seen:
+                seen[key].count += sig.count
+                seen[key].trace_ids = list(set(seen[key].trace_ids + sig.trace_ids))
+            else:
+                seen[key] = sig
+        self.error_signatures = list(seen.values())
+        return self

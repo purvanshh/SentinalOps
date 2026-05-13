@@ -32,7 +32,9 @@ def normalize_agent_executions(executions: Iterable[AgentExecution]) -> list[dic
                         "item_key": f"LOG-{index}",
                         "content": {
                             **signature,
-                            "timestamp": created_at,
+                            "timestamp": signature.get("first_seen") or created_at,
+                            "fingerprint": signature.get("fingerprint", ""),
+                            "trace_ids": signature.get("trace_ids", []),
                         },
                     }
                 )

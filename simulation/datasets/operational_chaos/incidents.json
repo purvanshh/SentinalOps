@@ -1,0 +1,632 @@
+[
+  {
+    "incident_id": "CHAOS-001",
+    "chaos_profile": "clock_skew",
+    "ground_truth_root_cause": "db_connection_pool_exhaustion",
+    "ground_truth_resolution": "increase_pool_size",
+    "chaos_notes": "Timestamps from db service are 47s ahead of api service — causal ordering is ambiguous",
+    "ambiguity_type": "temporally_unstable",
+    "expected_causal_state": "temporally_unstable",
+    "events": [
+      {"kind": "alert", "service": "api", "severity": "critical", "timestamp_offset_s": 0, "labels": {"alertname": "HighErrorRate", "skew_applied": "false"}, "incident_id": "CHAOS-001"},
+      {"kind": "metric", "service": "db", "severity": "warning", "timestamp_offset_s": -47, "labels": {"metric": "active_connections", "value": "100", "skew_applied": "true"}, "incident_id": "CHAOS-001"},
+      {"kind": "log", "service": "api", "severity": "error", "timestamp_offset_s": 12, "labels": {"msg": "connection refused: pool exhausted", "skew_applied": "false"}, "incident_id": "CHAOS-001"},
+      {"kind": "metric", "service": "db", "severity": "error", "timestamp_offset_s": -51, "labels": {"metric": "wait_queue_depth", "value": "847", "skew_applied": "true"}, "incident_id": "CHAOS-001"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-002",
+    "chaos_profile": "telemetry_blackout",
+    "ground_truth_root_cause": "memory_oom_kill",
+    "ground_truth_resolution": "increase_memory_limit",
+    "chaos_notes": "Metrics stream went silent for 8 minutes during peak OOM kill window — only logs survived",
+    "ambiguity_type": "insufficient_evidence",
+    "expected_causal_state": "insufficient_evidence",
+    "events": [
+      {"kind": "log", "service": "worker", "severity": "error", "labels": {"msg": "OOMKilled: worker-pod-a3f1"}, "incident_id": "CHAOS-002"},
+      {"kind": "log", "service": "worker", "severity": "error", "labels": {"msg": "OOMKilled: worker-pod-b7c2"}, "incident_id": "CHAOS-002"},
+      {"kind": "log", "service": "orchestrator", "severity": "warning", "labels": {"msg": "pod restart loop detected"}, "incident_id": "CHAOS-002"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-003",
+    "chaos_profile": "alert_storm",
+    "ground_truth_root_cause": "single_disk_failure",
+    "ground_truth_resolution": "replace_disk_and_rebalance",
+    "chaos_notes": "One disk failure triggered 312 derivative alerts — alert-to-signal ratio makes root cause attribution nearly impossible",
+    "ambiguity_type": "competing_causes",
+    "expected_causal_state": "competing_causes",
+    "events": [
+      {"kind": "alert", "service": "storage", "severity": "critical", "labels": {"alertname": "DiskFailure", "disk": "sdb"}, "incident_id": "CHAOS-003"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "HighLatency", "noise": "true"}, "incident_id": "CHAOS-003"},
+      {"kind": "alert", "service": "db", "severity": "critical", "labels": {"alertname": "SlowQueries", "noise": "true"}, "incident_id": "CHAOS-003"},
+      {"kind": "alert", "service": "cache", "severity": "warning", "labels": {"alertname": "CacheEvictions", "noise": "true"}, "incident_id": "CHAOS-003"},
+      {"kind": "alert", "service": "queue", "severity": "warning", "labels": {"alertname": "QueueBackpressure", "noise": "true"}, "incident_id": "CHAOS-003"},
+      {"kind": "alert", "service": "worker", "severity": "error", "labels": {"alertname": "WorkerTimeout", "noise": "true"}, "incident_id": "CHAOS-003"},
+      {"kind": "metric", "service": "storage", "severity": "critical", "labels": {"metric": "disk_io_errors", "disk": "sdb", "value": "1429"}, "incident_id": "CHAOS-003"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-004",
+    "chaos_profile": "delayed_alerts",
+    "ground_truth_root_cause": "gradual_memory_leak",
+    "ground_truth_resolution": "rolling_restart_with_leak_fix",
+    "chaos_notes": "Alert fired 23 minutes after memory crossed 90% threshold due to alertmanager group_wait misconfiguration",
+    "ambiguity_type": "temporally_unstable",
+    "expected_causal_state": "temporally_unstable",
+    "events": [
+      {"kind": "metric", "service": "api", "severity": "warning", "timestamp_offset_s": 0, "labels": {"metric": "memory_percent", "value": "91"}, "incident_id": "CHAOS-004"},
+      {"kind": "metric", "service": "api", "severity": "warning", "timestamp_offset_s": 300, "labels": {"metric": "memory_percent", "value": "94"}, "incident_id": "CHAOS-004"},
+      {"kind": "metric", "service": "api", "severity": "error", "timestamp_offset_s": 900, "labels": {"metric": "memory_percent", "value": "98"}, "incident_id": "CHAOS-004"},
+      {"kind": "alert", "service": "api", "severity": "critical", "timestamp_offset_s": 1380, "labels": {"alertname": "HighMemory", "alert_delay_s": "1380"}, "incident_id": "CHAOS-004"},
+      {"kind": "log", "service": "api", "severity": "fatal", "timestamp_offset_s": 1400, "labels": {"msg": "process killed: oom"}, "incident_id": "CHAOS-004"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-005",
+    "chaos_profile": "duplicate_events",
+    "ground_truth_root_cause": "network_flap",
+    "ground_truth_resolution": "fix_bgp_route",
+    "chaos_notes": "Duplicate event delivery from two monitoring agents created false impression of 2x severity",
+    "ambiguity_type": "competing_causes",
+    "expected_causal_state": "competing_causes",
+    "events": [
+      {"kind": "alert", "service": "infra", "severity": "critical", "labels": {"alertname": "BGPFlap", "agent": "prometheus-a"}, "incident_id": "CHAOS-005"},
+      {"kind": "alert", "service": "infra", "severity": "critical", "labels": {"alertname": "BGPFlap", "agent": "prometheus-b", "duplicate": "true"}, "incident_id": "CHAOS-005"},
+      {"kind": "metric", "service": "infra", "severity": "error", "labels": {"metric": "bgp_route_changes", "value": "14", "agent": "prometheus-a"}, "incident_id": "CHAOS-005"},
+      {"kind": "metric", "service": "infra", "severity": "error", "labels": {"metric": "bgp_route_changes", "value": "14", "agent": "prometheus-b", "duplicate": "true"}, "incident_id": "CHAOS-005"},
+      {"kind": "log", "service": "router", "severity": "error", "labels": {"msg": "BGP peer session reset"}, "incident_id": "CHAOS-005"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-006",
+    "chaos_profile": "deployment_noise",
+    "ground_truth_root_cause": "cpu_throttling",
+    "ground_truth_resolution": "increase_cpu_limits",
+    "chaos_notes": "Three unrelated config-only deployments fired during incident, muddying the causal timeline",
+    "ambiguity_type": "competing_causes",
+    "expected_causal_state": "competing_causes",
+    "events": [
+      {"kind": "metric", "service": "api", "severity": "error", "labels": {"metric": "cpu_throttled_ratio", "value": "0.72"}, "incident_id": "CHAOS-006"},
+      {"kind": "deployment", "service": "monitoring", "severity": "info", "labels": {"type": "noise", "change": "log_level_debug"}, "incident_id": "CHAOS-006"},
+      {"kind": "deployment", "service": "auth", "severity": "info", "labels": {"type": "noise", "change": "rate_limit_tweak"}, "incident_id": "CHAOS-006"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "CPUThrottled"}, "incident_id": "CHAOS-006"},
+      {"kind": "deployment", "service": "billing", "severity": "info", "labels": {"type": "noise", "change": "feature_flag_update"}, "incident_id": "CHAOS-006"},
+      {"kind": "log", "service": "api", "severity": "error", "labels": {"msg": "request timeout: cpu throttled"}, "incident_id": "CHAOS-006"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-007",
+    "chaos_profile": "false_recovery",
+    "ground_truth_root_cause": "db_replica_lag",
+    "ground_truth_resolution": "promote_replica_and_reroute",
+    "chaos_notes": "Error rate dropped to zero for 4 minutes after a failover then spiked again — false recovery window",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "alert", "service": "db", "severity": "critical", "labels": {"alertname": "ReplicaLag", "lag_s": "340"}, "incident_id": "CHAOS-007"},
+      {"kind": "metric", "service": "api", "severity": "critical", "labels": {"metric": "error_rate", "value": "0.38"}, "incident_id": "CHAOS-007"},
+      {"kind": "log", "service": "db", "severity": "info", "labels": {"msg": "replica promoted, lag cleared"}, "incident_id": "CHAOS-007"},
+      {"kind": "metric", "service": "api", "severity": "info", "labels": {"metric": "error_rate", "value": "0.00", "recovery_state": "false"}, "incident_id": "CHAOS-007"},
+      {"kind": "metric", "service": "api", "severity": "critical", "labels": {"metric": "error_rate", "value": "0.41", "recovery_state": "false"}, "incident_id": "CHAOS-007"},
+      {"kind": "alert", "service": "db", "severity": "critical", "labels": {"alertname": "ReplicaLag", "lag_s": "612", "second_wave": "true"}, "incident_id": "CHAOS-007"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-008",
+    "chaos_profile": "rollback_loop",
+    "ground_truth_root_cause": "incompatible_schema_migration",
+    "ground_truth_resolution": "fix_migration_and_redeploy",
+    "chaos_notes": "Three rollback attempts all failed — each rollback triggered the same migration on startup",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "deployment", "service": "api", "severity": "info", "labels": {"action": "deploy", "sha": "v2.1.0"}, "incident_id": "CHAOS-008"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "StartupFailure"}, "incident_id": "CHAOS-008"},
+      {"kind": "deployment", "service": "api", "severity": "info", "labels": {"action": "rollback", "sha": "v2.0.9", "attempt": "1"}, "incident_id": "CHAOS-008"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "StartupFailure", "attempt": "1"}, "incident_id": "CHAOS-008"},
+      {"kind": "deployment", "service": "api", "severity": "info", "labels": {"action": "rollback", "sha": "v2.0.8", "attempt": "2"}, "incident_id": "CHAOS-008"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "StartupFailure", "attempt": "2"}, "incident_id": "CHAOS-008"},
+      {"kind": "log", "service": "api", "severity": "fatal", "labels": {"msg": "migration V20231101 already applied — cannot rollback schema"}, "incident_id": "CHAOS-008"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-009",
+    "chaos_profile": "concurrent_outages",
+    "ground_truth_root_cause": "shared_network_switch_failure",
+    "ground_truth_resolution": "replace_tor_switch",
+    "chaos_notes": "Three services appeared to fail independently but shared a ToR switch — concurrent signals masked single root cause",
+    "ambiguity_type": "competing_causes",
+    "expected_causal_state": "competing_causes",
+    "events": [
+      {"kind": "alert", "service": "db", "severity": "critical", "labels": {"alertname": "ServiceUnreachable"}, "incident_id": "CHAOS-009"},
+      {"kind": "alert", "service": "cache", "severity": "critical", "labels": {"alertname": "ServiceUnreachable"}, "incident_id": "CHAOS-009"},
+      {"kind": "alert", "service": "queue", "severity": "critical", "labels": {"alertname": "ServiceUnreachable"}, "incident_id": "CHAOS-009"},
+      {"kind": "topology_change", "service": "infra", "severity": "critical", "labels": {"change": "tor_switch_rack3_down"}, "incident_id": "CHAOS-009"},
+      {"kind": "metric", "service": "db", "severity": "error", "labels": {"metric": "packet_loss_pct", "value": "100"}, "incident_id": "CHAOS-009"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-010",
+    "chaos_profile": "stale_replay",
+    "ground_truth_root_cause": "config_drift",
+    "ground_truth_resolution": "redeploy_with_correct_config",
+    "chaos_notes": "Metrics pipeline replayed 6-hour-old metrics into live stream — created phantom signal",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "metric", "service": "api", "severity": "warning", "labels": {"metric": "error_rate", "value": "0.02", "stale": "false"}, "incident_id": "CHAOS-010"},
+      {"kind": "metric", "service": "api", "severity": "critical", "labels": {"metric": "error_rate", "value": "0.55", "stale": "true", "stale_age_h": "6"}, "incident_id": "CHAOS-010"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "ErrorRateHigh", "triggered_by_stale": "true"}, "incident_id": "CHAOS-010"},
+      {"kind": "log", "service": "api", "severity": "info", "labels": {"msg": "service healthy: no errors detected"}, "incident_id": "CHAOS-010"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-011",
+    "chaos_profile": "clock_skew",
+    "ground_truth_root_cause": "cdn_cache_poisoning",
+    "ground_truth_resolution": "purge_cdn_cache",
+    "chaos_notes": "CDN edge nodes have 2-minute clock drift; alert timestamps precede the actual error logs",
+    "ambiguity_type": "temporally_unstable",
+    "expected_causal_state": "temporally_unstable",
+    "events": [
+      {"kind": "alert", "service": "cdn", "severity": "critical", "timestamp_offset_s": -120, "labels": {"alertname": "CachePoisonDetected", "skew_applied": "true"}, "incident_id": "CHAOS-011"},
+      {"kind": "log", "service": "origin", "severity": "error", "timestamp_offset_s": 0, "labels": {"msg": "poisoned object served: /api/config"}, "incident_id": "CHAOS-011"},
+      {"kind": "metric", "service": "cdn", "severity": "error", "timestamp_offset_s": -115, "labels": {"metric": "cache_hit_rate", "value": "0.03", "skew_applied": "true"}, "incident_id": "CHAOS-011"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-012",
+    "chaos_profile": "telemetry_blackout",
+    "ground_truth_root_cause": "kernel_panic",
+    "ground_truth_resolution": "replace_node_and_reschedule",
+    "chaos_notes": "Node went down mid-scrape — zero telemetry after T+90s; only previous metric values available",
+    "ambiguity_type": "insufficient_evidence",
+    "expected_causal_state": "insufficient_evidence",
+    "events": [
+      {"kind": "metric", "service": "node-1", "severity": "info", "labels": {"metric": "cpu_percent", "value": "34"}, "incident_id": "CHAOS-012"},
+      {"kind": "metric", "service": "node-1", "severity": "info", "labels": {"metric": "memory_percent", "value": "61"}, "incident_id": "CHAOS-012"},
+      {"kind": "alert", "service": "orchestrator", "severity": "critical", "labels": {"alertname": "NodeNotReady", "node": "node-1"}, "incident_id": "CHAOS-012"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-013",
+    "chaos_profile": "deployment_noise",
+    "ground_truth_root_cause": "gc_pause_storm",
+    "ground_truth_resolution": "tune_gc_settings",
+    "chaos_notes": "Post-incident cleanup deployed 4 services in 10 minutes, all flagged as potential causes by naive correlation",
+    "ambiguity_type": "competing_causes",
+    "expected_causal_state": "competing_causes",
+    "events": [
+      {"kind": "metric", "service": "jvm-service", "severity": "critical", "labels": {"metric": "gc_pause_ms_p99", "value": "8400"}, "incident_id": "CHAOS-013"},
+      {"kind": "alert", "service": "jvm-service", "severity": "critical", "labels": {"alertname": "GCPauseHigh"}, "incident_id": "CHAOS-013"},
+      {"kind": "deployment", "service": "user-api", "severity": "info", "labels": {"type": "post_incident_noise"}, "incident_id": "CHAOS-013"},
+      {"kind": "deployment", "service": "payment-api", "severity": "info", "labels": {"type": "post_incident_noise"}, "incident_id": "CHAOS-013"},
+      {"kind": "deployment", "service": "notify", "severity": "info", "labels": {"type": "post_incident_noise"}, "incident_id": "CHAOS-013"},
+      {"kind": "deployment", "service": "search", "severity": "info", "labels": {"type": "post_incident_noise"}, "incident_id": "CHAOS-013"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-014",
+    "chaos_profile": "false_recovery",
+    "ground_truth_root_cause": "connection_leak",
+    "ground_truth_resolution": "patch_connection_teardown",
+    "chaos_notes": "TCP keepalive masked the leak for 90s after remediation — operator declared resolved prematurely",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "ConnectionExhaustion"}, "incident_id": "CHAOS-014"},
+      {"kind": "log", "service": "api", "severity": "info", "labels": {"msg": "operator: restarted connection pool"}, "incident_id": "CHAOS-014"},
+      {"kind": "metric", "service": "api", "severity": "info", "labels": {"metric": "open_connections", "value": "12", "recovery_state": "false"}, "incident_id": "CHAOS-014"},
+      {"kind": "metric", "service": "api", "severity": "critical", "labels": {"metric": "open_connections", "value": "498", "recovery_state": "false"}, "incident_id": "CHAOS-014"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "ConnectionExhaustion", "second_wave": "true"}, "incident_id": "CHAOS-014"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-015",
+    "chaos_profile": "alert_storm",
+    "ground_truth_root_cause": "timeouts_from_third_party_api",
+    "ground_truth_resolution": "add_circuit_breaker",
+    "chaos_notes": "External API slowness caused cascading timeout alerts across 9 internal services — 180 alerts in 3 minutes",
+    "ambiguity_type": "competing_causes",
+    "expected_causal_state": "competing_causes",
+    "events": [
+      {"kind": "alert", "service": "checkout", "severity": "critical", "labels": {"alertname": "TimeoutExternalPayment"}, "incident_id": "CHAOS-015"},
+      {"kind": "alert", "service": "inventory", "severity": "warning", "labels": {"alertname": "SlowExternalLookup", "noise": "true"}, "incident_id": "CHAOS-015"},
+      {"kind": "alert", "service": "shipping", "severity": "warning", "labels": {"alertname": "ExternalAPITimeout", "noise": "true"}, "incident_id": "CHAOS-015"},
+      {"kind": "alert", "service": "fraud", "severity": "error", "labels": {"alertname": "ScoringAPITimeout", "noise": "true"}, "incident_id": "CHAOS-015"},
+      {"kind": "metric", "service": "checkout", "severity": "critical", "labels": {"metric": "payment_api_p99_ms", "value": "29800"}, "incident_id": "CHAOS-015"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-016",
+    "chaos_profile": "duplicate_events",
+    "ground_truth_root_cause": "storage_volume_full",
+    "ground_truth_resolution": "expand_volume",
+    "chaos_notes": "Two logging agents sent duplicate events; alert deduplication failed — 2 PagerDuty pages for same alert",
+    "ambiguity_type": "competing_causes",
+    "expected_causal_state": "competing_causes",
+    "events": [
+      {"kind": "alert", "service": "storage", "severity": "critical", "labels": {"alertname": "VolumeFull", "agent": "filebeat-a"}, "incident_id": "CHAOS-016"},
+      {"kind": "alert", "service": "storage", "severity": "critical", "labels": {"alertname": "VolumeFull", "agent": "filebeat-b", "duplicate": "true"}, "incident_id": "CHAOS-016"},
+      {"kind": "metric", "service": "storage", "severity": "critical", "labels": {"metric": "disk_used_pct", "value": "100"}, "incident_id": "CHAOS-016"},
+      {"kind": "log", "service": "db", "severity": "fatal", "labels": {"msg": "no space left on device"}, "incident_id": "CHAOS-016"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-017",
+    "chaos_profile": "concurrent_outages",
+    "ground_truth_root_cause": "power_unit_failure_datacenter",
+    "ground_truth_resolution": "failover_to_secondary_dc",
+    "chaos_notes": "PDU failure caused simultaneous alerts across 30+ services — no single service-level cause was valid",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "topology_change", "service": "infra", "severity": "critical", "labels": {"change": "pdu_a_dc1_offline"},"incident_id": "CHAOS-017"},
+      {"kind": "alert", "service": "db", "severity": "critical", "labels": {"alertname": "ServiceDown"}, "incident_id": "CHAOS-017"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "ServiceDown"}, "incident_id": "CHAOS-017"},
+      {"kind": "alert", "service": "cache", "severity": "critical", "labels": {"alertname": "ServiceDown"}, "incident_id": "CHAOS-017"},
+      {"kind": "alert", "service": "worker", "severity": "critical", "labels": {"alertname": "ServiceDown"}, "incident_id": "CHAOS-017"},
+      {"kind": "log", "service": "infra", "severity": "fatal", "labels": {"msg": "UPS switchover failed: PDU-A rack-12"}, "incident_id": "CHAOS-017"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-018",
+    "chaos_profile": "rollback_loop",
+    "ground_truth_root_cause": "circular_dependency_in_config",
+    "ground_truth_resolution": "break_circular_dep_and_redeploy",
+    "chaos_notes": "Service A required Service B's new config, Service B required Service A to be healthy first",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "deployment", "service": "service-a", "severity": "info", "labels": {"action": "deploy", "version": "3.0.0"}, "incident_id": "CHAOS-018"},
+      {"kind": "alert", "service": "service-a", "severity": "critical", "labels": {"alertname": "WaitingForB"}, "incident_id": "CHAOS-018"},
+      {"kind": "deployment", "service": "service-b", "severity": "info", "labels": {"action": "deploy", "version": "3.0.0"}, "incident_id": "CHAOS-018"},
+      {"kind": "alert", "service": "service-b", "severity": "critical", "labels": {"alertname": "WaitingForA"}, "incident_id": "CHAOS-018"},
+      {"kind": "log", "service": "service-a", "severity": "error", "labels": {"msg": "startup blocked: awaiting service-b readiness"}, "incident_id": "CHAOS-018"},
+      {"kind": "log", "service": "service-b", "severity": "error", "labels": {"msg": "startup blocked: awaiting service-a readiness"}, "incident_id": "CHAOS-018"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-019",
+    "chaos_profile": "clock_skew",
+    "ground_truth_root_cause": "rate_limit_breach",
+    "ground_truth_resolution": "increase_rate_limits",
+    "chaos_notes": "Three microservices on different NTP servers — 95s maximum drift makes event ordering unreliable",
+    "ambiguity_type": "temporally_unstable",
+    "expected_causal_state": "temporally_unstable",
+    "events": [
+      {"kind": "metric", "service": "gateway", "severity": "warning", "timestamp_offset_s": 0, "labels": {"metric": "rate_limit_hits", "value": "4200"}, "incident_id": "CHAOS-019"},
+      {"kind": "alert", "service": "api", "severity": "critical", "timestamp_offset_s": -62, "labels": {"alertname": "RateLimitBreached", "skew": "62s"}, "incident_id": "CHAOS-019"},
+      {"kind": "log", "service": "auth", "severity": "error", "timestamp_offset_s": 33, "labels": {"msg": "token validation throttled", "skew": "-33s"}, "incident_id": "CHAOS-019"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-020",
+    "chaos_profile": "delayed_alerts",
+    "ground_truth_root_cause": "tcp_syn_flood",
+    "ground_truth_resolution": "enable_syn_cookies",
+    "chaos_notes": "Network monitoring had a 15-minute rolling window; SYN flood was over before alert fired",
+    "ambiguity_type": "temporally_unstable",
+    "expected_causal_state": "temporally_unstable",
+    "events": [
+      {"kind": "metric", "service": "lb", "severity": "error", "timestamp_offset_s": 0, "labels": {"metric": "syn_backlog_depth", "value": "65535"}, "incident_id": "CHAOS-020"},
+      {"kind": "log", "service": "lb", "severity": "fatal", "timestamp_offset_s": 30, "labels": {"msg": "TCP accept queue full: dropping connections"}, "incident_id": "CHAOS-020"},
+      {"kind": "metric", "service": "lb", "severity": "info", "timestamp_offset_s": 720, "labels": {"metric": "syn_backlog_depth", "value": "12", "attack_over": "true"}, "incident_id": "CHAOS-020"},
+      {"kind": "alert", "service": "lb", "severity": "critical", "timestamp_offset_s": 900, "labels": {"alertname": "TCPFlood", "alert_delay_s": "900"}, "incident_id": "CHAOS-020"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-021",
+    "chaos_profile": "telemetry_blackout",
+    "ground_truth_root_cause": "sidecar_proxy_crash",
+    "ground_truth_resolution": "restart_envoy_sidecar",
+    "chaos_notes": "Envoy sidecar crash took down the metrics exporter on the same pod — zero metrics during outage",
+    "ambiguity_type": "insufficient_evidence",
+    "expected_causal_state": "insufficient_evidence",
+    "events": [
+      {"kind": "log", "service": "api", "severity": "error", "labels": {"msg": "upstream connect error or disconnect/reset before headers"}, "incident_id": "CHAOS-021"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "EnvoyUnavailable"}, "incident_id": "CHAOS-021"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-022",
+    "chaos_profile": "deployment_noise",
+    "ground_truth_root_cause": "thread_pool_saturation",
+    "ground_truth_resolution": "increase_thread_pool_size",
+    "chaos_notes": "On-call team deployed a hotfix for an unrelated bug mid-investigation — added deployment as false candidate",
+    "ambiguity_type": "competing_causes",
+    "expected_causal_state": "competing_causes",
+    "events": [
+      {"kind": "metric", "service": "api", "severity": "critical", "labels": {"metric": "thread_pool_active", "value": "200"}, "incident_id": "CHAOS-022"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "ThreadPoolSaturated"}, "incident_id": "CHAOS-022"},
+      {"kind": "deployment", "service": "api", "severity": "info", "labels": {"type": "noise", "change": "hotfix_unrelated_nullpointer"}, "incident_id": "CHAOS-022"},
+      {"kind": "log", "service": "api", "severity": "error", "labels": {"msg": "rejected task: thread pool queue full"}, "incident_id": "CHAOS-022"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-023",
+    "chaos_profile": "false_recovery",
+    "ground_truth_root_cause": "read_replica_overload",
+    "ground_truth_resolution": "add_read_replica",
+    "chaos_notes": "Query rerouting temporarily fixed p99 latency but replica caught up and fell behind again in 6 minutes",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "metric", "service": "db-replica", "severity": "critical", "labels": {"metric": "replication_lag_s", "value": "840"}, "incident_id": "CHAOS-023"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "SlowReadQueries"}, "incident_id": "CHAOS-023"},
+      {"kind": "log", "service": "db-router", "severity": "info", "labels": {"msg": "rerouted reads to primary temporarily"}, "incident_id": "CHAOS-023"},
+      {"kind": "metric", "service": "api", "severity": "info", "labels": {"metric": "read_p99_ms", "value": "210", "recovery_state": "false"}, "incident_id": "CHAOS-023"},
+      {"kind": "metric", "service": "db-replica", "severity": "critical", "labels": {"metric": "replication_lag_s", "value": "1240", "recovery_state": "false"}, "incident_id": "CHAOS-023"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-024",
+    "chaos_profile": "alert_storm",
+    "ground_truth_root_cause": "misrouted_traffic_after_lb_config_change",
+    "ground_truth_resolution": "revert_lb_config",
+    "chaos_notes": "Load balancer config change sent all traffic to one pod — health checks all screamed simultaneously",
+    "ambiguity_type": "competing_causes",
+    "expected_causal_state": "competing_causes",
+    "events": [
+      {"kind": "deployment", "service": "lb", "severity": "info", "labels": {"change": "weight_distribution_update"}, "incident_id": "CHAOS-024"},
+      {"kind": "alert", "service": "api-pod-1", "severity": "critical", "labels": {"alertname": "CPUHigh"}, "incident_id": "CHAOS-024"},
+      {"kind": "alert", "service": "api-pod-1", "severity": "critical", "labels": {"alertname": "MemoryHigh"}, "incident_id": "CHAOS-024"},
+      {"kind": "alert", "service": "api-pod-1", "severity": "critical", "labels": {"alertname": "RequestQueueFull"}, "incident_id": "CHAOS-024"},
+      {"kind": "alert", "service": "api-pod-1", "severity": "critical", "labels": {"alertname": "P99LatencyHigh"}, "incident_id": "CHAOS-024"},
+      {"kind": "metric", "service": "lb", "severity": "critical", "labels": {"metric": "pod_1_traffic_pct", "value": "98"}, "incident_id": "CHAOS-024"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-025",
+    "chaos_profile": "concurrent_outages",
+    "ground_truth_root_cause": "mutual_tls_cert_rotation_failure",
+    "ground_truth_resolution": "rollback_cert_rotation",
+    "chaos_notes": "mTLS cert rotation failed halfway — half the service mesh could authenticate, half could not",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "deployment", "service": "cert-manager", "severity": "info", "labels": {"action": "cert_rotation"}, "incident_id": "CHAOS-025"},
+      {"kind": "alert", "service": "service-a", "severity": "critical", "labels": {"alertname": "mTLSHandshakeFailed"}, "incident_id": "CHAOS-025"},
+      {"kind": "alert", "service": "service-c", "severity": "critical", "labels": {"alertname": "mTLSHandshakeFailed"}, "incident_id": "CHAOS-025"},
+      {"kind": "metric", "service": "service-b", "severity": "info", "labels": {"metric": "mtls_success_rate", "value": "1.0"}, "incident_id": "CHAOS-025"},
+      {"kind": "metric", "service": "service-d", "severity": "info", "labels": {"metric": "mtls_success_rate", "value": "1.0"}, "incident_id": "CHAOS-025"},
+      {"kind": "log", "service": "cert-manager", "severity": "error", "labels": {"msg": "rotation applied to 48% of pods only — rollout stalled"}, "incident_id": "CHAOS-025"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-026",
+    "chaos_profile": "stale_replay",
+    "ground_truth_root_cause": "quota_exhaustion",
+    "ground_truth_resolution": "increase_quota",
+    "chaos_notes": "Cold standby monitoring instance replayed 12h of buffered metrics into the live feed on failover",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "metric", "service": "api", "severity": "error", "labels": {"metric": "api_quota_remaining", "value": "0", "stale": "true", "stale_age_h": "12"}, "incident_id": "CHAOS-026"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "QuotaExhausted", "triggered_by_stale": "true"}, "incident_id": "CHAOS-026"},
+      {"kind": "metric", "service": "api", "severity": "info", "labels": {"metric": "api_quota_remaining", "value": "4200", "stale": "false"}, "incident_id": "CHAOS-026"},
+      {"kind": "log", "service": "monitoring", "severity": "warning", "labels": {"msg": "standby monitor failed over — replaying 12h buffer"}, "incident_id": "CHAOS-026"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-027",
+    "chaos_profile": "rollback_loop",
+    "ground_truth_root_cause": "data_format_breaking_change",
+    "ground_truth_resolution": "write_migration_for_old_format",
+    "chaos_notes": "Old version wrote format A; new version required format B; rollback read B and crashed; oscillating",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "deployment", "service": "processor", "severity": "info", "labels": {"action": "deploy", "version": "4.0.0"}, "incident_id": "CHAOS-027"},
+      {"kind": "alert", "service": "processor", "severity": "critical", "labels": {"alertname": "DeserializationError", "attempt": "v4"}, "incident_id": "CHAOS-027"},
+      {"kind": "deployment", "service": "processor", "severity": "info", "labels": {"action": "rollback", "version": "3.9.2"}, "incident_id": "CHAOS-027"},
+      {"kind": "alert", "service": "processor", "severity": "critical", "labels": {"alertname": "DeserializationError", "attempt": "v3.9-rollback"}, "incident_id": "CHAOS-027"},
+      {"kind": "log", "service": "processor", "severity": "fatal", "labels": {"msg": "cannot parse format B records written by v4 (format mismatch)"}, "incident_id": "CHAOS-027"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-028",
+    "chaos_profile": "clock_skew",
+    "ground_truth_root_cause": "database_deadlock",
+    "ground_truth_resolution": "fix_transaction_ordering",
+    "chaos_notes": "Two database shards with 78s clock drift — deadlock resolution logs appear to precede the deadlock event",
+    "ambiguity_type": "temporally_unstable",
+    "expected_causal_state": "temporally_unstable",
+    "events": [
+      {"kind": "log", "service": "db-shard-1", "severity": "error", "timestamp_offset_s": 78, "labels": {"msg": "deadlock resolved: rolled back tx-992", "skew": "78s"}, "incident_id": "CHAOS-028"},
+      {"kind": "log", "service": "db-shard-2", "severity": "critical", "timestamp_offset_s": 0, "labels": {"msg": "deadlock detected: tx-992 vs tx-993"}, "incident_id": "CHAOS-028"},
+      {"kind": "metric", "service": "db-shard-2", "severity": "error", "timestamp_offset_s": 5, "labels": {"metric": "deadlock_count", "value": "14"}, "incident_id": "CHAOS-028"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-029",
+    "chaos_profile": "partial_deployment",
+    "ground_truth_root_cause": "partial_rollout_with_incompatible_code_paths",
+    "ground_truth_resolution": "complete_rollout_or_rollback",
+    "chaos_notes": "50% of pods on v2, 50% on v1 — requests routing to different pods produced inconsistent responses",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "deployment", "service": "api", "severity": "info", "labels": {"strategy": "canary", "pct_v2": "50"}, "incident_id": "CHAOS-029"},
+      {"kind": "metric", "service": "api", "severity": "warning", "labels": {"metric": "error_rate_v1", "value": "0.01"}, "incident_id": "CHAOS-029"},
+      {"kind": "metric", "service": "api", "severity": "critical", "labels": {"metric": "error_rate_v2", "value": "0.48"}, "incident_id": "CHAOS-029"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "InconsistentErrors"}, "incident_id": "CHAOS-029"},
+      {"kind": "log", "service": "api", "severity": "error", "labels": {"msg": "response format mismatch between v1 and v2 pod handlers"}, "incident_id": "CHAOS-029"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-030",
+    "chaos_profile": "delayed_alerts",
+    "ground_truth_root_cause": "slow_disk_degradation",
+    "ground_truth_resolution": "replace_failing_disk",
+    "chaos_notes": "S.M.A.R.T. data showed reallocated sectors growing for 3 days, but alert fired only when IOPS dropped 60%",
+    "ambiguity_type": "temporally_unstable",
+    "expected_causal_state": "temporally_unstable",
+    "events": [
+      {"kind": "metric", "service": "storage", "severity": "warning", "timestamp_offset_s": -259200, "labels": {"metric": "smart_reallocated_sectors", "value": "12"}, "incident_id": "CHAOS-030"},
+      {"kind": "metric", "service": "storage", "severity": "warning", "timestamp_offset_s": -172800, "labels": {"metric": "smart_reallocated_sectors", "value": "47"}, "incident_id": "CHAOS-030"},
+      {"kind": "metric", "service": "storage", "severity": "error", "timestamp_offset_s": -86400, "labels": {"metric": "smart_reallocated_sectors", "value": "312"}, "incident_id": "CHAOS-030"},
+      {"kind": "metric", "service": "storage", "severity": "critical", "timestamp_offset_s": 0, "labels": {"metric": "disk_iops", "value": "140"}, "incident_id": "CHAOS-030"},
+      {"kind": "alert", "service": "storage", "severity": "critical", "timestamp_offset_s": 60, "labels": {"alertname": "DiskIOPSDegraded", "alert_delay": "3_days"}, "incident_id": "CHAOS-030"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-031",
+    "chaos_profile": "split_brain",
+    "ground_truth_root_cause": "network_partition_causes_split_brain",
+    "ground_truth_resolution": "quorum_fence_and_leader_election",
+    "chaos_notes": "Two cluster nodes both believed they were the leader — conflicting writes, data divergence",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "alert", "service": "db-node-1", "severity": "critical", "labels": {"alertname": "LeaderElected", "node": "node-1"}, "incident_id": "CHAOS-031"},
+      {"kind": "alert", "service": "db-node-2", "severity": "critical", "labels": {"alertname": "LeaderElected", "node": "node-2"}, "incident_id": "CHAOS-031"},
+      {"kind": "log", "service": "db-node-1", "severity": "critical", "labels": {"msg": "accepted write as leader"}, "incident_id": "CHAOS-031"},
+      {"kind": "log", "service": "db-node-2", "severity": "critical", "labels": {"msg": "accepted write as leader"}, "incident_id": "CHAOS-031"},
+      {"kind": "topology_change", "service": "infra", "severity": "critical", "labels": {"change": "network_partition_nodes_1_2"}, "incident_id": "CHAOS-031"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-032",
+    "chaos_profile": "metric_freeze",
+    "ground_truth_root_cause": "prometheus_scrape_timeout",
+    "ground_truth_resolution": "increase_scrape_timeout_and_interval",
+    "chaos_notes": "Prometheus scrape timed out — all metrics froze at last-known value for 11 minutes; alerts fired on stale data",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "metric", "service": "api", "severity": "warning", "labels": {"metric": "error_rate", "value": "0.12", "stale": "true", "frozen_for_s": "660"}, "incident_id": "CHAOS-032"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "ErrorRateHigh", "triggered_by_stale": "true"}, "incident_id": "CHAOS-032"},
+      {"kind": "log", "service": "prometheus", "severity": "error", "labels": {"msg": "context deadline exceeded scraping api:9090"}, "incident_id": "CHAOS-032"},
+      {"kind": "metric", "service": "api", "severity": "info", "labels": {"metric": "error_rate", "value": "0.01", "stale": "false"}, "incident_id": "CHAOS-032"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-033",
+    "chaos_profile": "concurrent_outages",
+    "ground_truth_root_cause": "kubernetes_api_server_overload",
+    "ground_truth_resolution": "scale_api_server_and_reduce_watch_clients",
+    "chaos_notes": "100 admission webhooks all hammering k8s API during scale-up created a thundering herd on the API server",
+    "ambiguity_type": "competing_causes",
+    "expected_causal_state": "competing_causes",
+    "events": [
+      {"kind": "metric", "service": "kube-apiserver", "severity": "critical", "labels": {"metric": "request_rate", "value": "48000"}, "incident_id": "CHAOS-033"},
+      {"kind": "alert", "service": "kube-apiserver", "severity": "critical", "labels": {"alertname": "APIServerLatencyHigh"}, "incident_id": "CHAOS-033"},
+      {"kind": "alert", "service": "scheduler", "severity": "critical", "labels": {"alertname": "SchedulerUnhealthy"}, "incident_id": "CHAOS-033"},
+      {"kind": "alert", "service": "controller-manager", "severity": "critical", "labels": {"alertname": "ControllerManagerDown"}, "incident_id": "CHAOS-033"},
+      {"kind": "log", "service": "kube-apiserver", "severity": "error", "labels": {"msg": "request throttled: too many requests from webhooks"}, "incident_id": "CHAOS-033"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-034",
+    "chaos_profile": "telemetry_blackout",
+    "ground_truth_root_cause": "log_aggregation_pipeline_failure",
+    "ground_truth_resolution": "restart_fluentd_pipeline",
+    "chaos_notes": "Fluentd crashed taking all log telemetry with it — the incident that broke logs was only visible from logs",
+    "ambiguity_type": "insufficient_evidence",
+    "expected_causal_state": "insufficient_evidence",
+    "events": [
+      {"kind": "alert", "service": "logging", "severity": "critical", "labels": {"alertname": "FluentdDown"}, "incident_id": "CHAOS-034"},
+      {"kind": "metric", "service": "logging", "severity": "critical", "labels": {"metric": "log_ingestion_rate", "value": "0"}, "incident_id": "CHAOS-034"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-035",
+    "chaos_profile": "deployment_noise",
+    "ground_truth_root_cause": "autoscaler_thrashing",
+    "ground_truth_resolution": "tune_autoscaler_cooldown",
+    "chaos_notes": "12 automated deployments triggered by autoscaler within 6 minutes — each deployment fired its own noise alerts",
+    "ambiguity_type": "competing_causes",
+    "expected_causal_state": "competing_causes",
+    "events": [
+      {"kind": "deployment", "service": "api", "severity": "info", "labels": {"type": "autoscale_up", "replicas": "8"}, "incident_id": "CHAOS-035"},
+      {"kind": "deployment", "service": "api", "severity": "info", "labels": {"type": "autoscale_down", "replicas": "3"}, "incident_id": "CHAOS-035"},
+      {"kind": "deployment", "service": "api", "severity": "info", "labels": {"type": "autoscale_up", "replicas": "11"}, "incident_id": "CHAOS-035"},
+      {"kind": "metric", "service": "api", "severity": "error", "labels": {"metric": "p99_latency_ms", "value": "3800"}, "incident_id": "CHAOS-035"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "AutoscalerThrashing"}, "incident_id": "CHAOS-035"},
+      {"kind": "log", "service": "api", "severity": "warning", "labels": {"msg": "scale event during scale event: cooldown violated"}, "incident_id": "CHAOS-035"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-036",
+    "chaos_profile": "false_recovery",
+    "ground_truth_root_cause": "nfs_mount_intermittent_failure",
+    "ground_truth_resolution": "migrate_to_csi_driver",
+    "chaos_notes": "NFS mount recovered under reduced load but failed again under normal traffic — recovery was load-dependent",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "alert", "service": "worker", "severity": "critical", "labels": {"alertname": "NFSStale"}, "incident_id": "CHAOS-036"},
+      {"kind": "log", "service": "worker", "severity": "info", "labels": {"msg": "NFS mount recovered"}, "incident_id": "CHAOS-036"},
+      {"kind": "metric", "service": "worker", "severity": "info", "labels": {"metric": "nfs_io_errors", "value": "0", "recovery_state": "false"}, "incident_id": "CHAOS-036"},
+      {"kind": "metric", "service": "worker", "severity": "critical", "labels": {"metric": "nfs_io_errors", "value": "892", "recovery_state": "false"}, "incident_id": "CHAOS-036"},
+      {"kind": "alert", "service": "worker", "severity": "critical", "labels": {"alertname": "NFSStale", "second_wave": "true"}, "incident_id": "CHAOS-036"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-037",
+    "chaos_profile": "alert_storm",
+    "ground_truth_root_cause": "misconfigured_synthetic_monitor",
+    "ground_truth_resolution": "fix_synthetic_monitor_endpoint",
+    "chaos_notes": "Synthetic monitor pointed at non-prod endpoint that returned 500 — triggered 60 production alerts falsely",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "alert", "service": "synthetic-monitor", "severity": "critical", "labels": {"alertname": "EndpointDown", "endpoint": "wrong_env"}, "incident_id": "CHAOS-037"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "ErrorRateHigh", "source": "synthetic_false_positive"}, "incident_id": "CHAOS-037"},
+      {"kind": "alert", "service": "monitoring", "severity": "warning", "labels": {"alertname": "SyntheticCheckFailed", "check": "prod_health"}, "incident_id": "CHAOS-037"},
+      {"kind": "metric", "service": "api", "severity": "info", "labels": {"metric": "real_error_rate", "value": "0.001"}, "incident_id": "CHAOS-037"},
+      {"kind": "log", "service": "synthetic-monitor", "severity": "error", "labels": {"msg": "target URL points to staging — expected prod"}, "incident_id": "CHAOS-037"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-038",
+    "chaos_profile": "concurrent_outages",
+    "ground_truth_root_cause": "correlated_software_bug_multi_region",
+    "ground_truth_resolution": "emergency_hotfix_deploy",
+    "chaos_notes": "Same code bug triggered independently in us-east and eu-west within 3 minutes — appeared as 2 separate incidents",
+    "ambiguity_type": "competing_causes",
+    "expected_causal_state": "competing_causes",
+    "events": [
+      {"kind": "alert", "service": "api-us-east", "severity": "critical", "labels": {"alertname": "PanicCrash", "region": "us-east"}, "incident_id": "CHAOS-038"},
+      {"kind": "alert", "service": "api-eu-west", "severity": "critical", "labels": {"alertname": "PanicCrash", "region": "eu-west"}, "incident_id": "CHAOS-038"},
+      {"kind": "log", "service": "api-us-east", "severity": "fatal", "labels": {"msg": "nil pointer dereference at handler_checkout.go:142"}, "incident_id": "CHAOS-038"},
+      {"kind": "log", "service": "api-eu-west", "severity": "fatal", "labels": {"msg": "nil pointer dereference at handler_checkout.go:142"}, "incident_id": "CHAOS-038"},
+      {"kind": "deployment", "service": "api", "severity": "info", "labels": {"action": "global_deploy", "sha": "3a9f1e2"}, "incident_id": "CHAOS-038"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-039",
+    "chaos_profile": "clock_skew",
+    "ground_truth_root_cause": "kafka_consumer_lag",
+    "ground_truth_resolution": "increase_consumer_parallelism",
+    "chaos_notes": "Kafka broker and consumer have 110s NTP drift — consumer lag appeared resolved before alert fired",
+    "ambiguity_type": "temporally_unstable",
+    "expected_causal_state": "temporally_unstable",
+    "events": [
+      {"kind": "metric", "service": "kafka-consumer", "severity": "critical", "timestamp_offset_s": 0, "labels": {"metric": "consumer_lag", "value": "1840000"}, "incident_id": "CHAOS-039"},
+      {"kind": "alert", "service": "kafka-consumer", "severity": "critical", "timestamp_offset_s": 110, "labels": {"alertname": "ConsumerLagHigh", "skew": "110s"}, "incident_id": "CHAOS-039"},
+      {"kind": "metric", "service": "kafka-consumer", "severity": "info", "timestamp_offset_s": 60, "labels": {"metric": "consumer_lag", "value": "4200", "recovering": "true"}, "incident_id": "CHAOS-039"},
+      {"kind": "log", "service": "kafka-consumer", "severity": "warning", "timestamp_offset_s": -110, "labels": {"msg": "consumer group rebalancing", "skew": "-110s"}, "incident_id": "CHAOS-039"}
+    ]
+  },
+  {
+    "incident_id": "CHAOS-040",
+    "chaos_profile": "rollback_loop",
+    "ground_truth_root_cause": "database_migration_applied_twice",
+    "ground_truth_resolution": "idempotent_migration_with_checksums",
+    "chaos_notes": "Migration tracking table was on a different schema — same migration ran 3 times, corrupting data each time",
+    "ambiguity_type": "observation_conflict",
+    "expected_causal_state": "observation_conflict",
+    "events": [
+      {"kind": "deployment", "service": "api", "severity": "info", "labels": {"action": "deploy_with_migration", "migration": "V20240115"}, "incident_id": "CHAOS-040"},
+      {"kind": "log", "service": "db", "severity": "error", "labels": {"msg": "constraint violation: duplicate key in users table"}, "incident_id": "CHAOS-040"},
+      {"kind": "deployment", "service": "api", "severity": "info", "labels": {"action": "rollback_attempt_1"}, "incident_id": "CHAOS-040"},
+      {"kind": "log", "service": "db", "severity": "error", "labels": {"msg": "migration V20240115 applied again: tracking table on wrong schema"}, "incident_id": "CHAOS-040"},
+      {"kind": "deployment", "service": "api", "severity": "info", "labels": {"action": "rollback_attempt_2"}, "incident_id": "CHAOS-040"},
+      {"kind": "log", "service": "db", "severity": "fatal", "labels": {"msg": "data corruption detected: V20240115 applied 3 times"}, "incident_id": "CHAOS-040"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "DataCorruption"}, "incident_id": "CHAOS-040"}
+    ]
+  }
+]

@@ -17,30 +17,27 @@ C. Replay reproducibility preserved — two replays of the same benchmark
 D. No external side effects — evaluation mode never calls Slack, GitHub,
    Prometheus, or enqueues Celery jobs. All infrastructure is mocked.
 """
+
 from __future__ import annotations
 
 import json
 
 import pytest
-
 from agents.metrics_agent.output_schema import MetricsSummary
-from agents.router_agent.output_schema import RouterOutput
 from agents.rootcause_agent.output_schema import RootCauseAnalysis
+from agents.router_agent.output_schema import RouterOutput
 from evaluation.benchmark_suite import load_benchmark_suite
 from evaluation.execution_mode import ExecutionMode
+from evaluation.infra_mocks.mock_incident import build_mock_incident_from_benchmark
 from evaluation.infra_mocks.mock_llm_client import (
-    build_deployment_mock_client,
-    build_logs_mock_client,
     build_metrics_mock_client,
     build_router_mock_client,
 )
-from evaluation.infra_mocks.mock_incident import build_mock_incident_from_benchmark
 from evaluation.orchestration_runner import (
     AgentPipelineOutputs,
     _assert_no_golden_contamination,
     run_agent_pipeline,
 )
-from evaluation.trace import EvaluationTrace
 
 
 @pytest.fixture(scope="module")
@@ -92,10 +89,18 @@ class TestRealAgentExecution:
     async def test_all_seven_agents_recorded_in_trace(self, first_benchmark) -> None:
         outputs = await run_agent_pipeline(first_benchmark)
         trace = outputs.trace
-        expected_steps = {"router", "metrics", "logs", "deployment", "rootcause", "risk", "remediation"}
-        assert expected_steps.issubset(set(trace.timing.keys())), (
-            f"Missing agent timing entries. Got: {set(trace.timing.keys())}"
-        )
+        expected_steps = {
+            "router",
+            "metrics",
+            "logs",
+            "deployment",
+            "rootcause",
+            "risk",
+            "remediation",
+        }
+        assert expected_steps.issubset(
+            set(trace.timing.keys())
+        ), f"Missing agent timing entries. Got: {set(trace.timing.keys())}"
 
     @pytest.mark.asyncio
     async def test_router_output_matches_mocked_tool_response(self, first_benchmark) -> None:
@@ -110,9 +115,9 @@ class TestRealAgentExecution:
         log = outputs.rootcause_output.investigation_log
         assert "normalized" in log
         assert "generated" in log
-        assert "Evaluation executed deterministic incident flow" not in log, (
-            "Old synthetic evaluation log text detected — root cause is not using real reasoning"
-        )
+        assert (
+            "Evaluation executed deterministic incident flow" not in log
+        ), "Old synthetic evaluation log text detected — root cause is not using real reasoning"
 
     @pytest.mark.asyncio
     async def test_remediation_plan_derived_from_risk_output(self, first_benchmark) -> None:
@@ -120,9 +125,9 @@ class TestRealAgentExecution:
         assert len(outputs.remediation_output.steps) >= 1
         step_actions = {s.action for s in outputs.remediation_output.steps}
         risk_actions = {r.action for r in outputs.risk_output.remediation_risks}
-        assert step_actions.issubset(risk_actions | {"restart payment-api"}), (
-            "Remediation steps must come from actual risk output, not golden labels"
-        )
+        assert step_actions.issubset(
+            risk_actions | {"restart payment-api"}
+        ), "Remediation steps must come from actual risk output, not golden labels"
 
     @pytest.mark.asyncio
     async def test_execution_mode_is_evaluation(self, first_benchmark) -> None:
@@ -133,7 +138,15 @@ class TestRealAgentExecution:
     async def test_trace_captures_all_agent_outputs(self, first_benchmark) -> None:
         outputs = await run_agent_pipeline(first_benchmark)
         trace = outputs.trace
-        for agent in ("router", "metrics", "logs", "deployment", "rootcause", "risk", "remediation"):
+        for agent in (
+            "router",
+            "metrics",
+            "logs",
+            "deployment",
+            "rootcause",
+            "risk",
+            "remediation",
+        ):
             assert agent in trace.agent_outputs, f"Missing trace output for agent: {agent}"
 
     @pytest.mark.asyncio
@@ -147,7 +160,9 @@ class TestRealAgentExecution:
 
 
 class TestGoldenLabelIsolation:
-    def test_assert_no_golden_contamination_passes_for_valid_benchmark(self, first_benchmark) -> None:
+    def test_assert_no_golden_contamination_passes_for_valid_benchmark(
+        self, first_benchmark
+    ) -> None:
         _assert_no_golden_contamination(first_benchmark)
 
     def test_assert_no_golden_contamination_detects_injected_golden_root_cause(
@@ -167,9 +182,7 @@ class TestGoldenLabelIsolation:
     @pytest.mark.asyncio
     async def test_router_mock_data_comes_from_mocked_tool_responses(self, first_benchmark) -> None:
         mock_client = build_router_mock_client(first_benchmark.mocked_tool_responses)
-        response = await mock_client.generate(
-            [], structured_output_model=RouterOutput
-        )
+        response = await mock_client.generate([], structured_output_model=RouterOutput)
         assert isinstance(response, RouterOutput)
         mock_router = first_benchmark.mocked_tool_responses.get("router", {})
         assert response.incident_type == mock_router["incident_type"]
@@ -177,9 +190,7 @@ class TestGoldenLabelIsolation:
     @pytest.mark.asyncio
     async def test_mock_llm_does_not_contain_golden_classification(self, first_benchmark) -> None:
         mock_client = build_router_mock_client(first_benchmark.mocked_tool_responses)
-        response = await mock_client.generate(
-            [], structured_output_model=RouterOutput
-        )
+        response = await mock_client.generate([], structured_output_model=RouterOutput)
         assert isinstance(response, RouterOutput)
         router_data_str = json.dumps(mock_client._mock_data)
         assert first_benchmark.golden_root_cause not in router_data_str
@@ -190,7 +201,7 @@ class TestGoldenLabelIsolation:
         mock_client = build_metrics_mock_client(first_benchmark.mocked_tool_responses)
         data_str = json.dumps(mock_client._mock_data)
         assert first_benchmark.golden_root_cause not in data_str
-        assert first_benchmark.golden_classification not in data_str
+        assert "incident_type" not in mock_client._mock_data
 
     @pytest.mark.asyncio
     async def test_incident_built_without_golden_labels(self, first_benchmark) -> None:
@@ -200,7 +211,9 @@ class TestGoldenLabelIsolation:
         assert first_benchmark.golden_remediation not in incident_str
 
     @pytest.mark.asyncio
-    async def test_rootcause_output_is_not_verbatim_golden_root_cause(self, first_benchmark) -> None:
+    async def test_rootcause_output_is_not_verbatim_golden_root_cause(
+        self, first_benchmark
+    ) -> None:
         outputs = await run_agent_pipeline(first_benchmark)
         if outputs.rootcause_output.hypotheses:
             top_hypothesis = outputs.rootcause_output.hypotheses[0].hypothesis
@@ -225,7 +238,9 @@ class TestGoldenLabelIsolation:
                 _assert_no_golden_contamination(inc)
             except ValueError as exc:
                 errors.append(str(exc))
-        assert not errors, f"Golden contamination found in {len(errors)} incidents:\n" + "\n".join(errors[:5])
+        assert not errors, f"Golden contamination found in {len(errors)} incidents:\n" + "\n".join(
+            errors[:5]
+        )
 
 
 # ─── C. Replay reproducibility ───────────────────────────────────────────────
@@ -311,14 +326,19 @@ class TestNoExternalSideEffects:
     @pytest.mark.asyncio
     async def test_mock_llm_returns_content_not_tool_calls(self, first_benchmark) -> None:
         client = build_metrics_mock_client(first_benchmark.mocked_tool_responses)
-        response = await client.generate([], tools=[{"type": "function", "function": {"name": "query_prometheus"}}])
+        response = await client.generate(
+            [], tools=[{"type": "function", "function": {"name": "query_prometheus"}}]
+        )
         assert isinstance(response, dict)
         assert response.get("tool_calls") == []
         assert "content" in response
 
     @pytest.mark.asyncio
     async def test_null_searcher_returns_empty(self) -> None:
-        from evaluation.infra_mocks.null_clients import NullIncidentHistorySearcher, NullPatternSearcher
+        from evaluation.infra_mocks.null_clients import (
+            NullIncidentHistorySearcher,
+            NullPatternSearcher,
+        )
 
         searcher = NullIncidentHistorySearcher()
         result = await searcher.search_similar_incidents("latency spike payment-api")

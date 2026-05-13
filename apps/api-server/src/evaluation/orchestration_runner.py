@@ -17,6 +17,7 @@ Side effects enforced:
   - No production DB mutations
   - No approval escalation jobs
 """
+
 from __future__ import annotations
 
 import time
@@ -35,19 +36,14 @@ from agents.risk_agent.action_risk import score_remediation_action
 from agents.risk_agent.blast_radius import compute_blast_radius
 from agents.risk_agent.schemas import RiskAssessment
 from agents.rootcause_agent.causal_graph import build_candidate_causes
-from agents.rootcause_agent.deductive_tester import assess_candidate
-from agents.rootcause_agent.evidence_builder import TimedEvent, build_timed_events
+from agents.rootcause_agent.evidence_builder import build_timed_events
 from agents.rootcause_agent.evidence_normalizer import normalize_agent_executions
-from agents.rootcause_agent.output_schema import (
-    HypothesisEvidence,
-    RootCauseAnalysis,
-    RootCauseHypothesis,
+from agents.rootcause_agent.output_schema import RootCauseAnalysis
+from agents.rootcause_agent.probabilistic_reasoner import (
+    build_probabilistic_root_cause_analysis,
 )
-from agents.rootcause_agent.scorer import score_assessment
 from agents.router_agent.agent import classify_incident
 from agents.router_agent.output_schema import RouterOutput
-from orchestration.state.topology import load_topology
-
 from evaluation.benchmark_suite import BenchmarkIncident
 from evaluation.execution_mode import ExecutionMode
 from evaluation.infra_mocks.mock_incident import (
@@ -64,6 +60,7 @@ from evaluation.infra_mocks.mock_llm_client import (
 )
 from evaluation.infra_mocks.null_clients import NullIncidentHistorySearcher
 from evaluation.trace import EvaluationTrace
+from orchestration.state.topology import load_topology
 
 _DEFAULT_REMEDIATION_HISTORY: list[dict[str, Any]] = [
     {
@@ -134,17 +131,6 @@ def _assert_no_golden_contamination(benchmark: BenchmarkIncident) -> None:
         )
 
 
-def _serialize_timed_events(events: list[TimedEvent]) -> list[HypothesisEvidence]:
-    return [
-        HypothesisEvidence(
-            item_key=event.item_key,
-            description=event.summary,
-            source=event.source,
-        )
-        for event in events
-    ]
-
-
 async def _eval_rootcause(
     benchmark: BenchmarkIncident,
     metrics_output: MetricsSummary,
@@ -199,68 +185,14 @@ async def _eval_rootcause(
         pattern_hints=[],
     )
 
-    hypotheses: list[RootCauseHypothesis] = []
-    investigation_steps = [
-        f"normalized {len(timed_events)} evidence events",
-        "retrieved 0 pattern hints (evaluation mode: null pattern searcher)",
-        f"generated {len(candidates)} candidate causes",
-    ]
-
-    for candidate in candidates:
-        assessment = assess_candidate(candidate, timed_events)
-        scores = score_assessment(assessment, incident_type)
-        causal_chain = (
-            f"{candidate.title} -> degraded {candidate.affected_service} behavior -> user-facing impact"
-            if candidate.cause_service == candidate.affected_service
-            else f"{candidate.title} in {candidate.cause_service} -> downstream impact on {candidate.affected_service}"
-        )
-        hypotheses.append(
-            RootCauseHypothesis(
-                hypothesis=(
-                    f"{candidate.title} in {candidate.cause_service} is the most likely "
-                    f"cause of the impact observed on {candidate.affected_service}."
-                ),
-                cause_service=candidate.cause_service,
-                affected_service=candidate.affected_service,
-                evidence_for=_serialize_timed_events(assessment.evidence_for),
-                evidence_against=_serialize_timed_events(assessment.evidence_against),
-                evidence_neutral=_serialize_timed_events(assessment.evidence_neutral),
-                causal_chain=causal_chain,
-                counterfactual_test=(
-                    f"If {candidate.title.lower()} were absent, the correlated anomalies on "
-                    f"{candidate.affected_service} would be less likely to appear together."
-                ),
-                confidence=scores["confidence"],
-                temporal_score=scores["temporal_score"],
-                evidence_coverage=assessment.evidence_coverage,
-                pattern_match_score=candidate.pattern_match_score,
-                prior_probability=scores["prior_probability"],
-                counterfactual_power=assessment.counterfactual_power,
-            )
-        )
-
-    hypotheses.sort(key=lambda h: h.confidence or 0.0, reverse=True)
-    strongest_index: int | None = (
-        0 if hypotheses and (hypotheses[0].confidence or 0.0) >= 0.4 else None
-    )
-    status = "completed" if strongest_index is not None else "insufficient_evidence"
-
-    return RootCauseAnalysis(
-        status=status,
-        hypotheses=hypotheses,
-        strongest_hypothesis_index=strongest_index,
-        investigation_log="; ".join(investigation_steps),
-        recommended_next_steps=(
-            [
-                "Review deployment rollback options",
-                "Inspect configuration drift on the implicated service",
-            ]
-            if strongest_index is not None
-            else [
-                "Gather more logs",
-                "Inspect network and deployment history around the alert window",
-            ]
-        ),
+    return build_probabilistic_root_cause_analysis(
+        incident_type=incident_type,
+        incident_severity=benchmark.golden_severity,
+        service=service,
+        evidence_items=simplified_evidence,
+        timed_events=timed_events,
+        candidates=candidates,
+        grounding_score=0.0,
     )
 
 
@@ -403,8 +335,7 @@ async def run_agent_pipeline(
     - Fully deterministic for same benchmark inputs
     """
     assert execution_mode == ExecutionMode.EVALUATION, (
-        "run_agent_pipeline must only be called in EVALUATION mode. "
-        f"Received: {execution_mode}"
+        "run_agent_pipeline must only be called in EVALUATION mode. " f"Received: {execution_mode}"
     )
 
     _assert_no_golden_contamination(benchmark)

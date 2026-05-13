@@ -15,7 +15,10 @@ import pytest
 import respx
 import httpx
 
-from core.resilience.fallback_classifier import DeterministicFallbackClassifier, FallbackClassification
+from core.resilience.fallback_classifier import (
+    DeterministicFallbackClassifier,
+    FallbackClassification,
+)
 from core.resilience.operating_mode import OperatingMode, OperatingModeManager
 from core.resilience.provider_chain import ProviderChain, ProviderConfig
 from core.resilience.resilient_llm_client import ResilientLLMClient
@@ -94,7 +97,9 @@ class TestIncidentSurvivability:
 
         alert_payload = {
             "title": "High database latency with connection pool warnings",
-            "summary": "PostgreSQL connection pool exhausted, slow queries detected across all services",
+            "summary": (
+                "PostgreSQL connection pool exhausted, slow queries detected across all services"
+            ),
             "severity": "high",
             "source": "prometheus",
             "labels": {"alertname": "DatabaseLatency", "service": "payment-api"},
@@ -126,7 +131,9 @@ class TestIncidentSurvivability:
         # ASSERTIONS: The system MUST produce a valid classification
         assert result is not None, "Classification must not be None"
         assert isinstance(result, FallbackClassification), "Must use deterministic fallback"
-        assert result.incident_type == "database", f"Expected 'database', got '{result.incident_type}'"
+        assert result.incident_type == "database", (
+            f"Expected 'database', got '{result.incident_type}'"
+        )
         assert result.severity == "high"
         assert result.fallback is True
         assert result.provider_used == "deterministic_fallback"
@@ -210,7 +217,12 @@ class TestIncidentSurvivability:
             "choices": [{
                 "message": {
                     "role": "assistant",
-                    "content": '{"incident_type": "memory", "severity": "high", "confidence": 0.85, "requires_immediate_investigation": true, "recommended_workflow": "full_investigation", "rationale": "OOM kill detected"}'
+                    "content": (
+                        '{"incident_type": "memory", "severity": "high", "confidence": 0.85,'
+                        ' "requires_immediate_investigation": true,'
+                        ' "recommended_workflow": "full_investigation",'
+                        ' "rationale": "OOM kill detected"}'
+                    )
                 }
             }]
         }
@@ -277,4 +289,5 @@ class TestIncidentSurvivability:
         for attempt in result_dict["attempts"]:
             assert "error" in attempt
             assert attempt["error"] is not None
-            assert attempt["provider_name"] in ("openai_primary", "openai_secondary", "ollama_local")
+            valid_providers = ("openai_primary", "openai_secondary", "ollama_local")
+            assert attempt["provider_name"] in valid_providers

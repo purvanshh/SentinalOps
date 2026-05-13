@@ -68,7 +68,9 @@ _RULES: list[_ClassificationRule] = [
             "cpu steal", "runaway process", "cpu bound",
         ],
         patterns=[
-            re.compile(r"cpu\s*(usage|utilization|load)\s*(high|above|exceeded|spike)", re.IGNORECASE),
+            re.compile(
+                r"cpu\s*(usage|utilization|load)\s*(high|above|exceeded|spike)", re.IGNORECASE
+            ),
             re.compile(r"load\s*average\s*(high|above|critical)", re.IGNORECASE),
             re.compile(r"cpu\s*>\s*\d+%", re.IGNORECASE),
         ],
@@ -84,7 +86,10 @@ _RULES: list[_ClassificationRule] = [
             "oomkilled", "memory saturation",
         ],
         patterns=[
-            re.compile(r"(memory|heap)\s*(usage|utilization|pressure)\s*(high|above|critical|spike)", re.IGNORECASE),
+            re.compile(
+                r"(memory|heap)\s*(usage|utilization|pressure)\s*(high|above|critical|spike)",
+                re.IGNORECASE,
+            ),
             re.compile(r"oom\s*(kill|killed|error)", re.IGNORECASE),
             re.compile(r"memory\s*>\s*\d+%", re.IGNORECASE),
             re.compile(r"(swap|page)\s*(usage|fault)", re.IGNORECASE),
@@ -159,7 +164,9 @@ _RULES: list[_ClassificationRule] = [
         ],
         patterns=[
             re.compile(r"(disk|filesystem|storage)\s*(full|usage|pressure|error)", re.IGNORECASE),
-            re.compile(r"(node|host|instance)\s*(not ready|unavailable|degraded|down)", re.IGNORECASE),
+            re.compile(
+                r"(node|host|instance)\s*(not ready|unavailable|degraded|down)", re.IGNORECASE
+            ),
             re.compile(r"(inode|iops)\s*(high|exceeded|critical)", re.IGNORECASE),
             re.compile(r"(evict|pressure)\s*(memory|disk|node)?", re.IGNORECASE),
         ],
@@ -219,8 +226,11 @@ class DeterministicFallbackClassifier:
             confidence=round(confidence, 2),
             requires_immediate_investigation=requires_immediate,
             recommended_workflow=matched_rule.recommended_workflow,
-            rationale=f"Deterministic fallback: matched {max_score} signals for '{matched_rule.incident_type}'. "
-                      f"Scores: {scores}. LLM providers exhausted.",
+            rationale=(
+                f"Deterministic fallback: matched {max_score} signals"
+                f" for '{matched_rule.incident_type}'."
+                f" Scores: {scores}. LLM providers exhausted."
+            ),
         )
 
     def _score_rule(self, rule: _ClassificationRule, text_lower: str, text: str) -> int:
@@ -251,7 +261,8 @@ class DeterministicFallbackClassifier:
 
     def _unknown_classification(self, alert_payload: dict[str, Any]) -> FallbackClassification:
         raw_severity = str(alert_payload.get("severity", "medium")).lower().strip()
-        severity = raw_severity if raw_severity in ("critical", "high", "medium", "low") else "medium"
+        valid = ("critical", "high", "medium", "low")
+        severity = raw_severity if raw_severity in valid else "medium"
 
         return FallbackClassification(
             incident_type="unknown",
@@ -259,7 +270,10 @@ class DeterministicFallbackClassifier:
             confidence=0.1,
             requires_immediate_investigation=severity in ("critical", "high"),
             recommended_workflow="human_triage",
-            rationale="Deterministic fallback: no classification rules matched. Routing to human triage.",
+            rationale=(
+                "Deterministic fallback: no classification rules matched."
+                " Routing to human triage."
+            ),
         )
 
     def _extract_searchable_text(self, alert_payload: dict[str, Any]) -> str:

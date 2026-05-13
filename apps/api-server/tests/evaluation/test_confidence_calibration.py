@@ -8,16 +8,19 @@ Validates:
 - Abstain threshold computation
 - Calibration grade assignment
 """
-import pytest
 
+import pytest
 from evaluation.benchmark_suite import load_benchmark_suite
 from evaluation.scorers.confidence_calibration_scorer import (
     CalibrationBin,
     CalibrationReport,
     build_calibration_data_from_benchmark,
+    build_reliability_curve,
     compute_brier_score,
     compute_ece,
+    detect_confidence_drift,
     find_abstain_threshold,
+    fit_temperature_scale,
     score_confidence_calibration,
 )
 
@@ -138,7 +141,13 @@ class TestCalibrationReportFromBenchmark:
         assert len(calibration_report.bins) == 10
 
     def test_report_has_calibration_grade(self, calibration_report: CalibrationReport) -> None:
-        assert calibration_report.calibration_grade in ("EXCELLENT", "GOOD", "FAIR", "POOR", "FAILING")
+        assert calibration_report.calibration_grade in (
+            "EXCELLENT",
+            "GOOD",
+            "FAIR",
+            "POOR",
+            "FAILING",
+        )
 
     def test_report_has_abstain_threshold(self, calibration_report: CalibrationReport) -> None:
         assert 0.0 <= calibration_report.abstain_recommendation_threshold <= 1.0
@@ -146,16 +155,47 @@ class TestCalibrationReportFromBenchmark:
     def test_report_has_escalation_threshold(self, calibration_report: CalibrationReport) -> None:
         assert 0.0 <= calibration_report.low_confidence_escalation_threshold <= 1.0
 
-    def test_abstain_threshold_above_escalation_threshold(self, calibration_report: CalibrationReport) -> None:
+    def test_abstain_threshold_above_escalation_threshold(
+        self, calibration_report: CalibrationReport
+    ) -> None:
         assert calibration_report.abstain_recommendation_threshold >= (
             calibration_report.low_confidence_escalation_threshold
         ), "Abstain threshold should be >= escalation threshold"
 
     def test_to_dict_serializable(self, calibration_report: CalibrationReport) -> None:
         import json
+
         json.dumps(calibration_report.to_dict())
 
     def test_ece_not_unreasonably_high(self, calibration_report: CalibrationReport) -> None:
-        assert calibration_report.expected_calibration_error < 0.40, (
-            f"ECE {calibration_report.expected_calibration_error:.3f} is unreasonably high"
+        assert (
+            calibration_report.expected_calibration_error < 0.40
+        ), f"ECE {calibration_report.expected_calibration_error:.3f} is unreasonably high"
+
+
+class TestPhase44Calibration:
+    def test_temperature_scaling_softens_overconfident_predictions(self) -> None:
+        confidences = [0.95] * 8 + [0.15] * 2
+        correctness = [True, False, True, False, True, False, False, False, True, True]
+        temperature = fit_temperature_scale(confidences, correctness)
+        assert temperature >= 1.0
+
+    def test_reliability_curve_emits_non_empty_points(self) -> None:
+        confidences = [0.2, 0.4, 0.6, 0.8]
+        correctness = [False, False, True, True]
+        _, bins = compute_ece(confidences, correctness)
+        curve = build_reliability_curve(bins)
+        assert curve
+        assert {"confidence", "accuracy", "gap"} <= curve[0].keys()
+
+    def test_calibration_report_detects_drift_from_baseline(self) -> None:
+        report = score_confidence_calibration(
+            [0.95, 0.95, 0.95, 0.95],
+            [True, False, False, False],
+            baseline_ece=0.02,
         )
+        assert report.drift_detected is True
+
+    def test_detect_confidence_drift_respects_tolerance(self) -> None:
+        assert detect_confidence_drift(0.05, 0.11) is True
+        assert detect_confidence_drift(0.05, 0.07) is False

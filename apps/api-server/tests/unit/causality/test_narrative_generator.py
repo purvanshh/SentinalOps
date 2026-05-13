@@ -13,24 +13,20 @@ Proves:
   - Contradictory evidence surfaced in narrative output.
   - Evidence chain count referenced in why_statements.
 """
+
 from __future__ import annotations
 
-import pytest
 from datetime import UTC, datetime, timedelta
 
 from causality.event_graph import (
-    CausalEdge,
-    CausalEventGraph,
     CausalNode,
-    EdgeType,
     NodeType,
 )
 from causality.failure_classifier import (
     ClassifiedEvent,
     FailureType,
-    classify_failures,
 )
-from causality.narrative_generator import generate_narrative, IncidentNarrative
+from causality.narrative_generator import IncidentNarrative, generate_narrative
 
 
 def _ts(offset_seconds: float = 0.0) -> str:
@@ -64,10 +60,12 @@ def _make_classified(
 def _make_incident_classified() -> list[ClassifiedEvent]:
     """Standard cascade: database (primary) → payment-api (secondary)."""
     return [
-        _make_classified("DB", NodeType.METRIC_ANOMALY, "database", 0,
-                         FailureType.PRIMARY_CAUSE, 0),
-        _make_classified("API", NodeType.METRIC_ANOMALY, "payment-api", 120,
-                         FailureType.SECONDARY_EFFECT, 1),
+        _make_classified(
+            "DB", NodeType.METRIC_ANOMALY, "database", 0, FailureType.PRIMARY_CAUSE, 0
+        ),
+        _make_classified(
+            "API", NodeType.METRIC_ANOMALY, "payment-api", 120, FailureType.SECONDARY_EFFECT, 1
+        ),
     ]
 
 
@@ -88,10 +86,10 @@ def test_narrative_root_cause_mentions_primary_service() -> None:
 
 def test_narrative_timeline_is_chronological() -> None:
     classified = [
-        _make_classified("LATE", NodeType.METRIC_ANOMALY, "api", 120,
-                         FailureType.SECONDARY_EFFECT, 1),
-        _make_classified("EARLY", NodeType.METRIC_ANOMALY, "db", 0,
-                         FailureType.PRIMARY_CAUSE, 0),
+        _make_classified(
+            "LATE", NodeType.METRIC_ANOMALY, "api", 120, FailureType.SECONDARY_EFFECT, 1
+        ),
+        _make_classified("EARLY", NodeType.METRIC_ANOMALY, "db", 0, FailureType.PRIMARY_CAUSE, 0),
     ]
     narrative = generate_narrative(classified, causal_confidence=0.75)
     # Timeline should start with the earlier event
@@ -121,8 +119,7 @@ def test_narrative_why_mentions_upstream_predecessors() -> None:
 
 def test_narrative_no_primary_indicates_insufficient_evidence() -> None:
     classified = [
-        _make_classified("NOISY", NodeType.ALERT, "unrelated", 0,
-                         FailureType.COLLATERAL_NOISE, 0),
+        _make_classified("NOISY", NodeType.ALERT, "unrelated", 0, FailureType.COLLATERAL_NOISE, 0),
     ]
     narrative = generate_narrative(classified, causal_confidence=0.20)
     assert "could not be conclusively identified" in narrative.root_cause_statement
@@ -169,8 +166,14 @@ def test_explainability_dict_has_required_keys() -> None:
     narrative = generate_narrative(classified, causal_confidence=0.75)
     d = narrative.to_explainability_dict()
     required = {
-        "root_cause", "why", "evidence_chain", "causal_confidence",
-        "contradictory_evidence", "propagation_path", "timeline", "summary",
+        "root_cause",
+        "why",
+        "evidence_chain",
+        "causal_confidence",
+        "contradictory_evidence",
+        "propagation_path",
+        "timeline",
+        "summary",
     }
     assert required.issubset(set(d.keys()))
 

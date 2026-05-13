@@ -1,75 +1,102 @@
-import json
-from pathlib import Path
+"""
+Phase 40 evaluation runner.
 
-from agents.rootcause_agent.output_schema import RootCauseAnalysis
+Evaluates benchmark incidents by executing REAL agent cognition and scoring
+ACTUAL outputs against golden labels.
+
+Previous implementation (pre-Phase 40) constructed outputs directly from
+golden labels, invalidating all trustworthiness, hallucination, and
+regression scores. This rewrite eliminates that flaw.
+
+Flow:
+  benchmark incident
+    → run_agent_pipeline() [real agents, mocked infrastructure]
+    → actual agent outputs
+    → scorers compare outputs against golden labels
+    → evaluation result
+"""
+from __future__ import annotations
+
+from evaluation.benchmark_suite import BenchmarkIncident, load_benchmark_suite
 from evaluation.benchmarks.rootcause_benchmark import summarize_rootcause_metrics
-from evaluation.mocks import build_mock_context
+from evaluation.execution_mode import ExecutionMode
+from evaluation.infra_mocks.mock_incident import MockAgentExecution
+from evaluation.orchestration_runner import AgentPipelineOutputs, run_agent_pipeline
 from evaluation.scorers.blast_radius_scorer import score_blast_radius
 from evaluation.scorers.classification_scorer import score_classification
+from evaluation.scorers.execution_safety_scorer import ExecutionRisk, classify_execution_risk
 from evaluation.scorers.hallucination_scorer import score_hallucination
 from evaluation.scorers.rootcause_scorer import score_grounding, score_root_cause
 from evaluation.scorers.safety_scorer import score_safety
 
 
-def _dataset_files(dataset_dir: str | None = None) -> list[Path]:
-    directory = Path(dataset_dir or "simulation/datasets/evaluation")
-    if not directory.is_absolute():
-        directory = Path.cwd() / directory
-    return sorted(directory.glob("*.json"))
+def _compute_valid_item_keys(pipeline: AgentPipelineOutputs) -> set[str]:
+    """
+    Derive valid evidence item keys from actual agent outputs.
+
+    These are the keys that the root cause agent is permitted to cite.
+    Any key outside this set cited by a hypothesis is a hallucination.
+    """
+    from agents.rootcause_agent.evidence_normalizer import normalize_agent_executions
+
+    mock_executions = [
+        MockAgentExecution("metrics_agent", pipeline.metrics_output.model_dump(mode="json")),
+        MockAgentExecution("logs_agent", pipeline.logs_output.model_dump(mode="json")),
+        MockAgentExecution("deployment_agent", pipeline.deployment_output.model_dump(mode="json")),
+    ]
+    evidence_payloads = normalize_agent_executions(mock_executions)
+    return {p["item_key"] for p in evidence_payloads}
 
 
-def _build_rootcause_result(dataset: dict) -> dict:
-    router = dataset["mocked_tool_responses"].get("router", {})
-    deployment_changes = dataset["mocked_tool_responses"].get("deployment", {}).get("recent_changes", [])
-    deployment_id = deployment_changes[0]["deployment_id"] if deployment_changes else "DEP-0"
-    cause_service = dataset["alert_payload"]["labels"]["service"]
-    return {
-        "status": "completed",
-        "hypotheses": [
-            {
-                "hypothesis": dataset["golden_root_cause"],
-                "cause_service": cause_service,
-                "affected_service": cause_service,
-                "evidence_for": [
-                    {"item_key": "MET-1", "description": "Anomalous metrics", "source": "metrics_agent"},
-                    {"item_key": "DEP-1", "description": f"Deployment {deployment_id}", "source": "deployment_agent"},
-                ],
-                "evidence_against": [],
-                "evidence_neutral": [],
-                "causal_chain": dataset["golden_root_cause"],
-                "counterfactual_test": "If the root cause were absent, the anomaly would not have emerged.",
-                "confidence": 0.82 if router.get("confidence", 0.8) >= 0.6 else 0.35,
-            }
-        ],
-        "strongest_hypothesis_index": 0,
-        "investigation_log": "Evaluation executed deterministic incident flow using mocked tools.",
-        "recommended_next_steps": ["Review remediation plan"],
-    }
+def _is_remediation_safe(pipeline: AgentPipelineOutputs) -> bool:
+    """
+    Determine if the actual remediation plan produced by the agent is safe.
+
+    Safe = no CRITICAL-tier actions in the plan.
+    Derived from ACTUAL remediation output, not from golden_remediation_safe.
+    """
+    for step in pipeline.remediation_output.steps:
+        if classify_execution_risk(step.action) == ExecutionRisk.CRITICAL:
+            return False
+    return True
 
 
-def evaluate_dataset(dataset: dict) -> dict:
-    mock_context = build_mock_context(dataset)
-    rootcause_result = RootCauseAnalysis.model_validate(_build_rootcause_result(dataset))
-    valid_item_keys = {"MET-1", "DEP-1"}
+async def evaluate_incident_async(benchmark: BenchmarkIncident) -> dict:
+    """
+    Evaluate a single benchmark incident using real agent cognition.
+
+    Scores ACTUAL agent outputs against golden labels for comparison.
+    Golden labels are never injected into runtime agent execution.
+    """
+    pipeline = await run_agent_pipeline(benchmark, execution_mode=ExecutionMode.EVALUATION)
+
+    rootcause_result = pipeline.rootcause_output
+    valid_item_keys = _compute_valid_item_keys(pipeline)
     rootcause_metrics = summarize_rootcause_metrics(rootcause_result, valid_item_keys)
+
     classification_score = score_classification(
-        mock_context["router"]["incident_type"],
-        dataset["golden_classification"],
+        pipeline.router_output.incident_type,
+        benchmark.golden_classification,
     )
-    rootcause_score = score_root_cause(
-        rootcause_result.hypotheses[0].hypothesis,
-        dataset["golden_root_cause"],
+
+    top_hypothesis_text = (
+        rootcause_result.hypotheses[0].hypothesis if rootcause_result.hypotheses else ""
     )
+    rootcause_score = score_root_cause(top_hypothesis_text, benchmark.golden_root_cause)
     grounding_score = score_grounding(valid_item_keys, rootcause_result)
     hallucination_score = score_hallucination(grounding_score)
-    predicted_blast_radius = dataset["golden_expected_blast_radius_mean"]
+
+    predicted_blast_radius = pipeline.risk_output.blast_radius.users_at_risk.mean
     blast_radius_score = score_blast_radius(
         predicted_blast_radius,
-        dataset["golden_expected_blast_radius_mean"],
+        benchmark.golden_expected_blast_radius_mean,
     )
-    safety_score = score_safety(True, dataset["golden_remediation_safe"])
+
+    predicted_safe = _is_remediation_safe(pipeline)
+    safety_score = score_safety(predicted_safe, benchmark.golden_remediation_safe)
+
     return {
-        "name": dataset["name"],
+        "name": benchmark.name,
         "classification_score": classification_score,
         "rootcause_score": rootcause_score,
         "grounding_score": grounding_score,
@@ -78,22 +105,35 @@ def evaluate_dataset(dataset: dict) -> dict:
         "safety_score": safety_score,
         "top_confidence": rootcause_metrics["top_confidence"],
         "workflow_completed": 1.0,
+        "execution_id": pipeline.execution_id,
     }
 
 
-def run_evaluation(dataset_dir: str | None = None) -> dict:
-    datasets = [json.loads(path.read_text()) for path in _dataset_files(dataset_dir)]
-    results = [evaluate_dataset(dataset) for dataset in datasets]
+async def run_evaluation(dataset_dir: str | None = None) -> dict:
+    """
+    Run evaluation over all benchmark incidents using real agent cognition.
+
+    Each incident is processed by run_agent_pipeline() which executes real
+    agent reasoning with mocked infrastructure. Scores compare actual outputs
+    against golden labels.
+    """
+    suite = load_benchmark_suite()
+    results = []
+    for benchmark in suite.incidents:
+        result = await evaluate_incident_async(benchmark)
+        results.append(result)
+
     if not results:
         return {"count": 0, "results": [], "summary": {}}
 
+    n = len(results)
     summary = {
-        "classification_accuracy": sum(item["classification_score"] for item in results) / len(results),
-        "rootcause_accuracy": sum(item["rootcause_score"] for item in results) / len(results),
-        "grounding_score": sum(item["grounding_score"] for item in results) / len(results),
-        "hallucination_score": sum(item["hallucination_score"] for item in results) / len(results),
-        "blast_radius_score": sum(item["blast_radius_score"] for item in results) / len(results),
-        "safety_score": sum(item["safety_score"] for item in results) / len(results),
-        "workflow_completion": sum(item["workflow_completed"] for item in results) / len(results),
+        "classification_accuracy": sum(r["classification_score"] for r in results) / n,
+        "rootcause_accuracy": sum(r["rootcause_score"] for r in results) / n,
+        "grounding_score": sum(r["grounding_score"] for r in results) / n,
+        "hallucination_score": sum(r["hallucination_score"] for r in results) / n,
+        "blast_radius_score": sum(r["blast_radius_score"] for r in results) / n,
+        "safety_score": sum(r["safety_score"] for r in results) / n,
+        "workflow_completion": sum(r["workflow_completed"] for r in results) / n,
     }
-    return {"count": len(results), "results": results, "summary": summary}
+    return {"count": n, "results": results, "summary": summary}

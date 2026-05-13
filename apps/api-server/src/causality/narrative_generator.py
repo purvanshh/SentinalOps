@@ -1,20 +1,22 @@
 """
-Evidence-grounded incident narrative generation for SentinelOps Phase 43.
+Evidence-grounded incident narrative generation for SentinelOps Phase 45.
 
 Produces causal narratives that are:
   - temporally ordered (events narrated in time sequence)
   - topology consistent (only valid propagation paths described)
   - evidence grounded (each claim tied to retrieved evidence)
   - uncertainty aware (confidence expressed, contradictions surfaced)
+  - mechanism aware (Phase 45: names the operational failure mechanism)
 
 Narrative format:
-  "At {timestamp}, {primary_cause_description} in {service}.
-   This propagated to {downstream_service} at {effect_timestamp},
-   causing {effect_description}. [Confidence: {pct}%]"
+  "At {timestamp}, {mechanism_name} in {service} was identified.
+   {mechanism_description} This propagated to {downstream_service} at
+   {effect_timestamp}, causing {effect_description}. [Confidence: {pct}%]"
 
 Operator explainability output:
   {
     "root_cause": "...",
+    "mechanism": {"id": "...", "name": "...", "description": "..."},
     "why": [...],
     "evidence_chain": [...],
     "causal_confidence": 0.83,
@@ -30,6 +32,7 @@ from typing import Any
 
 from causality.failure_classifier import ClassifiedEvent, FailureType
 from causality.temporal_engine import sequence_events_by_time
+from semantics.semantic_engine import MechanismInference
 
 
 @dataclass
@@ -46,10 +49,14 @@ class IncidentNarrative:
     contradictory_evidence: list[str]
     propagation_path: list[str]
     uncertainty_note: str = ""
+    mechanism_id: str | None = None
+    mechanism_name: str | None = None
+    mechanism_description: str | None = None
+    mechanism_confidence: float = 0.0
 
     def to_explainability_dict(self) -> dict[str, Any]:
         """Operator-facing explainability output."""
-        return {
+        result: dict[str, Any] = {
             "root_cause": self.root_cause_statement,
             "why": self.why_statements,
             "evidence_chain": self.evidence_chain,
@@ -60,6 +67,14 @@ class IncidentNarrative:
             "summary": self.summary,
             "uncertainty_note": self.uncertainty_note,
         }
+        if self.mechanism_id:
+            result["mechanism"] = {
+                "id": self.mechanism_id,
+                "name": self.mechanism_name,
+                "description": self.mechanism_description,
+                "confidence": round(self.mechanism_confidence, 4),
+            }
+        return result
 
 
 def _format_timestamp(ts: str) -> str:
@@ -93,11 +108,14 @@ def generate_narrative(
     evidence_chain: list[dict[str, Any]] | None = None,
     contradictory_evidence: list[str] | None = None,
     topology: dict[str, Any] | None = None,
+    mechanism_inference: MechanismInference | None = None,
 ) -> IncidentNarrative:
     """
     Generate a causal incident narrative from classified events.
 
     classified_events must include at least one PRIMARY_CAUSE event.
+    mechanism_inference, when provided, enriches the narrative with the
+    operational failure mechanism name and description (Phase 45).
     """
     evidence_chain = evidence_chain or []
     contradictory_evidence = contradictory_evidence or []
@@ -135,14 +153,33 @@ def generate_narrative(
         }.get(ftype, ftype)
         timeline.append(f"[{ts}] [{label}] {svc}: {desc}")
 
-    # Root cause statement
+    # Mechanism-aware root cause statement
+    mechanism_id: str | None = None
+    mechanism_name: str | None = None
+    mechanism_description: str | None = None
+    mechanism_confidence: float = 0.0
+
+    if mechanism_inference is not None and mechanism_inference.primary is not None:
+        mech = mechanism_inference.primary.mechanism
+        mechanism_id = mech.mechanism_id
+        mechanism_name = mech.name
+        mechanism_description = mech.description
+        mechanism_confidence = mechanism_inference.mechanism_confidence
+
     if primaries:
         primary = primaries[0]
         ts = _format_timestamp(primary.node.timestamp_iso)
-        root_cause_stmt = (
-            f"At {ts}, {primary.node.description} in {primary.node.service} "
-            f"was identified as the originating failure."
-        )
+        if mechanism_name:
+            root_cause_stmt = (
+                f"At {ts}, {mechanism_name} in {primary.node.service} "
+                f"was identified as the originating failure mechanism. "
+                f"{mechanism_description}"
+            )
+        else:
+            root_cause_stmt = (
+                f"At {ts}, {primary.node.description} in {primary.node.service} "
+                f"was identified as the originating failure."
+            )
     else:
         root_cause_stmt = "Root cause could not be conclusively identified from available evidence."
 
@@ -179,8 +216,20 @@ def generate_narrative(
         )
     ]
 
-    # Why statements
+    # Why statements — include mechanism explanation if available
     why_statements = []
+    if mechanism_name and mechanism_inference is not None:
+        latent_states = mechanism_inference.latent_state_implications
+        why_statements.append(
+            f"Operational mechanism '{mechanism_name}' inferred from evidence "
+            f"(mechanism confidence: {mechanism_confidence:.0%}). "
+            f"{mechanism_description}"
+        )
+        if latent_states:
+            why_statements.append(
+                f"Implied latent infrastructure states: {', '.join(latent_states[:3])}."
+            )
+        why_statements.append(mechanism_inference.inference_rationale)
     if primaries:
         p = primaries[0]
         why_statements.append(
@@ -207,6 +256,11 @@ def generate_narrative(
     uncertainty_note = f"Causal attribution is {conf_label} ({causal_confidence:.0%}). " + (
         "Operator review recommended." if causal_confidence < 0.60 else ""
     )
+    if mechanism_inference is not None and mechanism_confidence < 0.30:
+        uncertainty_note += (
+            f" Mechanism confidence is low ({mechanism_confidence:.0%}); "
+            "alternative mechanisms may explain the evidence."
+        )
 
     # Summary
     summary_parts = [root_cause_stmt]
@@ -224,4 +278,8 @@ def generate_narrative(
         contradictory_evidence=contradictory_evidence,
         propagation_path=propagation_path,
         uncertainty_note=uncertainty_note,
+        mechanism_id=mechanism_id,
+        mechanism_name=mechanism_name,
+        mechanism_description=mechanism_description,
+        mechanism_confidence=round(mechanism_confidence, 4),
     )

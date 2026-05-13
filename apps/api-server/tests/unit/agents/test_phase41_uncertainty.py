@@ -9,17 +9,17 @@ Proves:
      normalize_agent_executions carry retrieval_timestamp, confidence, and
      uncertainty_status fields.
 """
+
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 
+from agents.deployment_agent.output_schema import DeploymentSummary, RecentChange
 from agents.logs_agent.output_schema import ErrorSignature, LogsSummary
 from agents.metrics_agent.output_schema import MetricAnomaly, MetricsSummary
-from agents.deployment_agent.output_schema import DeploymentSummary, RecentChange
+from agents.rootcause_agent.evidence_normalizer import normalize_agent_executions
 from agents.uncertainty import UncertaintyIndicator, infer_uncertainty_from_items
 from evaluation.infra_mocks.mock_incident import MockAgentExecution
-from agents.rootcause_agent.evidence_normalizer import normalize_agent_executions
-
 
 # ─── D. Missing telemetry → structured uncertainty ────────────────────────────
 
@@ -41,12 +41,16 @@ def test_metrics_summary_with_no_anomalies_marks_partial() -> None:
     summary = MetricsSummary(summary="no anomalies detected", anomalies=[])
     assert summary.evidence_quality.status == "partial"
     assert summary.evidence_quality.confidence < 1.0
-    assert "insufficient telemetry" in summary.evidence_quality.reason.lower() or \
-           summary.evidence_quality.status == "partial"
+    assert (
+        "insufficient telemetry" in summary.evidence_quality.reason.lower()
+        or summary.evidence_quality.status == "partial"
+    )
 
 
 def test_metrics_summary_with_anomalies_marks_present() -> None:
-    anomaly = MetricAnomaly(metric="latency_p99", observed="450ms", expected_range="<100ms", z_score=3.8)
+    anomaly = MetricAnomaly(
+        metric="latency_p99", observed="450ms", expected_range="<100ms", z_score=3.8
+    )
     summary = MetricsSummary(summary="latency spike", anomalies=[anomaly])
     assert summary.evidence_quality.status == "present"
 
@@ -100,7 +104,9 @@ def test_uncertainty_indicator_is_not_actionable_for_unavailable() -> None:
 
 
 def test_uncertainty_indicator_is_not_actionable_for_low_confidence_partial() -> None:
-    assert UncertaintyIndicator.partial("very low confidence", confidence=0.2).is_actionable is False
+    assert (
+        UncertaintyIndicator.partial("very low confidence", confidence=0.2).is_actionable is False
+    )
 
 
 def test_infer_uncertainty_returns_unavailable_for_empty_items() -> None:
@@ -146,7 +152,12 @@ def test_normalize_agent_executions_adds_retrieval_timestamp_to_metrics() -> Non
         {
             "summary": "latency spike",
             "anomalies": [
-                {"metric": "latency_p99", "observed": "450ms", "expected_range": "<100ms", "z_score": 3.8}
+                {
+                    "metric": "latency_p99",
+                    "observed": "450ms",
+                    "expected_range": "<100ms",
+                    "z_score": 3.8,
+                }
             ],
         },
     )
@@ -164,8 +175,13 @@ def test_normalize_agent_executions_adds_confidence_to_metrics() -> None:
         {
             "summary": "high deviation",
             "anomalies": [
-                {"metric": "latency_p99", "observed": "450ms", "expected_range": "<100ms",
-                 "z_score": 3.8, "deviation_factor": 4.5}
+                {
+                    "metric": "latency_p99",
+                    "observed": "450ms",
+                    "expected_range": "<100ms",
+                    "z_score": 3.8,
+                    "deviation_factor": 4.5,
+                }
             ],
         },
     )
@@ -240,22 +256,43 @@ def test_normalize_agent_executions_marks_present_for_deployment_with_sha() -> N
 def test_all_evidence_items_have_required_provenance_fields() -> None:
     metrics_exec = MockAgentExecution(
         "metrics_agent",
-        {"summary": "ok", "anomalies": [
-            {"metric": "cpu", "observed": "90%", "expected_range": "<80%", "z_score": 2.1}
-        ]},
+        {
+            "summary": "ok",
+            "anomalies": [
+                {"metric": "cpu", "observed": "90%", "expected_range": "<80%", "z_score": 2.1}
+            ],
+        },
     )
     logs_exec = MockAgentExecution(
         "logs_agent",
-        {"error_signatures": [
-            {"signature": "OOMException", "count": 3, "first_seen": "15:00", "sample": "OOM", "trace_ids": []}
-        ]},
+        {
+            "error_signatures": [
+                {
+                    "signature": "OOMException",
+                    "count": 3,
+                    "first_seen": "15:00",
+                    "sample": "OOM",
+                    "trace_ids": [],
+                }
+            ]
+        },
     )
     deploy_exec = MockAgentExecution(
         "deployment_agent",
-        {"recent_changes": [
-            {"deployment_id": "d1", "service": "svc", "version": "1.0", "time": "now",
-             "commit_sha": "abc", "commit_author": "bob", "commit_summary": "fix", "risk_score": 0.3}
-        ]},
+        {
+            "recent_changes": [
+                {
+                    "deployment_id": "d1",
+                    "service": "svc",
+                    "version": "1.0",
+                    "time": "now",
+                    "commit_sha": "abc",
+                    "commit_author": "bob",
+                    "commit_summary": "fix",
+                    "risk_score": 0.3,
+                }
+            ]
+        },
     )
 
     items = normalize_agent_executions([metrics_exec, logs_exec, deploy_exec])

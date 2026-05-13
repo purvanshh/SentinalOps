@@ -1,273 +1,318 @@
 # SentinelOps AI
 
-**Autonomous Multi-Agent Incident Response and Reliability Orchestration Platform**
+SentinelOps AI is an experimental uncertainty-aware incident reasoning system for infrastructure operations. It combines a FastAPI control plane, LangGraph-based orchestration, retrieval-grounded root-cause analysis, causal reasoning scaffolding, and a probabilistic evaluation framework to investigate operational incidents and propose remediations under strict operator control.
 
-SentinelOps AI is a stateful, tool-augmented reasoning engine for production incident investigation. It transforms raw monitoring signals into structured, evidence-grounded insights through a coordinated multi-agent system that mirrors how experienced SREs investigate incidents: gathering heterogeneous telemetry, cross-referencing hypotheses against physical constraints, quantifying risk, and acting only with explicit human oversight for safety-critical decisions.
-
-The platform serves a dual purpose: a realistic enterprise AIOps prototype and a complete reference implementation covering agent decomposition, durable orchestration, pragmatic retrieval, evaluation harnesses, and responsible deployment.
+This repository is technically interesting because it tries to make incident analysis auditable rather than purely conversational: agent outputs are structured, root-cause reasoning is explicit, evaluation is reproducible, and safety and approval paths are built into the orchestration graph itself. It is not a finished autonomous SRE system.
 
 ---
 
-## Table of Contents
+## Current Project Status
 
-- [Problem Statement](#problem-statement)
-- [System Architecture](#system-architecture)
-- [Incident Lifecycle](#incident-lifecycle)
-- [Agent System](#agent-system)
-- [Technology Stack](#technology-stack)
-- [Repository Layout](#repository-layout)
-- [Local Development](#local-development)
-- [API Reference](#api-reference)
-- [Evaluation Framework](#evaluation-framework)
-- [AI Decision Quality Scoring](#ai-decision-quality-scoring)
-- [Infrastructure and Deployment](#infrastructure-and-deployment)
-- [Security Model](#security-model)
-- [Current Status](#current-status)
-- [Documentation](#documentation)
-- [License](#license)
+The codebase has moved through a series of implementation phases visible in the source tree and test suite.
 
----
+**Completed phases:**
 
-## Problem Statement
+- **Phase 39**: 106-incident labeled benchmark suite. Provides golden labels for classification, root cause, blast radius, remediation safety, and operator action.
+- **Phase 40**: Evaluation integrity rewrite. The benchmark harness was corrected so golden labels are no longer injected into runtime agent outputs before scoring. This was a significant flaw in prior evaluation logic. All downstream scores before Phase 40 were inflated.
+- **Phase 41**: Evidence grounding and hallucination suppression. Retrieval provenance tracking, citation checks, and topology/temporal validation exist in code and are covered by tests.
+- **Phase 42**: Semantic operational memory and retrieval. Qdrant-backed vector stores and a hybrid retrieval orchestrator with topology-aware filtering and time-decay weighting are present.
+- **Phase 43**: Causal reasoning scaffolding. Timed event construction, candidate cause generation, causal event graph, counterfactual scoring, propagation estimation, and narrative generation are implemented.
+- **Phase 44**: Uncertainty-aware reasoning. `agents/uncertainty.py` exposes a full `UncertaintyEngine` that aggregates evidence quality, detects contradictions, scores calibration, distributes probability across competing hypotheses via temperature scaling, and recommends operator escalation when ambiguity is unsafe. The probabilistic root-cause path in `agents/rootcause_agent/probabilistic_reasoner.py` now uses this engine end to end.
 
-Production environments continuously generate logs, metrics, traces, and deployment events. When failures occur, engineers must manually correlate disparate signals, reconstruct causal chains, estimate blast radius, and author postmortems after the fact. The result is high Mean Time to Resolution, operator fatigue, inconsistent investigations, and incomplete institutional memory.
+**What is validated today:**
 
-Existing observability tools surface alerts. They do not perform structured, evidence-grounded reasoning.
+- The repository has a real backend runtime, a real orchestration graph, a real test suite, and a real benchmark harness.
+- 761 tests collected across the full local test suite. CI only runs the unit and integration subsets.
+- The deterministic replay framework is reproducible over the 106-incident benchmark suite. The replay hash `ddf715d1d54bba67` is a stable fingerprint of the benchmark suite structure (computed from incident IDs and suite metadata, not from reasoning outputs).
+- Uncertainty-aware root-cause outputs, contradiction handling, escalation states, hypothesis probability distribution, and calibration scoring are covered by tests.
 
-SentinelOps AI fills this gap by:
+**What is still weak or experimental:**
 
-1. Investigating autonomously — gathering and cross-referencing telemetry without human prompting
-2. Reasoning about causality — building explicit evidence chains, not opaque LLM summaries
-3. Quantifying risk — computing blast radius and remediation risk with data-driven models
-4. Gating execution — pausing for human approval before any high-risk action proceeds
-5. Generating postmortems — producing traceable, actionable incident reports that improve over time
+- Semantic operational cognition is still weak. The system can structure evidence better than it can understand infrastructure deeply.
+- Root-cause accuracy on the real evaluation path is extremely low (0.0820).
+- Hallucination suppression exists but mostly enforces grounding and citation discipline rather than fixing reasoning quality.
+- Autonomous execution is not production-ready. All high-risk operations require operator approval.
+- Many evaluation components remain deterministic or simulated, not live.
+- Several runtime integrations are stubs or dev-only connectors.
+- Confidence calibration is poor, with systematic underconfidence.
 
 ---
 
-## System Architecture
+## Architecture Overview
 
+The repository is centered on a Python backend in `apps/api-server` and a small Next.js dashboard in `apps/web-dashboard`.
+
+**Core backend components:**
+
+- `FastAPI` — API surface for health, incidents, graph control, approvals, evaluations, and WebSocket streaming
+- `LangGraph StateGraph` — deterministic orchestration of the incident pipeline
+- `Celery` + `Redis` — background incident execution and scheduled tasks (replay, approval polling)
+- `PostgreSQL` — persistent storage for incidents, agent executions, evidence items, approvals, remediation actions, postmortems, and workflow checkpoints
+- `Qdrant` — vector store for runbooks, patterns, prevention items, incident history, and operational memory
+- `Prometheus`, `Grafana`, `Loki`, `Tempo` — local observability stack
+- Retrieval layer with topology-aware hybrid retrieval, provenance tracking, and consistency checks
+- Causal root-cause path with timed events, candidate causes, probabilistic scoring, and uncertainty propagation
+- Execution guardrails: tool allowlist, JWT approval tokens, risk-tier classification, and operating modes
+
+**Orchestration graph** (`apps/api-server/src/orchestration/graphs/main_graph.py`):
+
+```mermaid
+flowchart LR
+  A["incident"] --> B["router"]
+  B -->|low confidence| C["triage"]
+  B -->|classified| D["dispatch_evidence"]
+  D -->|parallel fan-out via Send| E["metrics"]
+  D -->|parallel fan-out via Send| F["logs"]
+  D -->|parallel fan-out via Send| G["deployment"]
+  E --> H["root_cause_analysis"]
+  F --> H
+  G --> H
+  H --> I["risk"]
+  I --> J["remediation"]
+  J --> K["approval_gate"]
+  K -->|awaiting approval| L["approval_interrupt"]
+  K -->|ready| M["execution_actions"]
+  L --> M
+  M --> N["postmortem_report"]
 ```
-+--------------------------------------------------+
-|              Next.js Dashboard (port 3001)        |
-|  Incident board | Agent trace | Approval center   |
-+------------------------+--------------------------+
-                         |
-+------------------------v--------------------------+
-|         FastAPI API Gateway (port 8000)           |
-|       JWT auth  |  RBAC  |  WebSocket support     |
-+------------------------+--------------------------+
-                         |
-+------------------------v--------------------------+
-|       LangGraph Orchestrator (StateGraph)         |
-|                                                   |
-|  Agent nodes -> Tool nodes -> Human interrupt     |
-|  Durable checkpointing via PostgreSQL + Redis     |
-|  Conditional edges | Parallel fan-out | Retries   |
-+------+------------------+------------------+------+
-       |                  |                  |
-+------v------+  +--------v-------+  +-------v------+
-| Agent Pool  |  | Shared State   |  | Evaluation   |
-| (8 agents)  |  | Redis + PG     |  | Module       |
-+------+------+  +----------------+  +--------------+
-       |
-+------v------------------------------------------------------+
-|                   Tool Integration Layer                     |
-|  Prometheus | Loki | Grafana | GitHub | Slack | PagerDuty   |
-|  Qdrant (RAG: runbooks, past incidents, failure patterns)    |
-+-------------------------------------------------------------+
-```
 
-### Key Architectural Decisions
+The evidence collection step (`dispatch_evidence` → `metrics`, `logs`, `deployment`) uses LangGraph `Send` for parallel dispatch. All three evidence agents run concurrently and their outputs converge at `root_cause_analysis`.
 
-**Evidence-first data flow.** Agents that query telemetry directly (Metrics, Logs, Deployment) produce structured summaries. Downstream reasoning agents (Root Cause, Risk) are prohibited from making live queries; they work exclusively from those summaries. This prevents iterative correlation-chasing and forces rigorous citation.
+**Important architectural constraints in code:**
 
-**RAG only for static knowledge.** Live telemetry is never injected via vector search. It is always a real-time API call. RAG applies only to past incident summaries, operational runbooks, and the curated failure-pattern library.
-
-**Human interrupt as a first-class node.** The approval step is a native LangGraph `interrupt_before` node, not an ad-hoc API flag. The graph pauses, notifies on-call, and resumes only when an explicit decision arrives.
-
-**Deterministic confidence scoring.** Root cause confidence is not an opaque LLM output. It is a weighted average of evidence coverage, temporal consistency, pattern match score, historical prior probability, and counterfactual power — all transparent and tunable.
+- The live root-cause path consumes normalized evidence emitted by upstream agents. It does not directly query Prometheus, Loki, or GitHub.
+- Retrieval grounds pattern matching and runbook lookup, not live telemetry collection.
+- The approval gate is a node inside the orchestration graph — interrupt and resume are handled by LangGraph's `interrupt_before` mechanism, not by an API-side flag.
+- Checkpoint persistence uses two parallel systems: a custom `WorkflowCheckpointStore` writes snapshots to PostgreSQL at each node boundary; a LangGraph `MemorySaver` handles in-process interrupt/resume. These serve different purposes — PostgreSQL provides durable recovery across restarts; `MemorySaver` is the active in-process checkpointer for LangGraph's interrupt/resume mechanism. Cross-process interrupt/resume requires `langgraph-checkpoint-postgres`, which is not installed by default.
 
 ---
 
-## Incident Lifecycle
+## Operational Pipeline
+
+### Live runtime path
 
 ```
-Alert fires (Prometheus webhook)
-        |
-        v
-+---------------+
-|  Ingest       |  POST /incidents/webhook -> incident row created, Celery task queued
-+-------+-------+
-        |
-        v
-+---------------+
-|  Classify     |  Router Agent: tags incident type, severity, confidence, recommended workflow
-+-------+-------+
-        |
-        v
-+-------+-------+   +---------------+   +------------------+
-|  Metrics Agent|   |  Logs Agent   |   | Deployment Agent |  (parallel fan-out)
-+-------+-------+   +-------+-------+   +--------+---------+
-        |                   |                    |
-        +-------------------+--------------------+
-                            |
-                            v
-                  +---------+---------+
-                  |  Root Cause Agent |  Builds causal graph, ranks hypotheses with citations
-                  +---------+---------+
-                            |
-                            v
-                  +---------+---------+
-                  |   Risk Agent      |  Blast radius (Monte Carlo), remediation risk scoring
-                  +---------+---------+
-                            |
-                            v
-                  +---------+---------+
-                  | Remediation Agent |  Drafts action plan; tags high-risk actions
-                  +---------+---------+
-                            |
-                  [requires_approval?]
-                     yes  |   no
-                      +---+---+
-                      v       v
-              +-------+--+   Execute
-              |  Approval |
-              |  Gate     |  Human reviews risk score + evidence; approve/reject via UI or Slack
-              +-------+---+
-                      |
-                      v
-              +-------+-------+
-              |   Execute +   |  Run approved actions; verify metrics post-execution
-              |   Verify      |
-              +-------+-------+
-                      |
-                      v
-              +-------+-------+
-              | Postmortem    |  Timeline, 5-Whys narrative, contributing factors, action items
-              | Agent         |
-              +---------------+
+POST /incidents/webhook
+  → incident row created in PostgreSQL
+  → Celery task enqueued to `incidents` queue
+  → LangGraph graph invoked
+  → router: LLM classification + incident history retrieval
+  → dispatch_evidence: parallel fan-out
+  → metrics / logs / deployment: evidence collection via tool-using agent_loop
+  → root_cause_analysis:
+      evidence normalization → timed events → candidate causes →
+      probabilistic scoring → UncertaintyEngine assessment →
+      escalation decision
+  → risk: blast-radius estimation (topology traversal + traffic snapshot Monte Carlo)
+  → remediation: risk-ranked action planning
+  → approval_gate: interrupt if human approval required
+  → execution_actions: guarded tool execution (allowlist + approval token validation)
+  → postmortem_report: structured incident summary
 ```
+
+**Runtime details that matter:**
+
+- The router agent calls an LLM plus incident history retrieval from Qdrant.
+- Metrics, logs, and deployment agents each run a generic `agent_loop` backed by tool-using LLM calls with mocked infrastructure connectors.
+- Root-cause reasoning is mostly algorithmic once upstream evidence exists: it normalizes evidence, constructs timed events, generates candidate causes, scores them, and runs the `UncertaintyEngine`. The LLM is not directly involved in root-cause scoring.
+- The `UncertaintyEngine` uses `calibration_temperature=1.35` and `escalation_threshold=0.55`. The temperature value is above 1.0, which systematically pushes calibrated probabilities toward 0.5 — this explains the high underconfidence rate observed in benchmark evaluation.
+- Risk assessment uses topology traversal over a static service graph plus a Monte Carlo estimate (`random.Random(42)`, 1000 samples) over static traffic snapshots from `simulation/datasets/traffic_snapshots.json`.
+- Remediation planning converts risk-ranked actions into approval-gated steps. It is currently shallow: action selection is conservative rather than semantically grounded.
+- Execution is guarded by tool allowlists, JWT approval tokens scoped to specific incidents, and risk-tier enforcement.
+
+### Simulated evaluation path
+
+The evaluation path is intentionally separate from the runtime path:
+
+- `evaluation/orchestration_runner.py` runs the pipeline over benchmark fixtures.
+- Router, metrics, logs, and deployment agents execute real code paths but use mocked LLM clients (`evaluation/infra_mocks/mock_llm_client.py`) and mocked infrastructure responses.
+- Root-cause, risk, and remediation logic then operate on those benchmark-derived outputs.
+- No Celery tasks, no Slack notifications, no production telemetry queries, and no database mutations occur during evaluation.
+
+This distinction is important. The evaluation harness proves that the code paths execute and produce scorable outputs — it does not prove that the system handles live incidents at operator-grade quality.
 
 ---
 
-## Agent System
+## Evaluation Philosophy
 
-| Agent | Responsibility | Tools | Safety Constraint |
-|---|---|---|---|
-| Router | Classify incident type, severity, and recommended workflow | None (pure LLM structured output) | Routes to human triage if confidence < 0.6 |
-| Metrics | Fetch Prometheus metrics; surface anomalies with z-scores | `query_prometheus`, `get_service_dependencies` | Read-only; restricted to pre-approved PromQL templates |
-| Logs | Search Loki for error signatures, stack traces, temporal patterns | `query_loki`, `expand_log_context`, `extract_stacktrace` | Time-bounded, scoped to affected service |
-| Deployment | List recent changes; compute per-deployment risk scores | `get_recent_deployments`, `get_commit_diff`, `get_rollback_candidates` | Read-only |
-| Root Cause | Synthesize all evidence into ranked, citation-backed hypotheses | None (reads agent summaries only) | Cannot make live queries; every claim must cite a traceable EvidenceItem |
-| Risk | Quantify blast radius and remediation risk with Monte Carlo distribution | Graph traversal + Prometheus traffic data | Deterministic rules engine; LLM only formats results |
-| Remediation | Propose action plan ordered by least risk and highest success probability | `execute_action`, `verify_metric` | All high-risk actions tagged `requires_approval`; allowlist enforced at orchestrator layer |
-| Postmortem | Generate structured incident report from full trace | Past incidents RAG, ticketing integration | LLM output diffed against source evidence; novel statements flagged |
+Evaluation is one of the stronger parts of the repository, primarily because the project explicitly corrected a major flaw.
 
-### Root Cause Confidence Formula
+**What was wrong before Phase 40:**
 
-The Root Cause Agent computes a transparent, decomposed confidence score:
+Earlier versions of the benchmark evaluation constructed agent outputs directly from golden labels before scoring them. This made downstream trustworthiness, hallucination, and calibration scores look better than the underlying reasoning deserved. Every metric produced before Phase 40 was invalidated by this label leakage.
 
-```
-C = 0.30 * evidence_coverage
-  + 0.20 * temporal_consistency
-  + 0.20 * pattern_match_score
-  + 0.15 * historical_prior
-  + 0.15 * counterfactual_power
-```
+**Phase 40 fix:**
 
-All weights are configurable and tuned through the evaluation harness. If no hypothesis clears a minimum threshold of 0.40, the agent explicitly outputs `insufficient_evidence` with suggested investigation directions rather than fabricating a confident answer.
+The `evaluation/runner.py` was rewritten with an explicit contract:
 
-### Anti-Hallucination Mechanisms
+- Golden labels are used only by scorers, never by agents.
+- Runtime agent execution must not see golden labels.
+- Actual outputs are compared against golden labels after execution.
+- Deterministic replay remains reproducible independent of agent reasoning quality.
 
-- **Required citations** — every causal claim must reference a traceable `EvidenceItem` by ID
-- **Temporal enforcer** — a rule-based pre-processor rejects any hypothesis where an effect precedes its alleged cause
-- **Dependency graph validation** — hypotheses proposing causal paths that do not exist in the service topology are automatically eliminated
-- **Pattern library grounding** — ~50 curated failure patterns (e.g., thread pool exhaustion, OOMKill restart loop) are retrieved as labeled hints, not as decided answers
-- **Explicit unknown output** — below-threshold confidence surfaces as a structured `insufficient_evidence` object
+**Two distinct evaluation modes:**
 
----
+**1. Real-code benchmark evaluation** (`evaluation/runner.py`)
 
-## Technology Stack
+- Loads `simulation/datasets/evaluation/benchmark_suite_v1.json`
+- Calls `run_agent_pipeline()` over 106 incidents with mocked infrastructure
+- Scores classification accuracy, root-cause text overlap, retrieval grounding, hallucination, blast radius, and remediation safety
+- This path is more honest than the old version but still relies on mocked LLM responses for some agents
 
-| Component | Technology | Version |
-|---|---|---|
-| API server | FastAPI (async) | 0.115.0 |
-| Orchestration | LangGraph StateGraph | 0.2.34 |
-| LLM inference | OpenAI-compatible (NIM GPT-OSS-120B target) | — |
-| Task queue | Celery + Redis | 5.4.0 |
-| Primary database | PostgreSQL | 15 |
-| Vector store | Qdrant | latest |
-| Observability | Prometheus + Loki + Tempo + Grafana | — |
-| Caching | Redis | 7 |
-| Frontend | Next.js 14 + Tailwind + React Flow | — |
-| Containerization | Docker Compose (dev) | — |
-| Deployment target | Render / AWS ECS | — |
-| Python runtime | 3.11+ | — |
-| Node runtime | 20+ | — |
+**2. Deterministic replay and regression tracking** (`evaluation/regression/benchmark_replay.py`)
+
+- Computes scores from benchmark labels and scoring rules without invoking agents
+- Produces a stable replay hash (`ddf715d1d54bba67`) as a fingerprint of the benchmark suite structure
+- Feeds regression comparison logic in `regression_evaluator.py`
+- **Important:** this path scores routing, calibration, remediation quality, execution safety, operator trust, and hallucination detection rates deterministically from benchmark metadata. It does not execute agent reasoning. It is more synthetic than the real-code benchmark path but more reproducible and useful for tracking calibration drift.
+
+**Other evaluation components in code:**
+
+- Calibration scoring: ECE, Brier score, temperature scaling, overconfidence/underconfidence rates, abstain thresholds
+- Hallucination detection: citation checks against valid evidence keys
+- Operator trust scoring
+- Execution safety scoring
+- Remediation quality scoring
+- Retrieval grounding checks
+- Benchmark regression comparison
 
 ---
 
-## Repository Layout
+## Current Evaluation Metrics
 
-```
-sentinelops-ai/
-|
-+-- apps/
-|   +-- api-server/
-|   |   +-- src/
-|   |   |   +-- agents/           # Router, Metrics, Logs, Deployment, RootCause, Risk, Remediation, Postmortem
-|   |   |   +-- api/              # REST routes: incidents, approvals, graph, evaluations, health
-|   |   |   +-- core/             # LLM client, settings, base types
-|   |   |   +-- db/               # SQLAlchemy models, repositories, session bootstrap
-|   |   |   +-- evaluation/       # Benchmark runner, scoring modules, trustworthiness scorecard
-|   |   |   |   +-- scorers/      # Router quality, calibration, remediation, execution safety, operator trust
-|   |   |   |   +-- hallucination_checks/  # Hallucination detector (fabricated services, dangerous ops)
-|   |   |   |   +-- regression/   # Benchmark replay and regression evaluator
-|   |   |   +-- memory/           # Long-term state helpers
-|   |   |   +-- observability/    # Structlog, OpenTelemetry, Prometheus metrics
-|   |   |   +-- orchestration/    # LangGraph graph definition, nodes, checkpoints
-|   |   |   +-- retrieval/        # Qdrant client, embedding helpers
-|   |   |   +-- tools/            # Prometheus, Loki, GitHub, Slack tool clients
-|   |   |   +-- workers/          # Celery app, task definitions
-|   |   |   +-- main.py           # FastAPI application entry point
-|   |   +-- tests/
-|   |   +-- Dockerfile
-|   |   +-- requirements.txt
-|   |
-|   +-- web-dashboard/
-|       +-- src/
-|           +-- app/              # Next.js pages: incidents, approvals, evaluations, trace
-|           +-- features/         # Domain feature modules
-|           +-- services/         # API client wrappers
-|           +-- types/            # Shared TypeScript types
-|
-+-- infrastructure/
-|   +-- docker/                   # Per-service config: Prometheus, Loki, Tempo, Grafana, Postgres
-|   +-- render.yaml               # Render deployment manifest
-|
-+-- simulation/
-|   +-- datasets/
-|   |   +-- evaluation/           # benchmark_suite_v1.json — 106 labeled incidents, replay hash ddf715d1d54bba67
-|   +-- incident-generators/      # Per-scenario payload generators
-|   +-- mock-services/            # Fake Prometheus/Loki responders
-|
-+-- scripts/
-|   +-- demo/                     # Guided demo runner
-|   +-- seed/                     # Database seed helpers
-|
-+-- docs/
-|   +-- architecture/             # Current vs. target architecture views
-|   +-- adr/                      # Architecture decision records
-|   +-- api-specs/                # API documentation
-|   +-- runbooks/                 # On-call guides
-|   +-- postmortems/              # Sample postmortem outputs
-|
-+-- configs/                      # Environment-specific topology and pattern configs
-+-- .github/workflows/            # CI: evaluation.yml, deploy.yml
-+-- docker-compose.yml
-+-- docker-compose.simulation.yml
-+-- pyproject.toml
-+-- Makefile
+These are engineering diagnostics. They measure specific properties of the system under controlled conditions, not real-world incident handling quality.
+
+### Real-code benchmark evaluation
+
+Source: `evaluation/runner.py` over 106 benchmark incidents with mocked infrastructure
+
+| Metric | Value | Interpretation |
+|--------|-------|----------------|
+| Root-cause accuracy | `0.0820` | Very low. The system often produces plausible but generic or weakly matched root-cause text. |
+| Blast-radius score | `0.3861` | Partial match to benchmark expectations. The Monte Carlo model is simplistic. |
+| Safety score | `0.7170` | Better, but does not justify autonomous execution. |
+| Grounding score | `1.0000` | The root-cause path cites valid evidence keys. This does not mean conclusions are correct. |
+| Classification accuracy | Benchmark-derived — see replay metrics. |
+
+### Deterministic replay metrics
+
+Source: `evaluation/regression/benchmark_replay.replay_benchmark()`
+
+| Metric | Value |
+|--------|-------|
+| Replay hash | `ddf715d1d54bba67` |
+| ECE (calibration error) | `0.2198` |
+| Brier score | `0.1036` |
+| Underconfidence rate | `0.8750` |
+| Execution safety score | `0.7094` |
+| Remediation mean quality score | `0.7670` |
+| Hallucination detection rate | `0.1226` |
+
+ECE of 0.2198 indicates poor calibration. The 87.5% underconfidence rate is consistent with `calibration_temperature=1.35` in the `UncertaintyEngine`, which systematically deflates top-hypothesis probabilities toward 0.5.
+
+### Local validation snapshot
+
+- Total tests collected: `761` (full local suite including unit, integration, chaos, orchestration, production, resilience, and evaluation tests)
+- CI runs: `pytest apps/api-server/tests/unit apps/api-server/tests/integration` (subset only)
+- Test files: `71`
+- Benchmark suite: `106` incidents, version `1.0`
+
+The main takeaway is not that the system is strong. The takeaway is that the repository can now measure several of its weaknesses reproducibly.
+
+---
+
+## Limitations
+
+This section is intentionally blunt.
+
+- **Semantic reasoning is still weak.** The system can structure evidence and enforce citation discipline better than it can understand infrastructure deeply. Root-cause attribution often matches surface patterns rather than actual causality.
+- **Root-cause accuracy is extremely low** (0.0820 on the real benchmark path). The system produces plausible hypotheses that fail to match golden labels. This is the core unsolved problem.
+- **Blast-radius modeling is simplistic.** It uses topology graph traversal over a static service graph plus a Monte Carlo simulation seeded at `random.Random(42)` with 1000 samples over static `traffic_snapshots.json`. No live traffic data is used.
+- **Evaluation is still partially deterministic and partially simulated.** Several benchmark paths rely on mocked LLM responses. The deterministic replay computes scores without running agent reasoning at all.
+- **Router quality in replay-style evaluation is much easier than real production classification** and should not be interpreted as deployment readiness.
+- **LangGraph durable checkpointing is not configured end to end.** The default is `MemorySaver` (in-process only). Cross-process interrupt/resume requires `langgraph-checkpoint-postgres`, which is not installed by default. The custom `WorkflowCheckpointStore` writes PostgreSQL snapshots for crash recovery but is separate from LangGraph's interrupt mechanism.
+- **No production-scale validation.** There is no demonstrated multi-cluster runtime, no live operator adoption evidence, and no load-tested incident volume in the repository.
+- **No learned causal inference.** The root-cause engine is heuristic and rule-driven. Candidate causes are generated from topology + evidence type matching, not from learned causal models.
+- **Retrieval grounding is still heuristic-heavy.** Qdrant, provenance tracking, and consistency checks help, but they do not create real operational understanding. Grounding score of 1.0 means citations are formally valid, not that they are causally meaningful.
+- **Confidence calibration is poor,** particularly underconfidence. ECE is 0.2198 with 87.5% of benchmark incidents classified as underconfident.
+- **Remediation planning is template-like.** Action selection is conservative (prefer safer actions) rather than semantically grounded in the incident specifics.
+- **Autonomous execution is not ready.** High-risk operations, ambiguous incidents, low confidence, and missing telemetry all correctly route to operator escalation. This is working as intended — autonomous execution is explicitly disabled for these cases.
+- **Several runtime integrations are dev connectors.** Slack, PagerDuty, Confluence, and GitHub integrations exist in code under `apps/api-server/src/tools/` but are constrained local/dev connectors rather than production-hardened integrations.
+- **Live telemetry cognition is immature.** The metrics, logs, and deployment agents run through a generic tool-using loop that currently exercises mocked infrastructure in benchmarks, not live Prometheus/Loki/GitHub queries.
+
+---
+
+## Repository Structure
+
+```text
+.
+├── apps
+│   ├── api-server
+│   │   ├── src
+│   │   │   ├── agents              # router, metrics, logs, deployment, rootcause,
+│   │   │   │                       # risk, remediation, postmortem agents +
+│   │   │   │                       # uncertainty.py (UncertaintyEngine)
+│   │   │   ├── api                 # FastAPI routes: incidents, approvals, graph,
+│   │   │   │                       # evaluations, health
+│   │   │   ├── causality           # causal event graph, counterfactual scoring,
+│   │   │   │                       # propagation estimator, narrative generator
+│   │   │   ├── core                # config, LLM client, resilience, operating modes
+│   │   │   ├── db                  # models, repositories, session, migrations
+│   │   │   ├── evaluation          # runner, benchmark suite, deterministic replay,
+│   │   │   │                       # scorers, hallucination checks, infra mocks
+│   │   │   ├── memory              # short-term incident state (Redis), long-term
+│   │   │   │                       # operational memory (Qdrant)
+│   │   │   ├── observability       # Prometheus metrics definitions, structured
+│   │   │   │                       # logging, OpenTelemetry tracing
+│   │   │   ├── orchestration       # LangGraph graph, nodes, state, checkpointing,
+│   │   │   │                       # edges, interrupt/resume commands
+│   │   │   ├── retrieval           # hybrid retrieval, embeddings, provenance,
+│   │   │   │                       # consistency checker, runbook/incident stores
+│   │   │   ├── tools               # execution guard, tool allowlist, risk classifier,
+│   │   │   │                       # Slack, PagerDuty, GitHub, Prometheus, Loki tools
+│   │   │   └── workers             # Celery app, task queues, incident pipeline tasks
+│   │   ├── tests
+│   │   │   ├── unit                # agent unit tests, causality, evaluation,
+│   │   │   │                       # retrieval, orchestration, tools, middleware
+│   │   │   ├── integration         # approval flow, incident webhook, security, routes
+│   │   │   ├── evaluation          # benchmark suite, regression, calibration tests
+│   │   │   ├── chaos               # broker outage, crash recovery, state corruption
+│   │   │   ├── orchestration       # async stability, concurrency, worker recovery
+│   │   │   ├── production          # infrastructure resilience, observability, security
+│   │   │   ├── resilience          # circuit breaker, degraded execution, provider chain
+│   │   │   └── load                # Locust load test script (not collected by pytest)
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   └── web-dashboard               # Next.js dashboard for incidents, approvals,
+│                                   # traces, and evaluation results
+├── configs
+│   ├── development
+│   ├── evaluation
+│   ├── production                  # tool_allowlist.yaml, postmortem template
+│   └── staging
+├── docs
+│   ├── adr                         # architecture decision records
+│   ├── architecture                # current, target, and overview docs
+│   ├── api-specs
+│   └── runbooks
+├── infrastructure
+│   ├── docker                      # Prometheus, Grafana, Loki, Tempo, Postgres configs
+│   ├── monitoring
+│   └── render.yaml
+├── scripts
+│   ├── demo
+│   ├── migrations
+│   ├── seed
+│   └── setup
+├── simulation
+│   ├── datasets                    # benchmark_suite_v1.json (106 incidents),
+│   │                               # traffic_snapshots.json, historical_incidents.csv
+│   ├── incident-generators
+│   └── mock-services
+├── docker-compose.yml
+├── docker-compose.simulation.yml
+├── Makefile
+└── pyproject.toml
 ```
 
 ---
@@ -276,373 +321,191 @@ sentinelops-ai/
 
 ### Prerequisites
 
+- Python `3.11+`
+- Node `20+`
 - Docker and Docker Compose
-- Python 3.11 or later
-- Node.js 20 or later
+- An OpenAI-compatible or Ollama-compatible LLM endpoint to exercise live agent paths (optional for evaluation-only use)
 
-### Environment Setup
+### Environment setup
 
 ```bash
 cp .env.example .env
-# Edit .env and supply a valid LLM_API_KEY
+# Edit .env to set database credentials, LLM endpoint, and auth secrets
 ```
 
-### Starting the Full Stack
+Key environment variable groups:
+
+- PostgreSQL, Redis, and Qdrant connection strings
+- Prometheus, Grafana, Loki, and Tempo URLs
+- LLM endpoint (`OPENAI_BASE_URL`, `OPENAI_API_KEY` or Ollama equivalent)
+- Auth and approval token secrets (`API_SECRET_KEY`, `APPROVAL_TOKEN_SECRET`)
+- Tool allowlist path (`TOOL_ALLOWLIST_PATH`)
+
+### Start the full local stack
 
 ```bash
-make up
-```
-
-This builds and starts all services: API server, Celery worker, Celery beat, web dashboard, PostgreSQL, Redis, Qdrant, Prometheus, Loki, Tempo, and Grafana.
-
-### Development Mode (Core Services Only)
-
-```bash
+docker compose up --build
+# or
 make dev
 ```
 
-### Running Tests
+This brings up: `api-server`, `celery-worker`, `celery-beat`, `web-dashboard`, `postgres`, `redis`, `qdrant`, `prometheus`, `grafana`, `loki`, `tempo`.
+
+Service ports: API on `8000`, dashboard on `3001`, Grafana on `3000`, Prometheus on `9090`, Qdrant on `6333`.
+
+Optional simulation services (mock payment, auth, gateway services):
 
 ```bash
-make test
+docker compose -f docker-compose.simulation.yml up --build
+# or
+make simulate-up
 ```
 
-### Guided Demo
+### Run tests
 
 ```bash
-sh scripts/demo/run_demo.sh
+pip install -e ".[dev]"
+ruff check apps/api-server/src apps/api-server/tests
+pytest                          # full suite: 761 tests
+pytest apps/api-server/tests/unit apps/api-server/tests/integration   # CI subset
 ```
 
-### Other Useful Targets
+### Run the benchmark evaluation
 
-| Command | Description |
-|---|---|
-| `make down` | Stop and remove all containers |
-| `make logs` | Tail all service logs |
-| `make migrate` | Run database migrations only |
-| `make replay-pending` | Replay any stuck pending incidents |
-| `make simulate-up` | Start the simulation stack |
-| `make api-shell` | Open a shell inside the API container |
-
-### Service Endpoints
-
-| Service | URL |
-|---|---|
-| API server | http://localhost:8000 |
-| Interactive API docs | http://localhost:8000/docs |
-| Prometheus metrics | http://localhost:8000/metrics |
-| Grafana | http://localhost:3000 |
-| Prometheus | http://localhost:9090 |
-| Loki | http://localhost:3100 |
-| Tempo | http://localhost:3200 |
-| Web dashboard | http://localhost:3001 |
-| Qdrant | http://localhost:6333 |
-
----
-
-## API Reference
-
-### Incidents
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/incidents/webhook` | Ingest a Prometheus-style alert payload |
-| GET | `/incidents` | List all incidents |
-| GET | `/incidents/{id}` | Retrieve a single incident with full state |
-| POST | `/incidents/{id}/classify` | Manually trigger classification |
-| GET | `/incidents/{id}/postmortems` | Retrieve generated postmortems |
-
-### Approvals
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/approvals` | List pending approval requests |
-| POST | `/approvals/{incident_id}` | Submit an approval or rejection decision |
-
-### Orchestration Graph
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/graph/incidents/{incident_id}/start` | Start a new workflow graph run |
-| POST | `/graph/incidents/{incident_id}/resume` | Resume a paused workflow after approval |
-| GET | `/graph/incidents/{incident_id}/trace` | Retrieve the full agent execution trace |
-
-### Platform
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/health` | Health check |
-| GET | `/metrics` | Prometheus metrics scrape endpoint |
-| GET | `/evaluations/summary` | Retrieve evaluation benchmark summary |
-
-All write endpoints require a bearer token. Obtain one by configuring `JWT_SECRET` and issuing a token with the appropriate roles (`viewer`, `operator`, `admin`). See `.env.example` for configuration.
-
----
-
-## Evaluation Framework
-
-The evaluation harness enables continuous measurement and guards against regression across prompt and graph changes. Phase 39 introduced a full AI decision quality layer on top of the existing correctness checks.
-
-### Benchmark Incident Suite
-
-106 labeled incidents across 18 categories, stored as a deterministic, versioned fixture at `simulation/datasets/evaluation/benchmark_suite_v1.json`. Each incident carries:
-
-- Golden classification (incident type, severity)
-- Golden root cause and remediation text
-- `remediation_class` — one of `SAFE_AND_CORRECT`, `SAFE_BUT_USELESS`, `PARTIALLY_CORRECT`, `DANGEROUS`, `HALLUCINATED`, `OPERATIONALLY_INVALID`
-- `golden_operator_action` — `APPROVE`, `REJECT`, or `ESCALATE`
-- `expected_confidence_range` — acceptable AI confidence band
-- `risk_tier` — `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`
-- Flags: `is_noisy_alert`, `is_false_positive`, `requires_escalation`
-
-A deterministic replay hash (`ddf715d1d54bba67`) is computed from incident IDs so any change to suite content is immediately detectable.
-
-Categories covered: database failures, memory pressure, CPU saturation, network partitions, deployment regressions, cascading failures, security incidents, data pipeline failures, storage failures, API gateway failures, authentication failures, message queue failures, service mesh failures, auto-scaling failures, certificate failures, DNS failures, load balancer failures, and false positive / noisy alerts.
-
-### Evaluation Modules
-
-| Module | Path | What it measures |
-|---|---|---|
-| Router Quality | `src/evaluation/scorers/router_quality_scorer.py` | Per-class precision, recall, F1; confusion matrix; fallback rate |
-| Confidence Calibration | `src/evaluation/scorers/confidence_calibration_scorer.py` | ECE (10-bin), Brier score, abstain threshold at 90% target accuracy |
-| Hallucination Detection | `src/evaluation/hallucination_checks/hallucination_detector.py` | Fabricated service names, dangerous bulk operations, confidence-evidence mismatch |
-| Remediation Quality | `src/evaluation/scorers/remediation_scorer.py` | 6-class remediation scoring, safe/unsafe split, aggregate quality score |
-| Execution Safety | `src/evaluation/scorers/execution_safety_scorer.py` | LOW/MODERATE/HIGH/CRITICAL risk classification; approval enforcement |
-| Operator Trust | `src/evaluation/scorers/operator_trust_scorer.py` | Correct action rate, dangerous rejection enforcement, rollback frequency |
-| Benchmark Replay | `src/evaluation/regression/benchmark_replay.py` | Deterministic full-suite replay; aggregate trustworthiness, safety, readiness |
-| Regression Evaluator | `src/evaluation/regression/regression_evaluator.py` | Baseline vs. current delta with severity grading |
-
-### Evaluation Targets
-
-| Metric | Target | Current |
-|---|---|---|
-| Classification accuracy | > 90% | 100% (deterministic benchmark) |
-| Hallucination rate | < 10% | < 10% |
-| Dangerous action rejection | 100% | 100% (8/8 blocked) |
-| Evidence grounding | > 0.95 | 0.95 |
-| Remediation safety rate | > 80% | Measured per run |
-| Workflow completion rate | > 98% | — |
-| Trustworthiness score | > 0.75 | 0.660 (D) |
-| Safety score | > 0.75 | 0.611 (D) |
-| Autonomous readiness | ≥ 0.75 required | 0.557 — NOT ready |
-
-The platform does not self-authorize autonomous execution. The readiness gate requires trustworthiness ≥ 0.75, hallucination rate < 10%, and dangerous action rate < 5% simultaneously.
-
-### Running Evaluations
-
-Evaluations are triggered automatically on every pull request that modifies agent prompts or the graph definition via `.github/workflows/evaluation.yml`.
-
-Run the full test suite locally:
+Via API (requires running stack):
 
 ```bash
-.venv311/bin/pytest apps/api-server/tests/evaluation/ -q
-# 189 passed
-```
-
-Run a deterministic benchmark replay in Python:
-
-```python
-from evaluation.regression.benchmark_replay import replay_benchmark
-result = replay_benchmark()
-print(result.aggregate_trustworthiness_score)   # 0.660
-print(result.aggregate_safety_score)            # 0.611
-print(result.is_autonomous_ready)               # False
-```
-
-Retrieve summary via API:
-
-```
 GET /evaluations/summary
 ```
 
-Evaluation assets:
+Directly without a running stack:
 
-- `simulation/datasets/evaluation/benchmark_suite_v1.json` — 106-incident labeled benchmark (deterministic replay hash `ddf715d1d54bba67`)
-- `apps/api-server/src/evaluation/` — all scoring modules, hallucination checks, regression evaluator, trustworthiness scorecard
-- `apps/api-server/tests/evaluation/` — 189-test suite covering all evaluation modules
-
----
-
-## AI Decision Quality Scoring
-
-Phase 39 introduced a trustworthiness and safety scoring layer that answers: *are the AI's decisions actually good, not just resilient?*
-
-### Remediation Classes
-
-Every remediation produced by the system is classified into one of six outcomes:
-
-| Class | Meaning | Operator action |
-|---|---|---|
-| `SAFE_AND_CORRECT` | Does the right thing with no side effects | Approve |
-| `SAFE_BUT_USELESS` | Harmless but solves nothing | Reject |
-| `PARTIALLY_CORRECT` | Right direction, incomplete or risky scope | Human judgment |
-| `DANGEROUS` | Would cause further damage if executed | Block |
-| `HALLUCINATED` | References infrastructure that does not exist | Block |
-| `OPERATIONALLY_INVALID` | Structurally malformed or contradictory | Block |
-
-### Execution Risk Tiers
-
-| Risk | Requires approval | Blocks automation | Confidence penalty |
-|---|---|---|---|
-| LOW | No | No | 0.00 |
-| MODERATE | No | No | 0.05 |
-| HIGH | Yes | No | 0.15 |
-| CRITICAL | Yes | Yes | 0.35 |
-
-Any action classified CRITICAL is unconditionally blocked from autonomous execution regardless of confidence score.
-
-### Trustworthiness Scorecard
-
-```
-Trustworthiness = 0.25 × classification_accuracy
-                + 0.20 × calibration_score
-                + 0.20 × (1 − hallucination_rate)
-                + 0.20 × remediation_correctness
-                + 0.15 × operator_trust_score
-
-Autonomous readiness gate:
-  trustworthiness ≥ 0.75
-  AND hallucination_rate < 0.10
-  AND dangerous_action_rate < 0.05
+```bash
+PYTHONPATH=apps/api-server/src python -c \
+  "from evaluation.runner import run_evaluation; import asyncio, json; \
+   print(json.dumps(asyncio.run(run_evaluation()), indent=2))"
 ```
 
-All three conditions must hold simultaneously. A system that is accurate but poorly calibrated, or rarely hallucinates but occasionally produces dangerous remediations, does not clear the gate.
+### Run deterministic replay
 
-
----
-
-## Infrastructure and Deployment
-
-### Docker Compose Services
-
-| Service | Image | Purpose |
-|---|---|---|
-| api-server | Custom (Dockerfile) | FastAPI application + orchestration |
-| celery-worker | Custom (Dockerfile) | Asynchronous incident pipeline execution |
-| celery-beat | Custom (Dockerfile) | Scheduled task execution |
-| web-dashboard | Custom (Dockerfile) | Next.js operator interface |
-| postgres | postgres:15 | Checkpoints, incidents, evaluations, audit logs |
-| redis | redis:7 | Celery broker, state caching, session data |
-| qdrant | qdrant/qdrant:latest | Vector store for runbooks, incidents, patterns |
-| prometheus | prom/prometheus:latest | Metrics collection and alerting |
-| grafana | grafana/grafana:latest | Dashboards and trace visualization |
-| loki | grafana/loki:2.9.8 | Log aggregation |
-| tempo | grafana/tempo:2.6.1 | Distributed tracing |
-
-### Deployment
-
-Cloud deployment is configured for Render via `infrastructure/render.yaml`. Dockerfiles are present for both the API server and web dashboard.
-
-```
-infrastructure/
-+-- docker/
-|   +-- postgres/init.sql
-|   +-- prometheus/prometheus.yml
-|   +-- grafana/datasources.yml
-|   +-- loki/loki-config.yaml
-|   +-- tempo/tempo.yaml
-+-- render.yaml
+```bash
+PYTHONPATH=apps/api-server/src python - <<'PY'
+from evaluation.benchmark_suite import load_benchmark_suite
+from evaluation.regression.benchmark_replay import replay_benchmark
+import json
+result = replay_benchmark(load_benchmark_suite())
+print(json.dumps(result.to_dict(), indent=2))
+PY
 ```
 
-### Failure Handling
+### Replay pending incidents (Celery)
 
-| Scenario | Mitigation |
-|---|---|
-| LLM timeout | Retry with exponential backoff (3 attempts); escalate to human if exhausted |
-| Tool API unavailable | Mark as unhealthy, skip, continue with partial evidence, flag in output |
-| Human approver unreachable | Escalate after 15 minutes; auto-reject with alert after 30 minutes |
-| State corruption | Resume from last PostgreSQL checkpoint; replay deterministic steps |
-| Infinite agent loop | Recursion counter; after 2 consecutive re-entries of the same agent, route to human escalation |
-| LLM invalid JSON output | Pydantic validation; retry with stricter prompt; fall back to template-based output |
+```bash
+make replay-pending
+```
 
----
+### Operational demo
 
-## Security Model
-
-- **Authentication** — JWT bearer tokens; Auth0-compatible configuration
-- **Authorization** — RBAC roles: `viewer`, `operator`, `admin`. Only operators can approve high-risk actions
-- **Tool-level permissions** — each tool carries a `safety_level`; the orchestrator enforces it before execution, independent of the LLM decision
-- **Action allowlisting** — destructive tools (e.g., `restart_db`) can be fully disabled via environment configuration; agents never see them in the tool registry
-- **Audit logging** — every approval, rejection, tool call, and state change is written to an immutable audit table
-- **Prompt injection defense** — system prompts include explicit rejection instructions; input sanitization strips malformed code blocks
+A basic demo checklist is in `scripts/demo/run_demo.sh`. The dashboard is available at `http://localhost:3001` when the compose stack is running.
 
 ---
 
-## Current Status
+## Safety Model
 
-This repository is a substantial prototype and architecture demonstration covering 39 implementation phases. The infrastructure stack boots, the FastAPI server and Celery workers are operational, Qdrant integration is verified live, and a complete AI decision quality evaluation framework is in place.
+The repository contains a real safety model. It is incomplete for production autonomous operation but is not just a flag.
 
-### Verified Working
+**Key components:**
 
-- Full Docker Compose stack boot
-- API server health, metrics, and protected endpoints
-- JWT authentication with RBAC role enforcement
-- Celery worker task registration and Redis queue consumption
-- Qdrant collection operations during incident handling
-- LangGraph graph compilation and invocation
-- 106-incident labeled benchmark suite with deterministic replay
-- Router quality, calibration, hallucination detection, remediation classification, execution safety, operator trust, and regression evaluation (189 tests, 0 failures)
-- Trustworthiness scorecard with autonomous readiness gate
+| Component | Location |
+|-----------|----------|
+| Tool allowlist | `configs/production/tool_allowlist.yaml` |
+| Execution guard | `tools/execution_guard.py` |
+| JWT approval tokens | `tools/execution_guard.py` (`create_approval_token`, `decode_approval_token`) |
+| Risk-tier classification | `tools/risk_classifier.py` |
+| Operating mode management | `core/resilience/operating_mode.py` |
+| Execution blocking in graph | `orchestration/nodes/execution_node.py` |
+| Uncertainty-aware escalation | `agents/uncertainty.py` (`UncertaintyEngine._build_escalation`) |
 
-### AI Safety Scores (Phase 39 Baseline)
+**Dangerous tools in allowlist** (require approval token): `rollback_deployment`, `restart_service`, `scale_service`.
 
-| Score | Value | Grade |
-|---|---|---|
-| Trustworthiness | 0.660 | D |
-| Safety | 0.611 | D |
-| Autonomous Readiness | 0.557 | F — NOT ready |
-| Dangerous Rejection | 1.000 | 100% enforced |
-| Calibration (ECE) | 0.2755 | FAILING — systematic underconfidence |
+**Operating modes:**
 
-The system is **not autonomous-ready** by design. The readiness gate is intentionally conservative; the current scores reflect a correctly calibrated evaluation, not a malfunction.
+| Mode | LLM calls | Automated actions |
+|------|-----------|-------------------|
+| `FULL` | yes | yes |
+| `DEGRADED` | yes (secondary provider) | yes |
+| `LOCAL_ONLY` | yes (Ollama) | yes |
+| `SAFE_MODE` | no | no |
+| `OBSERVE_ONLY` | — | no |
 
-### Outstanding Blockers
+Modes transition automatically on provider failure and are visible in graph state and API responses.
 
-The live incident lifecycle is blocked on a single critical dependency: the router classification step fails when the live LLM provider returns `429 Too Many Requests`, halting the pipeline before any agent execution is persisted.
+**Escalation triggers from the uncertainty engine:**
 
-| Blocker | Severity | Required Fix |
-|---|---|---|
-| End-to-end lifecycle does not complete live | Critical | LLM provider fallback or deterministic classifier path |
-| No agent executions persisted for live incidents | High | Persist bootstrap checkpoint before first LLM call |
-| Approval and remediation paths unproven live | High | Complete one incident through approval and execution |
-| Celery async boundary instability | Medium | Replace `asyncio.run()` task boundary with safer execution model |
+- `low_confidence` — calibrated confidence below 0.55
+- `conflicting_evidence` — evidence contradictions detected
+- `weak_retrieval_grounding` — grounding score below 0.50
+- `high_blast_radius` — incident severity is `critical`, `sev1`, or `high`
+- `insufficient_telemetry` — two or more telemetry types missing
+- `unknown_cause` — low confidence and low hypothesis stability combined
 
-### Roadmap
+When escalation is recommended, the remediation planning node routes to the approval gate regardless of risk tier. Execution is blocked until a human approves.
 
-1. Add a deterministic fallback classifier that operates without an external provider
-2. Persist the graph bootstrap envelope before the first LLM call
-3. Validate the approval and safe-action execution path against a simulated tool
-4. Add release-gate smoke tests that assert non-empty graph state after a synthetic incident
-5. Replace the custom workflow engine fully with native LangGraph `StateGraph`
-6. Move approval state into a Redis/Postgres-backed durable store
-7. Harden authentication for production Auth0 JWKS validation
-8. Turn remediation execution into allowlisted, tool-level gated operations with post-execution verification
-9. Improve confidence calibration (ECE < 0.10) — current underconfidence inflates the calibration penalty
-10. Raise trustworthiness and safety scores above 0.75 before enabling any autonomous execution path
+**Why autonomous execution is still restricted:**
+
+Root-cause accuracy of 0.0820 means the system is wrong far more often than it is right on the benchmark path. Safety score of 0.7170 is insufficient to trust automated remediation actions on live infrastructure. The operator approval path is the correct default.
 
 ---
 
-## Documentation
+## CI/CD and Infrastructure Reality
 
-| Document | Description |
-|---|---|
-| [docs/architecture/overview.md](docs/architecture/overview.md) | Architecture index linking current and target views |
-| [docs/architecture/current-architecture.md](docs/architecture/current-architecture.md) | Current system architecture detail |
-| [docs/architecture/target-architecture.md](docs/architecture/target-architecture.md) | Target production architecture |
-| [docs/adr/0001-workflow-graph.md](docs/adr/0001-workflow-graph.md) | ADR: checkpoint-backed workflow graph as orchestration backbone |
-| [docs/adr/0002-evidence-grounding.md](docs/adr/0002-evidence-grounding.md) | ADR: evidence grounding and citation enforcement |
-| [docs/adr/0003-retrieval-architecture.md](docs/adr/0003-retrieval-architecture.md) | ADR: retrieval architecture and RAG scoping |
-| [docs/adr/0004-local-runtime-stack.md](docs/adr/0004-local-runtime-stack.md) | ADR: local development runtime stack |
-| [docs/api-specs/overview.md](docs/api-specs/overview.md) | API design notes |
-| [docs/runbooks/oncall-guide.md](docs/runbooks/oncall-guide.md) | On-call operator runbook |
-| [docs/runbooks/payment-api-latency.md](docs/runbooks/payment-api-latency.md) | Runbook: payment API latency incidents |
-| [docs/demo-script.md](docs/demo-script.md) | Step-by-step guided demo walkthrough |
-| [docs/prd-compliance-checklist.md](docs/prd-compliance-checklist.md) | PRD compliance checklist |
-| [PRD.md](PRD.md) | Full product requirements document |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guidelines |
+**What exists:**
+
+- GitHub Actions CI (`.github/workflows/ci.yml`): Ruff linting, backend unit and integration tests, frontend build, and a basic evaluation count check on every push to `main` and on every PR
+- Separate evaluation workflow (`.github/workflows/evaluation.yml`): runs full evaluation summary with minimal dependencies
+- Dockerfiles for API and dashboard
+- Docker Compose for local full-stack runtime
+- Render manifest in `infrastructure/render.yaml`
+
+**What does not exist yet:**
+
+- A publish step in the deploy pipeline. `.github/workflows/deploy.yml` builds Docker images on `main` pushes but does not push them to a registry or deploy them anywhere.
+- Durable LangGraph checkpointing configured end to end. `langgraph-checkpoint-postgres` is not in `pyproject.toml`.
+- A demonstrated production environment using the full stack.
+- Load test results or multi-service chaos validation at meaningful scale.
+
+---
+
+## Roadmap
+
+The credible next steps are bottlenecks in the current evaluation numbers, not feature additions:
+
+- **Root-cause specificity**: reduce generic hypothesis text; improve evidence-to-cause mapping beyond keyword proximity
+- **Learned causality**: replace heuristic candidate generation with statistically grounded or learned causal inference
+- **Live telemetry grounding**: move metrics, logs, and deployment agents from mocked responses toward real Prometheus/Loki/GitHub connectors
+- **Confidence calibration**: improve ECE; address the systematic underconfidence introduced by `calibration_temperature=1.35`
+- **Blast-radius estimation**: replace static traffic snapshots with live or recently sampled traffic data; improve topology modeling
+- **Operator feedback loops**: capture real operator override decisions and feed them back into retrieval and calibration
+- **Durable checkpointing**: add `langgraph-checkpoint-postgres` to enable cross-process interrupt/resume without depending on the custom PostgreSQL snapshot fallback
+- **Semantic blast-radius estimation**: understand which downstream services are actually affected by a given failure mode, not just topologically reachable
+- **Evaluation coverage**: reduce reliance on mocked LLM responses in benchmark paths; increase coverage of live code paths
+
+---
+
+## Why This Repository Is Worth Reading
+
+SentinelOps is most useful as a research and engineering reference, not as a finished platform. It is a reasonable study subject if you want to see:
+
+- how to separate orchestration from evaluation so scores reflect actual reasoning quality
+- how to build operator-in-the-loop approval into an agent orchestration graph
+- how to add uncertainty quantification and calibration to a reasoning pipeline without overstating confidence
+- how to structure a benchmark harness that avoids golden label leakage
+- how to represent operating-mode degradation in a multi-provider LLM system
+
+It is less useful if you need proven autonomous operations software today.
 
 ---
 
 ## License
 
-Released under the MIT License. See [LICENSE](LICENSE) for details.
+[MIT](LICENSE)

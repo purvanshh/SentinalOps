@@ -1,8 +1,7 @@
 import structlog
+from core.config import get_settings
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
-
-from core.config import get_settings
 
 logger = structlog.get_logger(__name__)
 

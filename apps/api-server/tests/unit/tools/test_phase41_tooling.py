@@ -12,17 +12,16 @@ Proves:
   D. PagerDuty and Confluence integrations return synced/exported=False with
      an unavailable_reason field, not a "stub recorded" message.
 """
+
 from __future__ import annotations
 
 import json
 
 import httpx
 import pytest
-
 from tools.loki.client import LokiClient
 from tools.loki.tools import build_loki_registry
 from tools.runtime_tools import build_runtime_registry
-
 
 # ─── A. expand_log_context ────────────────────────────────────────────────────
 
@@ -88,9 +87,9 @@ async def test_expand_log_context_never_returns_fabricated_context_string() -> N
     result = await tool.handler(trace_id="xyz789")
 
     result_str = json.dumps(result)
-    assert "context for xyz789" not in result_str, (
-        "expand_log_context returned fabricated context string — old placeholder behavior detected"
-    )
+    assert (
+        "context for xyz789" not in result_str
+    ), "expand_log_context returned fabricated context string — old placeholder behavior detected"
     await loki_client.close()
 
 
@@ -119,11 +118,14 @@ async def test_extract_stacktrace_parses_python_traceback() -> None:
         "2024-01-01 14:00:00 ERROR payment-api\n"
         "Traceback (most recent call last):\n"
         '  File "payment/service.py", line 42, in process\n'
-        '    result = db.execute(query)\n'
+        "    result = db.execute(query)\n"
         "sqlalchemy.exc.OperationalError: connection refused\n"
     )
 
-    loki_client = LokiClient(base_url="http://test", transport=httpx.MockTransport(lambda r: httpx.Response(200, json={})))
+    loki_client = LokiClient(
+        base_url="http://test",
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={})),
+    )
     registry, _ = build_loki_registry(loki_client)
     tool = registry.get("extract_stacktrace")
 
@@ -139,7 +141,10 @@ async def test_extract_stacktrace_parses_python_traceback() -> None:
 async def test_extract_stacktrace_returns_unavailability_for_clean_log() -> None:
     log_entry = "2024-01-01 14:00:00 INFO payment-api - request completed in 50ms"
 
-    loki_client = LokiClient(base_url="http://test", transport=httpx.MockTransport(lambda r: httpx.Response(200, json={})))
+    loki_client = LokiClient(
+        base_url="http://test",
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={})),
+    )
     registry, _ = build_loki_registry(loki_client)
     tool = registry.get("extract_stacktrace")
 
@@ -164,19 +169,22 @@ async def test_extract_stacktrace_does_not_return_arbitrary_noise_lines() -> Non
     )
     log_entry_with_noise = noise_header + "\n" + exception_block
 
-    loki_client = LokiClient(base_url="http://test", transport=httpx.MockTransport(lambda r: httpx.Response(200, json={})))
+    loki_client = LokiClient(
+        base_url="http://test",
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={})),
+    )
     registry, _ = build_loki_registry(loki_client)
     tool = registry.get("extract_stacktrace")
 
     result = await tool.handler(log_entry=log_entry_with_noise)
 
     assert result.get("status") == "present"
-    assert len(result["stacktrace"]) < len(log_entry_with_noise), (
-        "extract_stacktrace returned the entire raw log entry — old pass-through behavior detected"
-    )
-    assert "metric tick 0" not in result["stacktrace"], (
-        "Non-exception noise lines leaked into the extracted stacktrace"
-    )
+    assert len(result["stacktrace"]) < len(
+        log_entry_with_noise
+    ), "extract_stacktrace returned the entire raw log entry — old pass-through behavior detected"
+    assert (
+        "metric tick 0" not in result["stacktrace"]
+    ), "Non-exception noise lines leaked into the extracted stacktrace"
     await loki_client.close()
 
 
@@ -243,9 +251,9 @@ async def test_pagerduty_sync_returns_unavailable_reason() -> None:
 
     assert result["synced"] is False
     assert "unavailable_reason" in result
-    assert "stub" not in result["unavailable_reason"].lower(), (
-        "pagerduty client still uses 'stub' language — should indicate integration is not configured"
-    )
+    assert (
+        "stub" not in result["unavailable_reason"].lower()
+    ), "pagerduty client still uses 'stub' language — should indicate integration is not configured"
 
 
 @pytest.mark.asyncio
@@ -261,5 +269,6 @@ async def test_confluence_export_returns_unavailable_reason() -> None:
     assert result["exported"] is False
     assert "unavailable_reason" in result
     assert "stub" not in result["unavailable_reason"].lower(), (
-        "confluence client still uses 'stub' language — should indicate integration is not configured"
+        "confluence client still uses 'stub' language and should indicate "
+        "the integration is not configured"
     )

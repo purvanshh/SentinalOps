@@ -1,7 +1,6 @@
 from typing import Any
 
 import httpx
-
 from core.config import get_settings
 from retrieval.embeddings.collection_manager import CollectionSpec, QdrantCollectionManager
 from retrieval.embeddings.embedding_client import EmbeddingClient
@@ -22,7 +21,9 @@ class IncidentHistorySearcher:
         self.embedding_client = EmbeddingClient(
             transport=embedding_transport or transport,
         )
-        self.collection_manager = QdrantCollectionManager(base_url=self.base_url, transport=transport)
+        self.collection_manager = QdrantCollectionManager(
+            base_url=self.base_url, transport=transport
+        )
         self.collection_manager.ensure_collection(
             CollectionSpec(self.collection_name, self.embedding_client.dimensions)
         )
@@ -32,7 +33,9 @@ class IncidentHistorySearcher:
 
     async def search_similar_incidents(self, text: str, limit: int = 3) -> list[dict[str, Any]]:
         vector = await self.embedding_client.embed_text_async(text)
-        results = await self.collection_manager.search_async(self.collection_name, vector, limit=limit)
+        results = await self.collection_manager.search_async(
+            self.collection_name, vector, limit=limit
+        )
 
         return [
             {

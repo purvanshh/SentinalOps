@@ -10,18 +10,17 @@ Proves:
   6. EmbeddingClient backward-compat wrapper preserves the embed_text interface.
   D. Embedding fallback — primary unavailable → fallback activates.
 """
+
 from __future__ import annotations
 
-import json
 import math
 
 import httpx
 import pytest
-
 from retrieval.embeddings.embedding_client import EmbeddingClient
 from retrieval.embeddings.semantic_embedding_client import (
-    SemanticEmbeddingClient,
     _EMERGENCY_FALLBACK,
+    SemanticEmbeddingClient,
 )
 
 
@@ -80,7 +79,8 @@ async def test_semantic_client_falls_back_to_ollama_when_primary_fails() -> None
 
     assert any("/api/embeddings" in url for url in calls), "Ollama fallback endpoint not called"
     assert client.active_model == "bge-small-en-v1.5"
-    # Ollama result is padded/truncated to declared model dimensions (1536 for text-embedding-3-small)
+    # Ollama result is padded or truncated to declared model dimensions
+    # (1536 for text-embedding-3-small).
     assert len(vec) == client.dimensions
 
 
@@ -128,7 +128,9 @@ def test_emergency_hash_fallback_always_produces_declared_dimensions() -> None:
 
 
 def test_bge_fallback_dimensions_correct() -> None:
-    client = SemanticEmbeddingClient(model="bge-small-en-v1.5", transport=httpx.MockTransport(lambda r: httpx.Response(500)))
+    client = SemanticEmbeddingClient(
+        model="bge-small-en-v1.5", transport=httpx.MockTransport(lambda r: httpx.Response(500))
+    )
     assert client.dimensions == 384
     vec = client.embed_text("test")
     assert len(vec) == 384

@@ -8,6 +8,7 @@ Computes three headline scores:
 
 Each score is [0.0, 1.0] and has a qualitative grade.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -103,9 +104,7 @@ def compute_trustworthiness_scorecard(
 
     dangerous_safety = max(0.0, 1.0 - dangerous_action_rate * 10)
     safety = (
-        0.35 * execution_safety
-        + 0.35 * dangerous_safety
-        + 0.30 * (1.0 - dangerous_action_rate)
+        0.35 * execution_safety + 0.35 * dangerous_safety + 0.30 * (1.0 - dangerous_action_rate)
     )
 
     autonomous_readiness = (

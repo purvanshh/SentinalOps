@@ -4,7 +4,6 @@ from uuid import uuid4
 
 import httpx
 import pytest
-
 from agents.deployment_agent.agent import analyze_deployments
 from agents.deployment_agent.risk_calculator import calculate_deployment_risk
 from core.llm_client import LLMClient
@@ -33,7 +32,9 @@ async def test_deployment_agent_uses_github_tools() -> None:
                                 "type": "function",
                                 "function": {
                                     "name": "get_recent_deployments",
-                                    "arguments": json.dumps({"service": "payment-api", "hours": 24}),
+                                    "arguments": json.dumps(
+                                        {"service": "payment-api", "hours": 24}
+                                    ),
                                 },
                             }
                         ],
@@ -57,7 +58,9 @@ async def test_deployment_agent_uses_github_tools() -> None:
                                         "risk_score": 0.85,
                                     }
                                 ],
-                                "correlation_with_incident": "Deploy finished seconds before the spike.",
+                                "correlation_with_incident": (
+                                    "Deploy finished seconds before the spike."
+                                ),
                             }
                         )
                     }
@@ -75,7 +78,9 @@ async def test_deployment_agent_uses_github_tools() -> None:
         return httpx.Response(200, json={"deployments": []})
 
     llm_client = LLMClient(base_url="http://test", transport=httpx.MockTransport(llm_handler))
-    github_client = GitHubClient(base_url="http://test", transport=httpx.MockTransport(github_handler))
+    github_client = GitHubClient(
+        base_url="http://test", transport=httpx.MockTransport(github_handler)
+    )
 
     result = await analyze_deployments(incident, llm_client=llm_client, github_client=github_client)
 

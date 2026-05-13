@@ -17,7 +17,7 @@ jobs:
       - name: Install minimal dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pydantic fastapi sqlalchemy prometheus_client
+          pip install pydantic fastapi sqlalchemy prometheus_client PyYAML
       - name: Run evaluation summary
         run: |
           PYTHONPATH=apps/api-server/src python -c "from evaluation.runner import run_evaluation; import json; print(json.dumps(run_evaluation(), indent=2))"

@@ -21,7 +21,9 @@ def score_remediation_action(
     avg_execution_time = sum(item["execution_time_seconds"] for item in matching) / total
     avg_failure_severity = sum(item["severity_on_failure"] for item in matching) / total
     execution_factor = min(avg_execution_time / 300.0, 1.0)
-    risk_score = round((1 - probability_of_success) * avg_failure_severity * (1 + execution_factor), 4)
+    risk_score = round(
+        (1 - probability_of_success) * avg_failure_severity * (1 + execution_factor), 4
+    )
     recommendation = "safe to proceed" if risk_score < 0.25 else "avoid unless necessary"
     worst_case_impact = (
         "Brief interruption during mitigation."

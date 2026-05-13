@@ -12,14 +12,12 @@ Proves:
   - compute_causal_confidence: penalizes contradictory evidence.
   - compute_causal_confidence: rewards strong temporal and topology alignment.
 """
+
 from __future__ import annotations
 
-import pytest
 from datetime import UTC, datetime, timedelta
 
 from causality.counterfactual import (
-    CausalConfidenceScore,
-    CounterfactualResult,
     check_redundancy,
     check_temporal_necessity,
     check_topology_necessity,
@@ -71,10 +69,12 @@ def test_check_topology_necessity_passes_direct_dependency() -> None:
 
 
 def test_check_topology_necessity_passes_transitive_dependency() -> None:
-    topology = {"dependencies": {
-        "database": ["payment-api"],
-        "payment-api": ["checkout"],
-    }}
+    topology = {
+        "dependencies": {
+            "database": ["payment-api"],
+            "payment-api": ["checkout"],
+        }
+    }
     ok, _ = check_topology_necessity("database", "checkout", topology)
     assert ok is True
 
@@ -252,4 +252,6 @@ def test_causal_confidence_factors_list_mentions_issues() -> None:
         contradictory_evidence_count=3,
     )
     factors_text = " ".join(score.factors)
-    assert "temporal" in factors_text or "topology" in factors_text or "contradictory" in factors_text
+    assert (
+        "temporal" in factors_text or "topology" in factors_text or "contradictory" in factors_text
+    )

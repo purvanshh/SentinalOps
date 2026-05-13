@@ -9,6 +9,7 @@ Every remediation action is classified into one of four tiers:
 
 The tier drives execution policy in enforcement_guard and execution_node.
 """
+
 from __future__ import annotations
 
 import re
@@ -30,22 +31,62 @@ class RiskTier(str, Enum):
         return self in (RiskTier.HIGH_RISK, RiskTier.DESTRUCTIVE)
 
 
-_DESTRUCTIVE_KEYWORDS = frozenset({
-    "delete", "drop", "destroy", "terminate", "purge", "wipe",
-    "drain", "evict", "cordon",
-})
-_HIGH_RISK_KEYWORDS = frozenset({
-    "rollback", "scale", "deploy", "migration", "migrate",
-    "reset", "flush", "upgrade", "downgrade", "replace",
-})
-_SAFE_MUTATION_KEYWORDS = frozenset({
-    "restart", "reload", "bounce", "recycle", "refresh",
-    "clear cache", "rotate", "update config", "patch",
-})
-_READ_ONLY_KEYWORDS = frozenset({
-    "get", "list", "describe", "fetch", "read", "show", "check",
-    "verify", "inspect", "monitor", "query", "search",
-})
+_DESTRUCTIVE_KEYWORDS = frozenset(
+    {
+        "delete",
+        "drop",
+        "destroy",
+        "terminate",
+        "purge",
+        "wipe",
+        "drain",
+        "evict",
+        "cordon",
+    }
+)
+_HIGH_RISK_KEYWORDS = frozenset(
+    {
+        "rollback",
+        "scale",
+        "deploy",
+        "migration",
+        "migrate",
+        "reset",
+        "flush",
+        "upgrade",
+        "downgrade",
+        "replace",
+    }
+)
+_SAFE_MUTATION_KEYWORDS = frozenset(
+    {
+        "restart",
+        "reload",
+        "bounce",
+        "recycle",
+        "refresh",
+        "clear cache",
+        "rotate",
+        "update config",
+        "patch",
+    }
+)
+_READ_ONLY_KEYWORDS = frozenset(
+    {
+        "get",
+        "list",
+        "describe",
+        "fetch",
+        "read",
+        "show",
+        "check",
+        "verify",
+        "inspect",
+        "monitor",
+        "query",
+        "search",
+    }
+)
 
 
 def _word_match(text: str, keyword: str) -> bool:

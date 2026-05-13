@@ -16,9 +16,8 @@ Also proves:
   - filter_by_type, primary_causes, secondary_effects helpers work.
   - to_classification_dict produces serializable output.
 """
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from causality.event_graph import (
     CausalEdge,
@@ -28,7 +27,6 @@ from causality.event_graph import (
     NodeType,
 )
 from causality.failure_classifier import (
-    ClassifiedEvent,
     FailureType,
     classify_failures,
     collateral_noise,

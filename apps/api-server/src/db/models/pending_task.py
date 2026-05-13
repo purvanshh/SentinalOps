@@ -1,9 +1,8 @@
 import uuid
 
+from db.models.base import Base, JsonDict, TimestampMixin, UUIDPrimaryKeyMixin
 from sqlalchemy import Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
-
-from db.models.base import Base, JsonDict, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class PendingTask(UUIDPrimaryKeyMixin, TimestampMixin, Base):

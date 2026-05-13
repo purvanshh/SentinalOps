@@ -10,6 +10,7 @@ The emergency fallback is honest: it produces a semantically meaningless vector
 but does NOT crash the pipeline. Callers should monitor `active_model` to detect
 when a degraded embedding is in use.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -17,7 +18,6 @@ import math
 from typing import Any
 
 import httpx
-
 from core.config import get_settings
 
 _MODEL_DIMENSIONS: dict[str, int] = {
@@ -144,10 +144,7 @@ class SemanticEmbeddingClient:
         cached = self._cache_get(text)
         if cached is not None:
             return cached
-        vec = (
-            self._try_openai_sync(text)
-            or self._try_ollama_sync(text)
-        )
+        vec = self._try_openai_sync(text) or self._try_ollama_sync(text)
         if vec is None:
             self._active_model = _EMERGENCY_FALLBACK
             vec = self._hash_embed(text)

@@ -1,9 +1,8 @@
 import uuid
 
+from db.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from sqlalchemy import Float, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from db.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class Evaluation(UUIDPrimaryKeyMixin, TimestampMixin, Base):

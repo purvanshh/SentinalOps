@@ -12,9 +12,8 @@ Proves:
   - Services not in service_to_node are skipped gracefully.
   - Empty topology produces empty blast radius.
 """
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from causality.event_graph import CausalEventGraph, CausalNode, EdgeType, NodeType
 from causality.propagation_estimator import PropagationEstimator

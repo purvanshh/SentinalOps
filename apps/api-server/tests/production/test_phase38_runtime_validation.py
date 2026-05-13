@@ -13,6 +13,7 @@ Validates:
   I. Operating mode metric fires on provider failure
   J. Dead-letter metric fires when replay budget exhausted
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -23,23 +24,24 @@ import pytest
 from fastapi import HTTPException
 from jose import jwt as jose_jwt
 
-
 # ---------------------------------------------------------------------------
 # A. Incident lifecycle observability hooks exist and are callable
 # ---------------------------------------------------------------------------
 
+
 def test_all_lifecycle_observer_functions_importable():
     from observability.metrics import (
-        observe_incident_created,
         observe_agent_execution,
-        observe_pipeline_completed,
         observe_approval_decision,
-        observe_degraded_mode,
-        observe_task_replay,
         observe_dead_letter,
+        observe_degraded_mode,
         observe_execution_guard_block,
+        observe_incident_created,
+        observe_pipeline_completed,
         observe_remediation_action,
+        observe_task_replay,
     )
+
     # All importable — no ImportError means the pipeline is fully wired
     for fn in [
         observe_incident_created,
@@ -58,9 +60,9 @@ def test_all_lifecycle_observer_functions_importable():
 def test_lifecycle_metrics_snapshot_reflects_increments():
     from observability.metrics import (
         build_metrics_snapshot,
+        observe_approval_decision,
         observe_incident_created,
         observe_pipeline_completed,
-        observe_approval_decision,
     )
 
     snap_before = build_metrics_snapshot()
@@ -70,7 +72,10 @@ def test_lifecycle_metrics_snapshot_reflects_increments():
     snap_after = build_metrics_snapshot()
 
     assert snap_after["incidents_total"] > snap_before["incidents_total"]
-    assert snap_after["incident_pipeline_completed_total"] > snap_before["incident_pipeline_completed_total"]
+    assert (
+        snap_after["incident_pipeline_completed_total"]
+        > snap_before["incident_pipeline_completed_total"]
+    )
     assert snap_after["approval_decisions_total"] > snap_before["approval_decisions_total"]
 
 
@@ -78,11 +83,16 @@ def test_lifecycle_metrics_snapshot_reflects_increments():
 # B. Invalid JWT: rejected, no secret in response
 # ---------------------------------------------------------------------------
 
+
 def test_wrong_secret_token_rejected_401():
     from api.middleware.auth import decode_access_token
 
     bad_token = jose_jwt.encode(
-        {"sub": "attacker", "roles": ["admin"], "exp": datetime.now(timezone.utc) + timedelta(hours=1)},
+        {
+            "sub": "attacker",
+            "roles": ["admin"],
+            "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+        },
         "attacker-guessed-secret",
         algorithm="HS256",
     )
@@ -118,9 +128,10 @@ def test_expired_token_rejected_without_leaking_details():
 # C. Unsafe remediation: execution blocked, guard error raised
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_unapproved_dangerous_tool_is_blocked(monkeypatch):
-    from tools.execution_guard import enforce_tool_execution_policy, ExecutionGuardError
+    from tools.execution_guard import ExecutionGuardError, enforce_tool_execution_policy
 
     monkeypatch.setattr(
         "tools.execution_guard.load_tool_allowlist",
@@ -138,7 +149,7 @@ async def test_unapproved_dangerous_tool_is_blocked(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_unlisted_tool_is_blocked(monkeypatch):
-    from tools.execution_guard import enforce_tool_execution_policy, ExecutionGuardError
+    from tools.execution_guard import ExecutionGuardError, enforce_tool_execution_policy
 
     monkeypatch.setattr(
         "tools.execution_guard.load_tool_allowlist",
@@ -157,6 +168,7 @@ async def test_unlisted_tool_is_blocked(monkeypatch):
 # ---------------------------------------------------------------------------
 # D. Redis outage: system continues
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_redis_outage_does_not_raise_from_save():
@@ -186,6 +198,7 @@ async def test_redis_outage_does_not_raise_from_load():
 # E. Production startup: hard-fails on default dev secrets
 # ---------------------------------------------------------------------------
 
+
 def test_production_startup_fails_on_default_secrets():
     from core.config import Settings
 
@@ -206,6 +219,7 @@ def test_production_startup_fails_on_default_secrets():
 # F. Production startup: hard-fails on missing required config
 # ---------------------------------------------------------------------------
 
+
 def test_production_startup_fails_on_missing_required_config():
     from core.config import Settings
 
@@ -225,6 +239,7 @@ def test_production_startup_fails_on_missing_required_config():
 # ---------------------------------------------------------------------------
 # G. SAFE_MODE: no automated execution
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_safe_mode_blocks_execution_in_execution_node():
@@ -251,6 +266,7 @@ async def test_safe_mode_blocks_execution_in_execution_node():
 # ---------------------------------------------------------------------------
 # H. Approval token: jti, incident-bound, tool-specific
 # ---------------------------------------------------------------------------
+
 
 def test_approval_token_full_chain():
     from tools.execution_guard import create_approval_token, decode_approval_token
@@ -284,6 +300,7 @@ def test_approval_token_tampered_is_rejected():
 # I. Operating mode metric fires on provider failure simulation
 # ---------------------------------------------------------------------------
 
+
 def test_provider_failure_fires_degraded_mode_metric():
     from core.resilience.operating_mode import OperatingMode, OperatingModeManager
     from prometheus_client import REGISTRY
@@ -292,9 +309,11 @@ def test_provider_failure_fires_degraded_mode_metric():
         for metric in REGISTRY.collect():
             if metric.name in {"degraded_mode_activations_total", "degraded_mode_activations"}:
                 for sample in metric.samples:
-                    if (sample.name == "degraded_mode_activations_total"
-                            and sample.labels.get("from_mode") == from_m
-                            and sample.labels.get("to_mode") == to_m):
+                    if (
+                        sample.name == "degraded_mode_activations_total"
+                        and sample.labels.get("from_mode") == from_m
+                        and sample.labels.get("to_mode") == to_m
+                    ):
                         return sample.value
         return 0.0
 
@@ -314,6 +333,7 @@ def test_provider_failure_fires_degraded_mode_metric():
 # J. Dead-letter metric fires when replay budget exhausted
 # ---------------------------------------------------------------------------
 
+
 def test_dead_letter_threshold_constant_is_bounded():
     from workers.tasks.incident_pipeline import _MAX_REPLAY_ATTEMPTS
 
@@ -328,7 +348,10 @@ def test_dead_letter_metric_increments():
         for metric in REGISTRY.collect():
             if metric.name in {"dead_letter_tasks_total", "dead_letter_tasks"}:
                 for sample in metric.samples:
-                    if sample.name == "dead_letter_tasks_total" and sample.labels.get("task_name") == task:
+                    if (
+                        sample.name == "dead_letter_tasks_total"
+                        and sample.labels.get("task_name") == task
+                    ):
                         return sample.value
         return 0.0
 
@@ -343,10 +366,11 @@ def test_dead_letter_metric_increments():
 # K. Operational summary: all Phase-38 modules imported cleanly
 # ---------------------------------------------------------------------------
 
+
 def test_all_phase38_modules_import_without_error():
-    import tools.risk_classifier  # noqa: F401
-    import observability.metrics  # noqa: F401
-    import observability.logging  # noqa: F401
-    import memory.short_term.incident_state  # noqa: F401
-    import tools.execution_guard  # noqa: F401
     import api.middleware.auth  # noqa: F401
+    import memory.short_term.incident_state  # noqa: F401
+    import observability.logging  # noqa: F401
+    import observability.metrics  # noqa: F401
+    import tools.execution_guard  # noqa: F401
+    import tools.risk_classifier  # noqa: F401

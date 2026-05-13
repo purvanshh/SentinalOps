@@ -11,26 +11,46 @@ Key concepts:
   - Claims with no supporting evidence are flagged as unsupported.
   - Results below the minimum grounding threshold are suppressed entirely.
 """
+
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from retrieval.provenance import GroundingStatus, _classify_grounding
-
-
 _MIN_GROUNDING_SCORE = 0.45
 _CLAIM_SUPPORT_THRESHOLD = 0.60
-_STOPWORDS = frozenset({
-    "the", "a", "an", "is", "was", "in", "on", "at", "to", "of", "and",
-    "or", "for", "with", "that", "this", "it", "by", "from", "as", "be",
-})
+_STOPWORDS = frozenset(
+    {
+        "the",
+        "a",
+        "an",
+        "is",
+        "was",
+        "in",
+        "on",
+        "at",
+        "to",
+        "of",
+        "and",
+        "or",
+        "for",
+        "with",
+        "that",
+        "this",
+        "it",
+        "by",
+        "from",
+        "as",
+        "be",
+    }
+)
 
 
 @dataclass
 class UnsupportedClaim:
     """A claim that could not be grounded in retrieved evidence."""
+
     claim_text: str
     reason: str
     retrieved_count: int = 0
@@ -40,6 +60,7 @@ class UnsupportedClaim:
 @dataclass
 class ConsistencyReport:
     """Result of checking claim consistency against retrieved evidence."""
+
     supported_claims: list[str] = field(default_factory=list)
     unsupported_claims: list[UnsupportedClaim] = field(default_factory=list)
     suppressed_results: list[str] = field(default_factory=list)
@@ -115,13 +136,16 @@ def check_claim_support(
         )
         if score < threshold:
             continue
-        result_text = " ".join(str(v) for v in [
-            result.get("title", ""),
-            result.get("description", ""),
-            result.get("summary", ""),
-            result.get("root_cause", ""),
-            " ".join(result.get("symptoms", [])),
-        ])
+        result_text = " ".join(
+            str(v)
+            for v in [
+                result.get("title", ""),
+                result.get("description", ""),
+                result.get("summary", ""),
+                result.get("root_cause", ""),
+                " ".join(result.get("symptoms", [])),
+            ]
+        )
         result_keywords = _extract_keywords(result_text)
         if claim_keywords & result_keywords:
             return True
@@ -157,16 +181,24 @@ def run_consistency_check(
             supported.append(claim)
         else:
             max_sim = max(
-                (float((r.get("provenance") or {}).get("similarity_score") or r.get("match_score") or 0.0)
-                 for r in results),
+                (
+                    float(
+                        (r.get("provenance") or {}).get("similarity_score")
+                        or r.get("match_score")
+                        or 0.0
+                    )
+                    for r in results
+                ),
                 default=0.0,
             )
-            unsupported.append(UnsupportedClaim(
-                claim_text=claim,
-                reason="no retrieved result supports this claim with sufficient similarity",
-                retrieved_count=len(results),
-                max_similarity=round(max_sim, 4),
-            ))
+            unsupported.append(
+                UnsupportedClaim(
+                    claim_text=claim,
+                    reason="no retrieved result supports this claim with sufficient similarity",
+                    retrieved_count=len(results),
+                    max_similarity=round(max_sim, 4),
+                )
+            )
 
     return ConsistencyReport(
         supported_claims=supported,

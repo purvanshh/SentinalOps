@@ -11,19 +11,19 @@ Proves:
   - Token expiry is encoded and decoded faithfully
   - Approval store records both approve and reject outcomes
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from jose import jwt
 
-
 # ---------------------------------------------------------------------------
 # Approval token creation — conditional on decision
 # ---------------------------------------------------------------------------
+
 
 def test_approval_token_created_when_approved():
     from tools.execution_guard import create_approval_token, decode_approval_token
@@ -48,19 +48,23 @@ def test_approval_token_not_issued_on_rejection():
 
     # Simulate the route: only create token when approved=True
     approved = False
-    token = create_approval_token(
-        incident_id=str(uuid4()),
-        action_ids=["scale_deployment"],
-        approved_by="op-1",
-        expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
-    ) if approved else None
+    token = (
+        create_approval_token(
+            incident_id=str(uuid4()),
+            action_ids=["scale_deployment"],
+            approved_by="op-1",
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
+        )
+        if approved
+        else None
+    )
 
     assert token is None
 
 
 def test_approval_token_encodes_expiry():
-    from tools.execution_guard import create_approval_token, decode_approval_token
     from core.config import get_settings
+    from tools.execution_guard import create_approval_token
 
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
     token = create_approval_token(
@@ -84,6 +88,7 @@ def test_approval_token_encodes_expiry():
 # Execution guard — tool-level enforcement
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_read_only_tool_bypasses_approval_requirement(monkeypatch):
     from tools.execution_guard import enforce_tool_execution_policy
@@ -104,7 +109,7 @@ async def test_read_only_tool_bypasses_approval_requirement(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_execution_guard_blocks_unlisted_standard_tool(monkeypatch):
-    from tools.execution_guard import enforce_tool_execution_policy, ExecutionGuardError
+    from tools.execution_guard import ExecutionGuardError, enforce_tool_execution_policy
 
     monkeypatch.setattr(
         "tools.execution_guard.load_tool_allowlist",
@@ -123,9 +128,9 @@ async def test_execution_guard_blocks_unlisted_standard_tool(monkeypatch):
 @pytest.mark.asyncio
 async def test_execution_guard_rejects_token_for_wrong_tool(monkeypatch):
     from tools.execution_guard import (
-        enforce_tool_execution_policy,
-        create_approval_token,
         ExecutionGuardError,
+        create_approval_token,
+        enforce_tool_execution_policy,
     )
 
     monkeypatch.setattr(
@@ -157,8 +162,8 @@ async def test_execution_guard_rejects_token_for_wrong_tool(monkeypatch):
 @pytest.mark.asyncio
 async def test_execution_guard_allows_correctly_approved_tool(monkeypatch):
     from tools.execution_guard import (
-        enforce_tool_execution_policy,
         create_approval_token,
+        enforce_tool_execution_policy,
     )
 
     monkeypatch.setattr(
@@ -191,6 +196,7 @@ async def test_execution_guard_allows_correctly_approved_tool(monkeypatch):
 # Approval token edge cases
 # ---------------------------------------------------------------------------
 
+
 def test_multiple_actions_in_single_token():
     from tools.execution_guard import create_approval_token, decode_approval_token
 
@@ -207,7 +213,7 @@ def test_multiple_actions_in_single_token():
 
 
 def test_decode_approval_token_raises_on_tampered_token():
-    from tools.execution_guard import decode_approval_token, ExecutionGuardError
+    from tools.execution_guard import ExecutionGuardError, decode_approval_token
 
     tampered = "eyJhbGciOiJIUzI1NiJ9.eyJpbmNpZGVudF9pZCI6InRlc3QifQ.invalid_sig"
     with pytest.raises(ExecutionGuardError):

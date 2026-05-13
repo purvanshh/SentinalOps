@@ -13,7 +13,12 @@ def _parse_time(value: str | None) -> datetime | None:
         return None
 
 
-def compute_incident_metrics(alert_time: datetime | None, evidence_items: list[Any], remediation_actions: list[Any], resolved_at: datetime | None) -> dict[str, Any]:
+def compute_incident_metrics(
+    alert_time: datetime | None,
+    evidence_items: list[Any],
+    remediation_actions: list[Any],
+    resolved_at: datetime | None,
+) -> dict[str, Any]:
     anomaly_times = []
     for item in evidence_items:
         raw = (item.content or {}).get("timestamp") if hasattr(item, "content") else None
@@ -22,7 +27,9 @@ def compute_incident_metrics(alert_time: datetime | None, evidence_items: list[A
             anomaly_times.append(parsed)
     first_anomaly = min(anomaly_times) if anomaly_times else alert_time
 
-    mitigated_candidates = [action.updated_at for action in remediation_actions if getattr(action, "executed", False)]
+    mitigated_candidates = [
+        action.updated_at for action in remediation_actions if getattr(action, "executed", False)
+    ]
     mitigated_at = min(mitigated_candidates) if mitigated_candidates else None
 
     ttd = (alert_time - first_anomaly).total_seconds() if alert_time and first_anomaly else None

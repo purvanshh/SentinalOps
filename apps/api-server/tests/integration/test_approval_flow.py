@@ -3,7 +3,6 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
-
 from main import app
 from tests.auth_helpers import make_auth_header
 
@@ -27,7 +26,9 @@ def test_approval_endpoint_processes_decision(monkeypatch) -> None:
         )
 
     async def fake_record(self, incident_id_arg, *, approved, approved_by, note):
-        return SimpleNamespace(incident_id=incident_id_arg, approved=approved, approved_by=approved_by, note=note)
+        return SimpleNamespace(
+            incident_id=incident_id_arg, approved=approved, approved_by=approved_by, note=note
+        )
 
     async def fake_get(self, incident_id_arg):
         return SimpleNamespace(id=incident_id_arg, graph_thread_id=None)

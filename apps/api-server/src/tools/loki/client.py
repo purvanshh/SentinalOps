@@ -1,7 +1,6 @@
 from typing import Any
 
 import httpx
-
 from core.config import get_settings
 
 

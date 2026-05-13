@@ -22,9 +22,10 @@ Operator explainability output:
     "propagation_path": [...]
   }
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from causality.failure_classifier import ClassifiedEvent, FailureType
@@ -34,6 +35,7 @@ from causality.temporal_engine import sequence_events_by_time
 @dataclass
 class IncidentNarrative:
     """Structured causal narrative with full explainability."""
+
     summary: str
     timeline: list[str]
     root_cause_statement: str
@@ -101,12 +103,8 @@ def generate_narrative(
     contradictory_evidence = contradictory_evidence or []
 
     primaries = [e for e in classified_events if e.failure_type == FailureType.PRIMARY_CAUSE]
-    secondaries = [
-        e for e in classified_events if e.failure_type == FailureType.SECONDARY_EFFECT
-    ]
-    cascading = [
-        e for e in classified_events if e.failure_type == FailureType.CASCADING_FAILURE
-    ]
+    secondaries = [e for e in classified_events if e.failure_type == FailureType.SECONDARY_EFFECT]
+    cascading = [e for e in classified_events if e.failure_type == FailureType.CASCADING_FAILURE]
 
     # Sort all events chronologically for timeline
     all_events_raw = [
@@ -146,9 +144,7 @@ def generate_narrative(
             f"was identified as the originating failure."
         )
     else:
-        root_cause_stmt = (
-            "Root cause could not be conclusively identified from available evidence."
-        )
+        root_cause_stmt = "Root cause could not be conclusively identified from available evidence."
 
     # Propagation description
     propagation_parts = []
@@ -162,19 +158,26 @@ def generate_narrative(
     if cascading:
         propagation_parts.append(
             f"The failure cascaded through {len(cascading)} additional service(s): "
-            + ", ".join(c.node.service for c in cascading[:3]) + "."
+            + ", ".join(c.node.service for c in cascading[:3])
+            + "."
         )
-    propagation_desc = " ".join(propagation_parts) if propagation_parts else (
-        "No downstream propagation detected."
+    propagation_desc = (
+        " ".join(propagation_parts)
+        if propagation_parts
+        else ("No downstream propagation detected.")
     )
 
     # Propagation path
-    propagation_path = [c.node.service for c in classified_events
-                        if c.failure_type in (
-                            FailureType.PRIMARY_CAUSE,
-                            FailureType.SECONDARY_EFFECT,
-                            FailureType.CASCADING_FAILURE,
-                        )]
+    propagation_path = [
+        c.node.service
+        for c in classified_events
+        if c.failure_type
+        in (
+            FailureType.PRIMARY_CAUSE,
+            FailureType.SECONDARY_EFFECT,
+            FailureType.CASCADING_FAILURE,
+        )
+    ]
 
     # Why statements
     why_statements = []
@@ -201,9 +204,8 @@ def generate_narrative(
 
     # Uncertainty note
     conf_label = _confidence_label(causal_confidence)
-    uncertainty_note = (
-        f"Causal attribution is {conf_label} ({causal_confidence:.0%}). "
-        + ("Operator review recommended." if causal_confidence < 0.60 else "")
+    uncertainty_note = f"Causal attribution is {conf_label} ({causal_confidence:.0%}). " + (
+        "Operator review recommended." if causal_confidence < 0.60 else ""
     )
 
     # Summary

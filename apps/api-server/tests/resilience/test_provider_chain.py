@@ -8,13 +8,11 @@ Verifies that:
 - Operating mode transitions correctly on failures
 """
 
-import pytest
 import httpx
+import pytest
 import respx
-
-from core.resilience.circuit_breaker import CircuitState
 from core.resilience.operating_mode import OperatingMode, OperatingModeManager
-from core.resilience.provider_chain import ProviderChain, ProviderConfig, ProviderRateLimitError
+from core.resilience.provider_chain import ProviderChain, ProviderConfig
 
 
 @pytest.fixture(autouse=True)
@@ -72,9 +70,7 @@ def _make_providers() -> list[ProviderConfig]:
 def _success_response():
     return httpx.Response(
         200,
-        json={
-            "choices": [{"message": {"role": "assistant", "content": "test response"}}]
-        },
+        json={"choices": [{"message": {"role": "assistant", "content": "test response"}}]},
     )
 
 

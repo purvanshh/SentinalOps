@@ -12,11 +12,12 @@ Proves:
   - compute_propagation_lag() returns non-negative lag in seconds.
   - to_dict() produces serializable graph representation.
 """
+
 from __future__ import annotations
 
-import pytest
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from causality.event_graph import (
     CausalEdge,
     CausalEventGraph,
@@ -143,9 +144,7 @@ def test_build_temporal_edges_adds_precedence_edge() -> None:
     graph.add_node(_make_node("EARLY", ts_offset=0))
     graph.add_node(_make_node("LATE", ts_offset=60))
     edges = build_temporal_edges(graph, propagation_window_seconds=300)
-    assert any(
-        e.source_id == "EARLY" and e.target_id == "LATE" for e in edges
-    )
+    assert any(e.source_id == "EARLY" and e.target_id == "LATE" for e in edges)
 
 
 def test_build_temporal_edges_outside_window_not_added() -> None:

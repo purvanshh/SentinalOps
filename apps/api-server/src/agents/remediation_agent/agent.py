@@ -1,8 +1,7 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from agents.remediation_agent.output_schema import RemediationPlan
 from db.models.incident import Incident
 from db.repositories.incident_repo import IncidentRepository
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def build_remediation_plan(
@@ -10,10 +9,17 @@ async def build_remediation_plan(
     *,
     db_session: AsyncSession,
 ) -> RemediationPlan:
-    risk_execution = next(
-        (execution.output for execution in incident.agent_executions if execution.agent_name == "risk_agent"),
-        None,
-    ) or {}
+    risk_execution = (
+        next(
+            (
+                execution.output
+                for execution in incident.agent_executions
+                if execution.agent_name == "risk_agent"
+            ),
+            None,
+        )
+        or {}
+    )
     remediation_risks = risk_execution.get("remediation_risks", [])
 
     steps = []

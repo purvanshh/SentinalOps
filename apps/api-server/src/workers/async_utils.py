@@ -11,6 +11,7 @@ to call async code from sync context, but it fails in two scenarios:
 run_async() fixes both by always constructing a private loop per call,
 running to completion, draining any pending tasks, and closing cleanly.
 """
+
 from __future__ import annotations
 
 import asyncio

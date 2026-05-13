@@ -1,13 +1,12 @@
 import asyncio
 
 import httpx
-from fastapi import APIRouter
-from redis.asyncio import Redis
-
 from core.config import get_settings
 from core.resilience.operating_mode import OperatingModeManager
 from core.resilience.resilient_llm_client import get_provider_chain
+from fastapi import APIRouter
 from observability.metrics import build_metrics_snapshot, observe_api_request
+from redis.asyncio import Redis
 
 router = APIRouter(tags=["health"])
 

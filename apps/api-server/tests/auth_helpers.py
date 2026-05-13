@@ -1,6 +1,7 @@
-from jose import jwt
+from datetime import UTC, datetime, timedelta
 
 from core.config import get_settings
+from jose import jwt
 
 
 def make_auth_header(role: str) -> dict[str, str]:
@@ -10,6 +11,11 @@ def make_auth_header(role: str) -> dict[str, str]:
         "roles": [role],
         "aud": settings.auth0_audience,
         "iss": settings.auth_issuer,
+        "exp": datetime.now(UTC) + timedelta(hours=1),
     }
-    token = jwt.encode(payload, settings.auth0_secret_key, algorithm=settings.auth0_algorithms.split(",")[0].strip())
+    token = jwt.encode(
+        payload,
+        settings.auth0_secret_key,
+        algorithm=settings.auth0_algorithms.split(",")[0].strip(),
+    )
     return {"Authorization": f"Bearer {token}"}

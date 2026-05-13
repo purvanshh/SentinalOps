@@ -12,12 +12,16 @@ def evaluate_contributing_factors(context: dict[str, Any]) -> list[dict[str, str
         {
             "factor": "Deployment procedure risk",
             "detected": deploy_detected,
-            "detail": deployment.get("correlation_with_incident", "No deployment correlation found."),
+            "detail": deployment.get(
+                "correlation_with_incident", "No deployment correlation found."
+            ),
         },
         {
             "factor": "Monitoring lag",
             "detected": high_latency,
-            "detail": "Alert and anomaly windows indicate whether detection lagged the first symptom.",
+            "detail": (
+                "Alert and anomaly windows indicate whether detection " "lagged the first symptom."
+            ),
         },
         {
             "factor": "Recurring error signatures",
@@ -27,7 +31,10 @@ def evaluate_contributing_factors(context: dict[str, Any]) -> list[dict[str, str
         {
             "factor": "Insufficient redundancy",
             "detected": deploy_detected and recurring_errors,
-            "detail": "Service degradation after a single change suggests weak safety rails or fallback capacity.",
+            "detail": (
+                "Service degradation after a single change suggests weak "
+                "safety rails or fallback capacity."
+            ),
         },
     ]
     return factors

@@ -1,27 +1,29 @@
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from api.dependencies import get_db, require_role
 from api.middleware.auth import AuthenticatedUser
 from api.schemas.approval import ApprovalDecisionRequest, ApprovalQueueItem, ApprovalResponse
 from db.repositories.incident_repo import IncidentRepository
+from fastapi import APIRouter, Depends, HTTPException, status
 from orchestration.graphs.main_graph import build_main_graph
-from orchestration.interrupts.commands import ResumeCommand
 from orchestration.interrupts.approval_store import ApprovalStore
+from orchestration.interrupts.commands import ResumeCommand
+from sqlalchemy.ext.asyncio import AsyncSession
 from tools.action_mapping import map_action_to_tool
 from tools.execution_guard import create_approval_token
 from workers.tasks.approval_workflow import process_approval_decision
 
 router = APIRouter(prefix="/approvals", tags=["approvals"])
+DB_DEPENDENCY = Depends(get_db)
+VIEWER_ROLE_DEPENDENCY = Depends(require_role(["viewer"]))
+OPERATOR_ROLE_DEPENDENCY = Depends(require_role(["operator"]))
 
 
 @router.get("", response_model=list[ApprovalQueueItem])
 async def pending_approvals(
-    db: AsyncSession = Depends(get_db),
-    _: AuthenticatedUser = Depends(require_role(["viewer"])),
+    db: AsyncSession = DB_DEPENDENCY,
+    _: AuthenticatedUser = VIEWER_ROLE_DEPENDENCY,
 ) -> list[ApprovalQueueItem]:
     rows = await ApprovalStore(db).list_pending_approvals()
     return [
@@ -44,8 +46,8 @@ async def pending_approvals(
 async def decide_approval(
     incident_id: UUID,
     payload: ApprovalDecisionRequest,
-    db: AsyncSession = Depends(get_db),
-    user: AuthenticatedUser = Depends(require_role(["operator"])),
+    db: AsyncSession = DB_DEPENDENCY,
+    user: AuthenticatedUser = OPERATOR_ROLE_DEPENDENCY,
 ) -> ApprovalResponse:
     approval_store = ApprovalStore(db)
     pending = await approval_store.get_pending_approval(incident_id)
@@ -84,7 +86,9 @@ async def decide_approval(
             ),
         )
     else:
-        await process_approval_decision(incident_id, payload.approved, payload.note, user.user_id, db)
+        await process_approval_decision(
+            incident_id, payload.approved, payload.note, user.user_id, db
+        )
         approval_token = None
         await approval_store.record_approval(
             incident_id,

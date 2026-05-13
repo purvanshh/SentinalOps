@@ -11,14 +11,13 @@ Proves:
   - Empty topology does not raise errors.
   - limit parameter caps the result count.
 """
+
 from __future__ import annotations
 
-import math
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
-
 from retrieval.hybrid_retrieval import (
     HybridRetriever,
     _compute_hybrid_score,

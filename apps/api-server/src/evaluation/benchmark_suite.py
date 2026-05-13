@@ -4,6 +4,7 @@ Phase 39 benchmark suite loader and validator.
 Loads the 106-incident labeled evaluation suite from benchmark_suite_v1.json.
 Provides typed access to benchmark incidents for deterministic replay.
 """
+
 from __future__ import annotations
 
 import json
@@ -11,20 +12,24 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-
 SUITE_FILE = (
     Path(__file__).parent.parent.parent.parent.parent
-    / "simulation" / "datasets" / "evaluation" / "benchmark_suite_v1.json"
+    / "simulation"
+    / "datasets"
+    / "evaluation"
+    / "benchmark_suite_v1.json"
 )
 
-REMEDIATION_CLASSES = frozenset({
-    "SAFE_AND_CORRECT",
-    "SAFE_BUT_USELESS",
-    "PARTIALLY_CORRECT",
-    "DANGEROUS",
-    "HALLUCINATED",
-    "OPERATIONALLY_INVALID",
-})
+REMEDIATION_CLASSES = frozenset(
+    {
+        "SAFE_AND_CORRECT",
+        "SAFE_BUT_USELESS",
+        "PARTIALLY_CORRECT",
+        "DANGEROUS",
+        "HALLUCINATED",
+        "OPERATIONALLY_INVALID",
+    }
+)
 
 RISK_TIERS = frozenset({"LOW", "MODERATE", "HIGH", "CRITICAL"})
 OPERATOR_ACTIONS = frozenset({"APPROVE", "REJECT", "ESCALATE", "IGNORE"})
@@ -69,7 +74,9 @@ class BenchmarkIncident:
 
     @property
     def mocked_confidence(self) -> float:
-        return self.mocked_tool_responses.get("router", {}).get("confidence", self.confidence_midpoint)
+        return self.mocked_tool_responses.get("router", {}).get(
+            "confidence", self.confidence_midpoint
+        )
 
     def to_runner_format(self) -> dict[str, Any]:
         """Produce the dict format expected by evaluation/runner.py."""

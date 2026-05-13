@@ -30,14 +30,20 @@ def assess_candidate(candidate: CandidateCause, events: list[TimedEvent]) -> Can
         if any(keyword in summary for keyword in candidate.required_keywords):
             evidence_for.append(event)
             matched_keywords += 1
-        elif event.service == candidate.cause_service or event.service == candidate.affected_service:
+        elif (
+            event.service == candidate.cause_service or event.service == candidate.affected_service
+        ):
             evidence_neutral.append(event)
         else:
             evidence_against.append(event)
 
     required_total = max(len(candidate.required_keywords), 1)
     evidence_coverage = min((len(evidence_for) + matched_keywords) / required_total, 1.0)
-    counterfactual_power = 0.85 if evidence_against == [] else max(0.35, 1 - (len(evidence_against) / max(len(events), 1)))
+    counterfactual_power = (
+        0.85
+        if evidence_against == []
+        else max(0.35, 1 - (len(evidence_against) / max(len(events), 1)))
+    )
 
     return CandidateAssessment(
         candidate=candidate,

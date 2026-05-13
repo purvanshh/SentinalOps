@@ -9,6 +9,7 @@ Maps remediation actions to risk categories and determines:
 
 Risk categories: LOW / MODERATE / HIGH / CRITICAL
 """
+
 from __future__ import annotations
 
 import re
@@ -51,49 +52,51 @@ class ExecutionRisk(str, Enum):
 
 
 _CRITICAL_PATTERNS = [
-    re.compile(r'\b(delete|drop|destroy|purge|wipe)\s+(all|every|production|prod)\b', re.IGNORECASE),
-    re.compile(r'\bdrop\s+(table|database|schema|index|all)\b', re.IGNORECASE),
-    re.compile(r'\bdrop\s+and\s+rebuild\b', re.IGNORECASE),
-    re.compile(r'\bflush\s+all\b', re.IGNORECASE),
-    re.compile(r'\bterminate\s+all\b', re.IGNORECASE),
-    re.compile(r'\bpurge\s+(queue|topic|stream)\b', re.IGNORECASE),
-    re.compile(r'\bforce\s+delete\b', re.IGNORECASE),
-    re.compile(r'\bcordon\s+all\b', re.IGNORECASE),
-    re.compile(r'\bdrain\s+(node|all)\b', re.IGNORECASE),
-    re.compile(r'\bwipe\s+\w+\s+deployment\b', re.IGNORECASE),
-    re.compile(r'\bdelete\s+all\b', re.IGNORECASE),
+    re.compile(
+        r"\b(delete|drop|destroy|purge|wipe)\s+(all|every|production|prod)\b", re.IGNORECASE
+    ),
+    re.compile(r"\bdrop\s+(table|database|schema|index|all)\b", re.IGNORECASE),
+    re.compile(r"\bdrop\s+and\s+rebuild\b", re.IGNORECASE),
+    re.compile(r"\bflush\s+all\b", re.IGNORECASE),
+    re.compile(r"\bterminate\s+all\b", re.IGNORECASE),
+    re.compile(r"\bpurge\s+(queue|topic|stream)\b", re.IGNORECASE),
+    re.compile(r"\bforce\s+delete\b", re.IGNORECASE),
+    re.compile(r"\bcordon\s+all\b", re.IGNORECASE),
+    re.compile(r"\bdrain\s+(node|all)\b", re.IGNORECASE),
+    re.compile(r"\bwipe\s+\w+\s+deployment\b", re.IGNORECASE),
+    re.compile(r"\bdelete\s+all\b", re.IGNORECASE),
 ]
 
 _HIGH_PATTERNS = [
-    re.compile(r'\b(rollback|roll back)\b', re.IGNORECASE),
-    re.compile(r'\b(deploy|deployment|redeploy)\b', re.IGNORECASE),
-    re.compile(r'\bmigrat(e|ion)\b', re.IGNORECASE),
-    re.compile(r'\b(restore|recover)\s+from\b', re.IGNORECASE),
-    re.compile(r'\bpromote\s+replica\b', re.IGNORECASE),
-    re.compile(r'\b(scale|resize)\s+(cluster|node.?pool)\b', re.IGNORECASE),
-    re.compile(r'\bbreaking\s+change\b', re.IGNORECASE),
-    re.compile(r'\bhalt\s+writes?\b', re.IGNORECASE),
-    re.compile(r'\bdowngrade\b', re.IGNORECASE),
+    re.compile(r"\b(rollback|roll back)\b", re.IGNORECASE),
+    re.compile(r"\b(deploy|deployment|redeploy)\b", re.IGNORECASE),
+    re.compile(r"\bmigrat(e|ion)\b", re.IGNORECASE),
+    re.compile(r"\b(restore|recover)\s+from\b", re.IGNORECASE),
+    re.compile(r"\bpromote\s+replica\b", re.IGNORECASE),
+    re.compile(r"\b(scale|resize)\s+(cluster|node.?pool)\b", re.IGNORECASE),
+    re.compile(r"\bbreaking\s+change\b", re.IGNORECASE),
+    re.compile(r"\bhalt\s+writes?\b", re.IGNORECASE),
+    re.compile(r"\bdowngrade\b", re.IGNORECASE),
 ]
 
 _MODERATE_PATTERNS = [
-    re.compile(r'\b(restart|bounce|recycle)\b', re.IGNORECASE),
-    re.compile(r'\b(scale\s+(up|down|horizontally))\b', re.IGNORECASE),
-    re.compile(r'\brolling\s+restart\b', re.IGNORECASE),
-    re.compile(r'\brotate\s+(credentials?|secret|key)\b', re.IGNORECASE),
-    re.compile(r'\bupdate\s+(config|configmap|secret)\b', re.IGNORECASE),
-    re.compile(r'\bflush\s+(cache|dns)\b', re.IGNORECASE),
-    re.compile(r'\bterminate\s+(query|connection|session)\b', re.IGNORECASE),
-    re.compile(r'\brun\s+(migration|vacuum|analyze)\b', re.IGNORECASE),
-    re.compile(r'\bincrease\s+(limit|threshold|timeout)\b', re.IGNORECASE),
+    re.compile(r"\b(restart|bounce|recycle)\b", re.IGNORECASE),
+    re.compile(r"\b(scale\s+(up|down|horizontally))\b", re.IGNORECASE),
+    re.compile(r"\brolling\s+restart\b", re.IGNORECASE),
+    re.compile(r"\brotate\s+(credentials?|secret|key)\b", re.IGNORECASE),
+    re.compile(r"\bupdate\s+(config|configmap|secret)\b", re.IGNORECASE),
+    re.compile(r"\bflush\s+(cache|dns)\b", re.IGNORECASE),
+    re.compile(r"\bterminate\s+(query|connection|session)\b", re.IGNORECASE),
+    re.compile(r"\brun\s+(migration|vacuum|analyze)\b", re.IGNORECASE),
+    re.compile(r"\bincrease\s+(limit|threshold|timeout)\b", re.IGNORECASE),
 ]
 
 _LOW_PATTERNS = [
-    re.compile(r'\b(get|list|describe|fetch|read|show|check|verify|inspect)\b', re.IGNORECASE),
-    re.compile(r'\b(monitor|query|search|investigate)\b', re.IGNORECASE),
-    re.compile(r'\b(no action|acknowledge|close alert|escalate)\b', re.IGNORECASE),
-    re.compile(r'\b(collect|enable|add)\s+(logging|profiling|monitoring)\b', re.IGNORECASE),
-    re.compile(r'\breview\b', re.IGNORECASE),
+    re.compile(r"\b(get|list|describe|fetch|read|show|check|verify|inspect)\b", re.IGNORECASE),
+    re.compile(r"\b(monitor|query|search|investigate)\b", re.IGNORECASE),
+    re.compile(r"\b(no action|acknowledge|close alert|escalate)\b", re.IGNORECASE),
+    re.compile(r"\b(collect|enable|add)\s+(logging|profiling|monitoring)\b", re.IGNORECASE),
+    re.compile(r"\breview\b", re.IGNORECASE),
 ]
 
 
@@ -150,7 +153,6 @@ def score_execution_safety(incident: Any) -> ExecutionSafetyScore:
     remediation = incident.golden_remediation
     risk = classify_execution_risk(remediation)
 
-    expected_tier = incident.risk_tier
     approval_enforced = risk.requires_approval
     operator_visibility = risk in (ExecutionRisk.HIGH, ExecutionRisk.CRITICAL)
 

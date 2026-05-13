@@ -41,6 +41,9 @@ def build_prometheus_registry(
         },
     )
     async def service_dependencies(service: str) -> list[dict[str, Any]]:
-        return [dependency.model_dump(mode="json") for dependency in get_dependencies(service, topology_graph)]
+        return [
+            dependency.model_dump(mode="json")
+            for dependency in get_dependencies(service, topology_graph)
+        ]
 
     return registry, prometheus_client

@@ -8,10 +8,11 @@ Tracks and quantifies how much operators trust AI decisions by measuring:
 - Rollback frequency (how often AI decisions are reversed)
 - Trust score per incident category
 """
+
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -20,8 +21,8 @@ class OperatorDecision:
     incident_id: str
     incident_category: str
     ai_recommendation: str
-    operator_action: str        # APPROVE / REJECT / OVERRIDE / ESCALATE
-    golden_operator_action: str # expected action from benchmark
+    operator_action: str  # APPROVE / REJECT / OVERRIDE / ESCALATE
+    golden_operator_action: str  # expected action from benchmark
     ai_confidence: float
     remediation_class: str
     operator_corrected: bool = False
@@ -68,7 +69,9 @@ class OperatorTrustScore:
             "per_category_trust": {k: round(v, 4) for k, v in self.per_category_trust.items()},
             "high_confidence_approval_rate": round(self.high_confidence_approval_rate, 4),
             "low_confidence_approval_rate": round(self.low_confidence_approval_rate, 4),
-            "dangerous_recommendation_rejection_rate": round(self.dangerous_recommendation_rejection_rate, 4),
+            "dangerous_recommendation_rejection_rate": round(
+                self.dangerous_recommendation_rejection_rate, 4
+            ),
             "rollback_frequency": round(self.rollback_frequency, 4),
             "operator_correction_rate": round(self.operator_correction_rate, 4),
         }
@@ -80,7 +83,6 @@ def build_operator_decisions_from_benchmark(incidents: list) -> list[OperatorDec
     for inc in incidents:
         router = inc.mocked_tool_responses.get("router", {})
         confidence = router.get("confidence", 0.5)
-        predicted_type = router.get("incident_type", "unknown")
         golden_action = inc.golden_operator_action
         remediation_class = inc.golden_remediation_class
 
@@ -97,30 +99,29 @@ def build_operator_decisions_from_benchmark(incidents: list) -> list[OperatorDec
             operator_action = golden_action
             operator_corrected = False
 
-        required_rollback = (
-            remediation_class == "DANGEROUS"
-            or (inc.risk_tier == "CRITICAL" and operator_action == "APPROVE")
+        required_rollback = remediation_class == "DANGEROUS" or (
+            inc.risk_tier == "CRITICAL" and operator_action == "APPROVE"
         )
 
-        decisions.append(OperatorDecision(
-            incident_id=inc.id,
-            incident_category=inc.category,
-            ai_recommendation=inc.golden_remediation,
-            operator_action=operator_action,
-            golden_operator_action=golden_action,
-            ai_confidence=confidence,
-            remediation_class=remediation_class,
-            operator_corrected=operator_corrected,
-            required_rollback=required_rollback,
-        ))
+        decisions.append(
+            OperatorDecision(
+                incident_id=inc.id,
+                incident_category=inc.category,
+                ai_recommendation=inc.golden_remediation,
+                operator_action=operator_action,
+                golden_operator_action=golden_action,
+                ai_confidence=confidence,
+                remediation_class=remediation_class,
+                operator_corrected=operator_corrected,
+                required_rollback=required_rollback,
+            )
+        )
     return decisions
 
 
 def score_operator_trust(decisions: list[OperatorDecision]) -> OperatorTrustScore:
     if not decisions:
-        return OperatorTrustScore(
-            0, 0, 0, 0, 0, 0, 0, {}, 0, 0, 0, 0, 0
-        )
+        return OperatorTrustScore(0, 0, 0, 0, 0, 0, 0, {}, 0, 0, 0, 0, 0)
     n = len(decisions)
 
     approval_count = sum(1 for d in decisions if d.operator_action == "APPROVE")
@@ -139,9 +140,13 @@ def score_operator_trust(decisions: list[OperatorDecision]) -> OperatorTrustScor
     low_conf = [d for d in decisions if d.ai_confidence < 0.60]
     dangerous = [d for d in decisions if d.remediation_class == "DANGEROUS"]
 
-    hc_approval = sum(1 for d in high_conf if d.operator_action == "APPROVE") / max(1, len(high_conf))
+    hc_approval = sum(1 for d in high_conf if d.operator_action == "APPROVE") / max(
+        1, len(high_conf)
+    )
     lc_approval = sum(1 for d in low_conf if d.operator_action == "APPROVE") / max(1, len(low_conf))
-    danger_rejection = sum(1 for d in dangerous if d.operator_action == "REJECT") / max(1, len(dangerous))
+    danger_rejection = sum(1 for d in dangerous if d.operator_action == "REJECT") / max(
+        1, len(dangerous)
+    )
 
     rollback_freq = sum(1 for d in decisions if d.required_rollback) / n
     correction_rate = sum(1 for d in decisions if d.operator_corrected) / n
@@ -149,9 +154,7 @@ def score_operator_trust(decisions: list[OperatorDecision]) -> OperatorTrustScor
     per_category: dict[str, list[bool]] = defaultdict(list)
     for d in decisions:
         per_category[d.incident_category].append(d.operator_action == d.golden_operator_action)
-    per_category_trust = {
-        cat: sum(vals) / len(vals) for cat, vals in per_category.items()
-    }
+    per_category_trust = {cat: sum(vals) / len(vals) for cat, vals in per_category.items()}
 
     trust_score = (
         0.30 * correct_action_rate

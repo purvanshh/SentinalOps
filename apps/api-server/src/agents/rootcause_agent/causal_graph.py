@@ -46,8 +46,7 @@ def build_candidate_causes(
             item_key
             for item_key, event in event_lookup.items()
             if any(
-                symptom.lower() in event.summary.lower()
-                for symptom in pattern.get("symptoms", [])
+                symptom.lower() in event.summary.lower() for symptom in pattern.get("symptoms", [])
             )
         ]
         candidates.append(

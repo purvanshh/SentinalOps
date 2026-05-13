@@ -18,11 +18,13 @@ def _load_historical_incidents(path: str | None = None) -> list[dict[str, Any]]:
         return list(csv.DictReader(handle))
 
 
-async def fetch_live_traffic(service: str, client: PrometheusClient | None = None) -> dict[str, Any]:
+async def fetch_live_traffic(
+    service: str, client: PrometheusClient | None = None
+) -> dict[str, Any]:
     prometheus_client = client or PrometheusClient()
     try:
         payload = await prometheus_client.query_range(
-            f"sum(rate(http_requests_total{{service=\"{service}\"}}[5m]))",
+            f'sum(rate(http_requests_total{{service="{service}"}}[5m]))',
             "now-5m",
             "now",
             "60s",

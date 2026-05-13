@@ -1,13 +1,12 @@
 from time import perf_counter
 from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from agents.base_agent import agent_loop
 from agents.metrics_agent.output_schema import MetricsSummary
 from agents.metrics_agent.prompts import build_metrics_system_prompt, build_metrics_user_prompt
 from core.llm_client import LLMClient
 from db.models.incident import Incident
+from sqlalchemy.ext.asyncio import AsyncSession
 from tools.prometheus.client import PrometheusClient
 from tools.prometheus.tools import build_prometheus_registry
 

@@ -8,6 +8,7 @@ Proves:
   - Health endpoint returns required service keys without making external calls
   - Concurrent indexing calls do not share mutable vector state
 """
+
 from __future__ import annotations
 
 import threading
@@ -15,10 +16,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Qdrant hot-path: bootstrap must NOT be called by indexing methods
 # ---------------------------------------------------------------------------
+
 
 def test_index_patterns_does_not_call_bootstrap(monkeypatch):
     from retrieval.retrieval_orchestrator import RetrievalOrchestrator
@@ -32,7 +33,9 @@ def test_index_patterns_does_not_call_bootstrap(monkeypatch):
     orch.collection_manager.upsert_points.return_value = True
     orch.bootstrap = MagicMock()
 
-    orch.index_patterns([{"title": "CPU spike", "description": "High CPU", "symptoms": ["latency"]}])
+    orch.index_patterns(
+        [{"title": "CPU spike", "description": "High CPU", "symptoms": ["latency"]}]
+    )
 
     orch.bootstrap.assert_not_called()
     orch.collection_manager.ensure_collection.assert_not_called()
@@ -72,7 +75,9 @@ async def test_index_prevention_items_does_not_call_bootstrap():
     orch.collection_manager.upsert_points_async = AsyncMock(return_value=True)
     orch.bootstrap = MagicMock()
 
-    await orch.index_prevention_items([{"title": "Update deps", "description": "Patch CVE-2024-1234", "status": "open"}])
+    await orch.index_prevention_items(
+        [{"title": "Update deps", "description": "Patch CVE-2024-1234", "status": "open"}]
+    )
 
     orch.bootstrap.assert_not_called()
     orch.collection_manager.ensure_collection.assert_not_called()
@@ -108,6 +113,7 @@ async def test_index_resolved_incident_does_not_call_bootstrap():
 # EmbeddingClient: determinism and normalization
 # ---------------------------------------------------------------------------
 
+
 def test_embedding_is_deterministic():
     from retrieval.embeddings.embedding_client import EmbeddingClient
 
@@ -119,6 +125,7 @@ def test_embedding_is_deterministic():
 
 def test_embedding_is_unit_normalised():
     import math
+
     from retrieval.embeddings.embedding_client import EmbeddingClient
 
     client = EmbeddingClient(dimensions=16)
@@ -149,6 +156,7 @@ def test_different_texts_produce_different_embeddings():
 # Concurrent indexing: no shared mutable vector state
 # ---------------------------------------------------------------------------
 
+
 def test_concurrent_index_calls_produce_independent_vectors():
     from retrieval.embeddings.embedding_client import EmbeddingClient
 
@@ -175,17 +183,21 @@ def test_concurrent_index_calls_produce_independent_vectors():
 # Health endpoint: structure check
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_health_response_contains_required_service_keys():
-    from api.routes.health import health_check
-    from unittest.mock import AsyncMock, patch, MagicMock
+    from unittest.mock import AsyncMock
 
-    with patch("api.routes.health.OperatingModeManager") as mock_mode, \
-         patch("api.routes.health.get_provider_chain") as mock_chain, \
-         patch("api.routes.health.build_metrics_snapshot", return_value={}), \
-         patch("api.routes.health.observe_api_request"), \
-         patch("api.routes.health._probe_redis", new=AsyncMock(return_value="reachable")), \
-         patch("api.routes.health._probe_qdrant", new=AsyncMock(return_value="reachable")):
+    from api.routes.health import health_check
+
+    with (
+        patch("api.routes.health.OperatingModeManager") as mock_mode,
+        patch("api.routes.health.get_provider_chain") as mock_chain,
+        patch("api.routes.health.build_metrics_snapshot", return_value={}),
+        patch("api.routes.health.observe_api_request"),
+        patch("api.routes.health._probe_redis", new=AsyncMock(return_value="reachable")),
+        patch("api.routes.health._probe_qdrant", new=AsyncMock(return_value="reachable")),
+    ):
         mock_mode.return_value.current_mode.value = "normal"
         mock_mode.return_value.to_dict.return_value = {}
         mock_chain.return_value.get_health.return_value = {}

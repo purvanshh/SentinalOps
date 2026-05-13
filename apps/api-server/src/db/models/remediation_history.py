@@ -1,7 +1,6 @@
+from db.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from sqlalchemy import Boolean, Float, Text
 from sqlalchemy.orm import Mapped, mapped_column
-
-from db.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class RemediationHistory(UUIDPrimaryKeyMixin, TimestampMixin, Base):

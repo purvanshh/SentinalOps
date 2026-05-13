@@ -17,7 +17,9 @@ async def check_pending_approvals() -> list[str]:
     for item in rows:
         expires_at = datetime.fromisoformat(item.expires_at)
         age = now - item.created_at
-        if now >= expires_at + timedelta(minutes=settings.approval_auto_reject_minutes - settings.approval_timeout_minutes):
+        if now >= expires_at + timedelta(
+            minutes=settings.approval_auto_reject_minutes - settings.approval_timeout_minutes
+        ):
             escalations.append(f"{item.incident_id}:auto_reject")
             escalate_approval.delay(str(item.incident_id))
         elif age >= timedelta(minutes=settings.approval_timeout_minutes):

@@ -1,4 +1,6 @@
-def calculate_deployment_risk(change_type: str, minutes_since_deploy: int, prior_incident_match: bool) -> float:
+def calculate_deployment_risk(
+    change_type: str, minutes_since_deploy: int, prior_incident_match: bool
+) -> float:
     base_score_map = {
         "infrastructure": 0.8,
         "database": 0.85,

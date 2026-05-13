@@ -4,7 +4,6 @@ from uuid import uuid4
 
 import httpx
 import pytest
-
 from agents.logs_agent.agent import analyze_logs
 from core.llm_client import LLMClient
 from tools.loki.client import LokiClient
@@ -32,7 +31,11 @@ async def test_logs_agent_uses_loki_tools() -> None:
                                 "function": {
                                     "name": "query_loki",
                                     "arguments": json.dumps(
-                                        {"logql": "{service=\"payment-api\"}", "start": "1", "end": "2"}
+                                        {
+                                            "logql": '{service="payment-api"}',
+                                            "start": "1",
+                                            "end": "2",
+                                        }
                                     ),
                                 },
                             }

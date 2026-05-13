@@ -4,8 +4,6 @@ Tests for the circuit breaker implementation.
 
 import time
 
-import pytest
-
 from core.resilience.circuit_breaker import CircuitBreaker, CircuitState
 
 
@@ -42,7 +40,9 @@ class TestCircuitBreaker:
         assert cb.state == CircuitState.HALF_OPEN
 
     def test_half_open_success_closes_circuit(self):
-        cb = CircuitBreaker("test", failure_threshold=1, recovery_timeout=0.1, half_open_max_calls=1)
+        cb = CircuitBreaker(
+            "test", failure_threshold=1, recovery_timeout=0.1, half_open_max_calls=1
+        )
         cb.record_failure()
         time.sleep(0.15)
         assert cb.state == CircuitState.HALF_OPEN

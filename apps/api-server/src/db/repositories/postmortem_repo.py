@@ -1,7 +1,6 @@
-from sqlalchemy import select
-
 from db.models import Postmortem, PreventionItem
 from db.repositories import BaseRepository
+from sqlalchemy import select
 
 
 class PostmortemRepository(BaseRepository):
@@ -26,12 +25,16 @@ class PostmortemRepository(BaseRepository):
 
     async def list_postmortems(self, incident_id) -> list[Postmortem]:
         result = await self.session.execute(
-            select(Postmortem).where(Postmortem.incident_id == incident_id).order_by(Postmortem.version.asc())
+            select(Postmortem)
+            .where(Postmortem.incident_id == incident_id)
+            .order_by(Postmortem.version.asc())
         )
         return list(result.scalars().all())
 
     async def list_prevention_items(self) -> list[PreventionItem]:
-        result = await self.session.execute(select(PreventionItem).order_by(PreventionItem.created_at.asc()))
+        result = await self.session.execute(
+            select(PreventionItem).order_by(PreventionItem.created_at.asc())
+        )
         return list(result.scalars().all())
 
     async def create_prevention_items(self, items: list[dict]) -> list[PreventionItem]:

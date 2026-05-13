@@ -5,10 +5,9 @@ import warnings
 from typing import Any
 
 import structlog
-from sqlalchemy import select
-
 from db.models.workflow_checkpoint import WorkflowCheckpoint
 from db.session import SessionLocal
+from sqlalchemy import select
 
 logger = structlog.get_logger(__name__)
 
@@ -79,7 +78,9 @@ class WorkflowCheckpointStore:
                 )
             return None
 
-    async def recover_state(self, *, thread_id: str | None = None, incident_id: str | None = None) -> dict[str, Any] | None:
+    async def recover_state(
+        self, *, thread_id: str | None = None, incident_id: str | None = None
+    ) -> dict[str, Any] | None:
         checkpoint = None
         if thread_id is not None:
             checkpoint = await self.latest(thread_id)
@@ -99,8 +100,8 @@ def build_langgraph_checkpointer():
     to ensure cross-process interrupt/resume works correctly.
     """
     try:
-        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
         from core.config import get_settings
+        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
         settings = get_settings()
         saver = AsyncPostgresSaver.from_conn_string(

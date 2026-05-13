@@ -2,10 +2,9 @@ import json
 
 import httpx
 import pytest
-from pydantic import BaseModel
-
 from agents.base_agent import agent_loop
 from core.llm_client import LLMClient
+from pydantic import BaseModel
 from tools.registry import ToolRegistry
 
 

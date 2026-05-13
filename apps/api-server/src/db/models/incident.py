@@ -1,7 +1,6 @@
+from db.models.base import Base, JsonDict, TimestampMixin, UUIDPrimaryKeyMixin
 from sqlalchemy import Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from db.models.base import Base, JsonDict, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class Incident(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -28,7 +27,9 @@ class Incident(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     ttr_seconds: Mapped[float | None] = mapped_column(nullable=True)
 
     agent_executions = relationship("AgentExecution", back_populates="incident", lazy="selectin")
-    remediation_actions = relationship("RemediationAction", back_populates="incident", lazy="selectin")
+    remediation_actions = relationship(
+        "RemediationAction", back_populates="incident", lazy="selectin"
+    )
     evaluations = relationship("Evaluation", back_populates="incident", lazy="selectin")
     postmortems = relationship("Postmortem", back_populates="incident", lazy="selectin")
     evidence_items = relationship("EvidenceItem", back_populates="incident", lazy="selectin")

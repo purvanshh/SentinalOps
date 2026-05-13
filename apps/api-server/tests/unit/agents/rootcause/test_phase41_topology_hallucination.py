@@ -6,6 +6,7 @@ Proves:
      that reference services not registered in the topology, preventing the
      root cause agent from reasoning about infrastructure that does not exist.
 """
+
 from __future__ import annotations
 
 from agents.rootcause_agent.causal_graph import build_candidate_causes
@@ -92,9 +93,9 @@ def test_build_candidate_causes_rejects_pattern_with_nonexistent_cause_service()
     )
 
     cause_services = {c.cause_service for c in candidates}
-    assert "hallucinated-svc" not in cause_services, (
-        "build_candidate_causes accepted a pattern referencing a hallucinated cause service"
-    )
+    assert (
+        "hallucinated-svc" not in cause_services
+    ), "build_candidate_causes accepted a pattern referencing a hallucinated cause service"
 
 
 def test_build_candidate_causes_rejects_pattern_with_nonexistent_affected_service() -> None:
@@ -119,9 +120,9 @@ def test_build_candidate_causes_rejects_pattern_with_nonexistent_affected_servic
     )
 
     affected_services = {c.affected_service for c in candidates}
-    assert "ghost-downstream" not in affected_services, (
-        "build_candidate_causes accepted a pattern referencing a hallucinated affected service"
-    )
+    assert (
+        "ghost-downstream" not in affected_services
+    ), "build_candidate_causes accepted a pattern referencing a hallucinated affected service"
 
 
 def test_build_candidate_causes_accepts_valid_topology_pattern() -> None:
@@ -146,12 +147,14 @@ def test_build_candidate_causes_accepts_valid_topology_pattern() -> None:
     )
 
     candidate_ids = {c.pattern_id for c in candidates}
-    assert "db-saturation" in candidate_ids, (
-        "build_candidate_causes rejected a valid topology pattern"
-    )
+    assert (
+        "db-saturation" in candidate_ids
+    ), "build_candidate_causes rejected a valid topology pattern"
 
 
-def test_build_candidate_causes_falls_back_to_unknown_degradation_when_all_patterns_rejected() -> None:
+def test_build_candidate_causes_falls_back_to_unknown_degradation_when_all_patterns_rejected() -> (
+    None
+):
     topology = _make_topology()
     events: list[TimedEvent] = []
     all_fake_patterns = [
@@ -197,6 +200,6 @@ def test_build_candidate_causes_skips_topology_check_when_graph_is_empty() -> No
         pattern_hints=pattern,
     )
 
-    assert any(c.pattern_id == "any-pattern" for c in candidates), (
-        "build_candidate_causes rejected a pattern when topology is empty — should bypass guard"
-    )
+    assert any(
+        c.pattern_id == "any-pattern" for c in candidates
+    ), "build_candidate_causes rejected a pattern when topology is empty — should bypass guard"

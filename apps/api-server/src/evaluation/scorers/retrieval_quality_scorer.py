@@ -7,10 +7,10 @@ Measures four dimensions of semantic retrieval quality:
   - retrieval_grounding_score: mean similarity across retrieved results
   - semantic_similarity_accuracy: fraction of results above the grounding threshold
 """
+
 from __future__ import annotations
 
 from typing import Any
-
 
 _GROUNDING_THRESHOLD = 0.70
 
@@ -45,10 +45,7 @@ def score_retrieval_grounding(results: list[dict[str, Any]]) -> float:
     for r in results:
         prov = r.get("provenance") or {}
         s = float(
-            prov.get("similarity_score")
-            or r.get("match_score")
-            or r.get("similarity_score")
-            or 0.0
+            prov.get("similarity_score") or r.get("match_score") or r.get("similarity_score") or 0.0
         )
         scores.append(s)
     return round(sum(scores) / len(scores), 4)
@@ -63,12 +60,10 @@ def score_semantic_similarity_accuracy(
     if not results:
         return 0.0
     above = sum(
-        1 for r in results
-        if float(
-            (r.get("provenance") or {}).get("similarity_score")
-            or r.get("match_score")
-            or 0.0
-        ) >= threshold
+        1
+        for r in results
+        if float((r.get("provenance") or {}).get("similarity_score") or r.get("match_score") or 0.0)
+        >= threshold
     )
     return round(above / len(results), 4)
 

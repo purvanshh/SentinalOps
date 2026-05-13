@@ -19,6 +19,7 @@ Edge types:
   deployment_linked  — deployment co-occurred with anomaly
   causal_influence   — inferred causal contribution
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -45,6 +46,7 @@ class EdgeType(str, Enum):
 @dataclass
 class CausalNode:
     """A single event node in the causal graph."""
+
     node_id: str
     node_type: NodeType
     service: str
@@ -62,6 +64,7 @@ class CausalNode:
 @dataclass
 class CausalEdge:
     """A directed edge from source to target encoding causal influence."""
+
     source_id: str
     target_id: str
     edge_type: EdgeType
@@ -88,9 +91,7 @@ class CausalEventGraph:
 
     def add_edge(self, edge: CausalEdge) -> None:
         if edge.source_id not in self._nodes or edge.target_id not in self._nodes:
-            raise ValueError(
-                f"Edge references unknown node: {edge.source_id} → {edge.target_id}"
-            )
+            raise ValueError(f"Edge references unknown node: {edge.source_id} → {edge.target_id}")
         self._edges.append(edge)
 
     @property

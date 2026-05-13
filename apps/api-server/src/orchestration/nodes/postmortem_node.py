@@ -14,7 +14,11 @@ async def postmortem_node(state: dict, session=None) -> dict:
         return {"errors": [f"Incident {state['incident_id']} not found"]}
     try:
         result = await generate_postmortem(incident, db_session=session)
-        final_status = "resolved_degraded" if str(state.get("operating_mode", "FULL")) != "FULL" else "resolved"
+        final_status = (
+            "resolved_degraded"
+            if str(state.get("operating_mode", "FULL")) != "FULL"
+            else "resolved"
+        )
         return {
             "postmortem": result,
             "status": final_status,

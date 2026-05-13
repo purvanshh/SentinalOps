@@ -13,6 +13,7 @@ The benchmark is intentionally self-contained: it uses the ConsistencyChecker
 and retrieval quality scorer without live Qdrant/embedding API calls, allowing
 regression testing in CI environments.
 """
+
 from __future__ import annotations
 
 import statistics
@@ -26,6 +27,7 @@ from retrieval.consistency_checker import run_consistency_check
 @dataclass
 class RetrievalBenchmarkCase:
     """A single benchmark query with known relevant incident IDs."""
+
     query: str
     relevant_incident_ids: set[str]
     simulated_results: list[dict[str, Any]] = field(default_factory=list)
@@ -34,6 +36,7 @@ class RetrievalBenchmarkCase:
 @dataclass
 class RetrievalBenchmarkReport:
     """Aggregated retrieval quality metrics across all benchmark cases."""
+
     total_cases: int
     mean_precision: float
     mean_recall: float
@@ -84,11 +87,13 @@ def run_retrieval_benchmark(cases: list[RetrievalBenchmarkCase]) -> RetrievalBen
         report = run_consistency_check([], case.simulated_results)
         total_suppressed += report.suppression_count
 
-        per_case.append({
-            "query": case.query,
-            "suppressed": report.suppression_count,
-            **metrics,
-        })
+        per_case.append(
+            {
+                "query": case.query,
+                "suppressed": report.suppression_count,
+                **metrics,
+            }
+        )
 
     precisions = [c.get("retrieval_precision", 0.0) for c in per_case]
     recalls = [c.get("retrieval_recall", 0.0) for c in per_case]

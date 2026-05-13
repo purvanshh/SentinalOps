@@ -1,7 +1,6 @@
 from typing import Any
 
 import httpx
-
 from core.config import get_settings
 
 
@@ -29,7 +28,9 @@ class GitHubClient:
         await self._client.aclose()
 
     async def get_recent_deployments(self, service: str, hours: int = 24) -> list[dict[str, Any]]:
-        response = await self._client.get("/deployments", params={"service": service, "hours": hours})
+        response = await self._client.get(
+            "/deployments", params={"service": service, "hours": hours}
+        )
         response.raise_for_status()
         payload = response.json()
         if isinstance(payload, dict):

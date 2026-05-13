@@ -5,7 +5,6 @@ from uuid import uuid4
 
 import httpx
 import pytest
-
 from agents.router_agent.agent import classify_incident
 from core.llm_client import LLMClient
 from retrieval.incident_history.searcher import IncidentHistorySearcher

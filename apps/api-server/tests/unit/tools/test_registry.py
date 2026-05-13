@@ -1,5 +1,4 @@
 import pytest
-
 from tools.base import ToolCall
 from tools.registry import ToolRegistry
 

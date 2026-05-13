@@ -13,17 +13,19 @@ service topology, allowing the causal reasoning engine to distinguish:
   - secondary effects (downstream services that received blast)
   - collateral services (not on any path from the origin)
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
 
-from causality.event_graph import CausalEdge, CausalEventGraph, CausalNode, EdgeType
+from causality.event_graph import CausalEdge, CausalEventGraph, EdgeType
 
 
 @dataclass
 class PropagationResult:
     """Result of a blast propagation analysis."""
+
     origin_service: str
     blast_radius: list[str]
     propagation_paths: list[list[str]]
@@ -147,9 +149,7 @@ class PropagationEstimator:
                     target_id=target_node_id,
                     edge_type=EdgeType.DEPENDENCY_PATH,
                     weight=0.8,
-                    rationale=(
-                        f"{source_svc} is a direct upstream dependency of {target_svc}"
-                    ),
+                    rationale=(f"{source_svc} is a direct upstream dependency of {target_svc}"),
                 )
                 graph.add_edge(edge)
                 added.append(edge)

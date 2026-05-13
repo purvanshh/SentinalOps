@@ -10,12 +10,12 @@ item that enters agent reasoning so that:
      evidence rather than invented by the LLM.
   3. Evaluation can measure retrieval quality across benchmark replays.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Literal
-
 
 GroundingStatus = Literal["grounded", "weakly_grounded", "ungrounded"]
 

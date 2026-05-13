@@ -1,5 +1,4 @@
 from celery import Celery
-
 from core.config import get_settings
 
 settings = get_settings()
@@ -32,4 +31,6 @@ celery_app.conf.update(
         "workers.schedulers.scan_pending_approvals": {"queue": "approvals"},
     },
 )
-celery_app.autodiscover_tasks(["workers.tasks", "workers.schedulers"], related_name=None, force=True)
+celery_app.autodiscover_tasks(
+    ["workers.tasks", "workers.schedulers"], related_name=None, force=True
+)

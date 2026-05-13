@@ -11,13 +11,13 @@ Compares evaluation runs across versions to detect quality regressions:
 A regression is flagged when a metric drops below an acceptable threshold
 relative to a baseline run.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
 
 from evaluation.regression.benchmark_replay import ReplayResult
-
 
 REGRESSION_THRESHOLDS = {
     "accuracy": 0.02,
@@ -100,7 +100,9 @@ def _extract_metrics(result: ReplayResult) -> dict[str, float]:
         "mean_quality_score": result.remediation_quality.get("mean_quality_score", 0.0),
         "execution_safety": result.execution_safety.get("mean_safety_score", 0.0),
         "trust_score": result.operator_trust.get("trust_score", 0.0),
-        "dangerous_rejection_rate": result.operator_trust.get("dangerous_recommendation_rejection_rate", 0.0),
+        "dangerous_rejection_rate": result.operator_trust.get(
+            "dangerous_recommendation_rejection_rate", 0.0
+        ),
         "trustworthiness": result.aggregate_trustworthiness_score,
         "safety_score": result.aggregate_safety_score,
         "autonomous_readiness": result.aggregate_autonomous_readiness_score,
@@ -109,9 +111,7 @@ def _extract_metrics(result: ReplayResult) -> dict[str, float]:
 
 def _higher_is_better(metric: str) -> bool:
     """Metrics where higher = better. Lower = better for error/rate metrics."""
-    lower_is_better = {
-        "calibration_error", "brier_score", "hallucination_rate", "dangerous_rate"
-    }
+    lower_is_better = {"calibration_error", "brier_score", "hallucination_rate", "dangerous_rate"}
     return metric not in lower_is_better
 
 
@@ -154,25 +154,29 @@ def compare_runs(baseline: ReplayResult, current: ReplayResult) -> RegressionRep
 
         if delta < -threshold:
             severity = _compute_severity(delta, threshold)
-            regressions.append(Regression(
-                metric=metric,
-                baseline_value=baseline_val,
-                current_value=current_val,
-                delta=delta,
-                threshold=threshold,
-                severity=severity,
-                description=f"{metric} degraded by {abs(delta):.4f} (threshold: {threshold})",
-            ))
+            regressions.append(
+                Regression(
+                    metric=metric,
+                    baseline_value=baseline_val,
+                    current_value=current_val,
+                    delta=delta,
+                    threshold=threshold,
+                    severity=severity,
+                    description=f"{metric} degraded by {abs(delta):.4f} (threshold: {threshold})",
+                )
+            )
         elif delta > threshold:
-            improvements.append(Regression(
-                metric=metric,
-                baseline_value=baseline_val,
-                current_value=current_val,
-                delta=delta,
-                threshold=threshold,
-                severity="INFO",
-                description=f"{metric} improved by {delta:.4f}",
-            ))
+            improvements.append(
+                Regression(
+                    metric=metric,
+                    baseline_value=baseline_val,
+                    current_value=current_val,
+                    delta=delta,
+                    threshold=threshold,
+                    severity="INFO",
+                    description=f"{metric} improved by {delta:.4f}",
+                )
+            )
         else:
             neutral.append(metric)
 
@@ -180,10 +184,9 @@ def compare_runs(baseline: ReplayResult, current: ReplayResult) -> RegressionRep
 
     regression_score = 0.0
     if regressions:
-        regression_score = sum(
-            abs(r.delta) / max(r.threshold, 0.001)
-            for r in regressions
-        ) / len(regressions)
+        regression_score = sum(abs(r.delta) / max(r.threshold, 0.001) for r in regressions) / len(
+            regressions
+        )
 
     return RegressionReport(
         baseline_hash=baseline.replay_hash,

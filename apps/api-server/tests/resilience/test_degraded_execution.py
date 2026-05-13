@@ -2,7 +2,6 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
-
 from orchestration.nodes.approval_node import approval_node
 from orchestration.nodes.execution_node import execution_node
 

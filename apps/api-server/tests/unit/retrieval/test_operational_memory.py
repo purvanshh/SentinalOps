@@ -9,14 +9,13 @@ Proves:
     matched_dimensions, embedding_model, retrieved_at.
   - min_score threshold filters low-confidence results.
 """
+
 from __future__ import annotations
 
-import json
-from datetime import UTC, datetime
+from datetime import datetime
 
 import httpx
 import pytest
-
 from memory.operational_memory import MemoryItem, OperationalMemory
 from retrieval.semantic_retrieval import SemanticIncidentRetriever
 
@@ -168,7 +167,7 @@ async def test_operational_memory_incident_store_and_recall() -> None:
     transport = _make_mock_transport(qdrant_score=0.87)
     mem = OperationalMemory(transport=transport)
 
-    stored = await mem.incident_memory.store(
+    await mem.incident_memory.store(
         "INC-001",
         {
             "title": "Postgres latency spike",

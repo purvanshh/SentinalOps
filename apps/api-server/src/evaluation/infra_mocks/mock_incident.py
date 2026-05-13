@@ -6,6 +6,7 @@ requiring a live database session. They satisfy the duck-typing requirements
 of the agent functions (title, summary, severity, raw_payload, etc.) without
 instantiating SQLAlchemy-mapped models.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

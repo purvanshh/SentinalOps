@@ -1,9 +1,8 @@
 import uuid
 
+from db.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from sqlalchemy import Boolean, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
-
-from db.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class PreventionItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):

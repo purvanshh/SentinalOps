@@ -13,6 +13,7 @@ Proves:
   - Auth middleware returns 401 for missing Bearer prefix
   - Unknown algorithm in token raises 401
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -22,10 +23,10 @@ import pytest
 from fastapi import HTTPException
 from jose import jwt
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_token(
     *,
@@ -39,6 +40,7 @@ def _make_token(
     omit_aud: bool = False,
 ) -> str:
     from core.config import get_settings
+
     settings = get_settings()
     payload: dict = {}
     if not omit_aud:
@@ -58,6 +60,7 @@ def _make_token(
 # ---------------------------------------------------------------------------
 # Expired token
 # ---------------------------------------------------------------------------
+
 
 def test_expired_token_raises_401():
     from api.middleware.auth import decode_access_token
@@ -80,6 +83,7 @@ def test_deeply_expired_token_raises_401():
 # ---------------------------------------------------------------------------
 # Malformed claims
 # ---------------------------------------------------------------------------
+
 
 def test_token_without_exp_raises_401():
     from api.middleware.auth import decode_access_token
@@ -123,6 +127,7 @@ def test_token_signed_with_different_algorithm_raises_401():
 # Privilege escalation
 # ---------------------------------------------------------------------------
 
+
 def test_operator_cannot_escalate_to_admin():
     from core.security.permissions import has_permission
 
@@ -147,6 +152,7 @@ def test_unknown_role_cannot_escalate_to_any():
 # ---------------------------------------------------------------------------
 # Approval token: jti (replay protection)
 # ---------------------------------------------------------------------------
+
 
 def test_approval_token_contains_jti():
     from tools.execution_guard import create_approval_token, decode_approval_token
@@ -184,6 +190,7 @@ def test_each_approval_token_has_unique_jti():
 
 def test_approval_token_jti_is_uuid_format():
     import re
+
     from tools.execution_guard import create_approval_token, decode_approval_token
 
     token = create_approval_token(
@@ -193,15 +200,14 @@ def test_approval_token_jti_is_uuid_format():
         expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
     )
     payload = decode_approval_token(token)
-    uuid_pattern = re.compile(
-        r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-    )
+    uuid_pattern = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
     assert uuid_pattern.match(payload["jti"])
 
 
 # ---------------------------------------------------------------------------
 # Configuration validation
 # ---------------------------------------------------------------------------
+
 
 def test_validate_required_configuration_catches_missing_redis():
     from core.config import Settings
@@ -248,6 +254,7 @@ def test_production_dummy_llm_key_flagged():
 # ---------------------------------------------------------------------------
 # Error handler: comprehensive suppression
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_error_handler_suppresses_sql_error_detail(monkeypatch):

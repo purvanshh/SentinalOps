@@ -1,7 +1,6 @@
-from sqlalchemy import select
-
 from db.models import RemediationHistory
 from db.repositories import BaseRepository
+from sqlalchemy import select
 
 
 class RiskRepository(BaseRepository):

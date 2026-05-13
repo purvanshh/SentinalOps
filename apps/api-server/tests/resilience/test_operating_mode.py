@@ -3,7 +3,6 @@ Tests for operating mode management.
 """
 
 import pytest
-
 from core.resilience.operating_mode import OperatingMode, OperatingModeManager
 
 

@@ -15,19 +15,19 @@ Proves:
   - Production startup fails if secrets are default dev values
   - Startup succeeds in development with missing config (only warns)
 """
+
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Redis graceful degradation
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_save_state_returns_false_on_redis_error():
@@ -127,6 +127,7 @@ async def test_save_state_passes_ttl_to_redis():
 # Dockerfile healthcheck
 # ---------------------------------------------------------------------------
 
+
 def test_dockerfile_contains_healthcheck():
     dockerfile = Path(__file__).parents[4] / "apps" / "api-server" / "Dockerfile"
     if not dockerfile.exists():
@@ -146,6 +147,7 @@ def test_dockerfile_healthcheck_uses_health_endpoint():
 # ---------------------------------------------------------------------------
 # Configuration validation at startup
 # ---------------------------------------------------------------------------
+
 
 def test_validate_required_configuration_catches_empty_redis():
     from core.config import Settings

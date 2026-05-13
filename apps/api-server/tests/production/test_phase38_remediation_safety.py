@@ -13,15 +13,17 @@ Proves:
   - SAFE_MODE disables automated execution and returns execution_disabled flag
   - observe_remediation_action counter fires for executed and blocked outcomes
 """
+
 from __future__ import annotations
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 
 # ---------------------------------------------------------------------------
 # RiskTier enum completeness
 # ---------------------------------------------------------------------------
+
 
 def test_risk_tier_has_all_four_values():
     from tools.risk_classifier import RiskTier
@@ -59,30 +61,36 @@ def test_only_high_risk_and_destructive_blocked_in_safe_mode():
 # Action classification
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("action,expected_tier", [
-    ("get pod logs", "READ_ONLY"),
-    ("list services", "READ_ONLY"),
-    ("describe deployment", "READ_ONLY"),
-    ("verify metric", "READ_ONLY"),
-    ("restart api-server", "SAFE_MUTATION"),
-    ("restart service payment-api", "SAFE_MUTATION"),
-    ("reload nginx", "SAFE_MUTATION"),
-    ("clear cache redis", "SAFE_MUTATION"),
-    ("rollback deployment", "HIGH_RISK"),
-    ("scale payment-api", "HIGH_RISK"),
-    ("deploy new version", "HIGH_RISK"),
-    ("upgrade dependencies", "HIGH_RISK"),
-    ("delete namespace production", "DESTRUCTIVE"),
-    ("drop database sentinelops", "DESTRUCTIVE"),
-    ("drain node k8s-node-1", "DESTRUCTIVE"),
-    ("terminate instance i-0abc1234", "DESTRUCTIVE"),
-    ("purge queue incidents", "DESTRUCTIVE"),
-])
+
+@pytest.mark.parametrize(
+    "action,expected_tier",
+    [
+        ("get pod logs", "READ_ONLY"),
+        ("list services", "READ_ONLY"),
+        ("describe deployment", "READ_ONLY"),
+        ("verify metric", "READ_ONLY"),
+        ("restart api-server", "SAFE_MUTATION"),
+        ("restart service payment-api", "SAFE_MUTATION"),
+        ("reload nginx", "SAFE_MUTATION"),
+        ("clear cache redis", "SAFE_MUTATION"),
+        ("rollback deployment", "HIGH_RISK"),
+        ("scale payment-api", "HIGH_RISK"),
+        ("deploy new version", "HIGH_RISK"),
+        ("upgrade dependencies", "HIGH_RISK"),
+        ("delete namespace production", "DESTRUCTIVE"),
+        ("drop database sentinelops", "DESTRUCTIVE"),
+        ("drain node k8s-node-1", "DESTRUCTIVE"),
+        ("terminate instance i-0abc1234", "DESTRUCTIVE"),
+        ("purge queue incidents", "DESTRUCTIVE"),
+    ],
+)
 def test_action_risk_tier_classification(action, expected_tier):
     from tools.risk_classifier import RiskTier, classify_action_risk_tier
 
     result = classify_action_risk_tier(action)
-    assert result == RiskTier(expected_tier), f"Action '{action}' classified as {result}, expected {expected_tier}"
+    assert result == RiskTier(
+        expected_tier
+    ), f"Action '{action}' classified as {result}, expected {expected_tier}"
 
 
 def test_unknown_action_defaults_to_high_risk():
@@ -103,6 +111,7 @@ def test_destructive_wins_over_high_risk_when_both_keywords_present():
 # ---------------------------------------------------------------------------
 # tier_requires_approval and tier_blocked_in_safe_mode helpers
 # ---------------------------------------------------------------------------
+
 
 def test_tier_requires_approval_helper():
     from tools.risk_classifier import RiskTier, tier_requires_approval
@@ -125,6 +134,7 @@ def test_tier_blocked_in_safe_mode_helper():
 # ---------------------------------------------------------------------------
 # SAFE_MODE disables automated execution
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_execution_node_safe_mode_returns_execution_disabled():
@@ -181,6 +191,7 @@ async def test_execution_node_observe_only_returns_execution_disabled():
 # observe_remediation_action counter fires for blocked outcome
 # ---------------------------------------------------------------------------
 
+
 def test_observe_remediation_action_executes_increments_counter():
     from observability.metrics import observe_remediation_action
     from prometheus_client import REGISTRY
@@ -189,7 +200,10 @@ def test_observe_remediation_action_executes_increments_counter():
         for metric in REGISTRY.collect():
             if metric.name in {"remediation_actions_total", "remediation_actions"}:
                 for sample in metric.samples:
-                    if sample.name == "remediation_actions_total" and sample.labels.get("outcome") == outcome:
+                    if (
+                        sample.name == "remediation_actions_total"
+                        and sample.labels.get("outcome") == outcome
+                    ):
                         return sample.value
         return 0.0
 
@@ -202,6 +216,7 @@ def test_observe_remediation_action_executes_increments_counter():
 # ---------------------------------------------------------------------------
 # Rollback metadata enrichment
 # ---------------------------------------------------------------------------
+
 
 def test_rollback_path_derives_from_tool_name():
     # For a non-rollback tool, rollback_path should be rollback_{tool_name}

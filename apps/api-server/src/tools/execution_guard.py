@@ -5,11 +5,10 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from jose import JWTError, jwt
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from core.config import get_settings
 from db.repositories.audit_repo import AuditLogRepository
+from jose import JWTError, jwt
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class ExecutionGuardError(RuntimeError):
@@ -65,7 +64,9 @@ async def enforce_tool_execution_policy(
     actor_id = context.get("actor_id")
     audit_repo = AuditLogRepository(session) if session is not None else None
 
-    allowed_tools = set(allowlist.get("dangerous_tools", [])) | set(allowlist.get("approval_required_tools", []))
+    allowed_tools = set(allowlist.get("dangerous_tools", [])) | set(
+        allowlist.get("approval_required_tools", [])
+    )
     if tool_name not in allowed_tools and safety_level != "read_only":
         if audit_repo is not None:
             await audit_repo.create_event(
@@ -78,6 +79,7 @@ async def enforce_tool_execution_policy(
             )
         try:
             from observability.metrics import observe_execution_guard_block
+
             observe_execution_guard_block("not_allowlisted")
         except Exception:  # noqa: BLE001
             pass
@@ -88,6 +90,7 @@ async def enforce_tool_execution_policy(
         if not token:
             try:
                 from observability.metrics import observe_execution_guard_block
+
                 observe_execution_guard_block("no_approval_token")
             except Exception:  # noqa: BLE001
                 pass
@@ -96,6 +99,7 @@ async def enforce_tool_execution_policy(
         if str(payload.get("incident_id")) != str(incident_id):
             try:
                 from observability.metrics import observe_execution_guard_block
+
                 observe_execution_guard_block("incident_mismatch")
             except Exception:  # noqa: BLE001
                 pass
@@ -104,6 +108,7 @@ async def enforce_tool_execution_policy(
         if tool_name not in approved_tool_names:
             try:
                 from observability.metrics import observe_execution_guard_block
+
                 observe_execution_guard_block("tool_not_approved")
             except Exception:  # noqa: BLE001
                 pass

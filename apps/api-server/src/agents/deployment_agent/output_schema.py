@@ -1,6 +1,5 @@
-from pydantic import BaseModel, Field, model_validator
-
 from agents.uncertainty import UncertaintyIndicator
+from pydantic import BaseModel, Field, model_validator
 
 
 class RecentChange(BaseModel):
@@ -18,9 +17,7 @@ class RecentChange(BaseModel):
 class DeploymentSummary(BaseModel):
     recent_changes: list[RecentChange] = Field(default_factory=list)
     correlation_with_incident: str
-    evidence_quality: UncertaintyIndicator = Field(
-        default_factory=UncertaintyIndicator.present
-    )
+    evidence_quality: UncertaintyIndicator = Field(default_factory=UncertaintyIndicator.present)
 
     @model_validator(mode="after")
     def _assess_evidence_quality(self) -> "DeploymentSummary":

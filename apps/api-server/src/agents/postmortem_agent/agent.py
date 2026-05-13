@@ -4,8 +4,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from agents.postmortem_agent.action_items import propose_action_items
 from agents.postmortem_agent.contributing_factors import evaluate_contributing_factors
 from agents.postmortem_agent.metrics import compute_incident_metrics
@@ -15,6 +13,7 @@ from db.models.incident import Incident
 from db.repositories.incident_repo import IncidentRepository
 from db.repositories.postmortem_repo import PostmortemRepository
 from retrieval.retrieval_orchestrator import RetrievalOrchestrator
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def _render_template(template: str, values: dict[str, str]) -> str:
@@ -118,19 +117,22 @@ async def generate_postmortem(
         f"- {factor['factor']}: {'Yes' if factor['detected'] else 'No'} — {factor['detail']}"
         for factor in contributing_factors
     )
-    action_items_text = "\n".join(
-        f"- {item['title']}: {item['description']}"
-        for item in new_action_items
-    ) or "- No new action items proposed."
+    action_items_text = (
+        "\n".join(f"- {item['title']}: {item['description']}" for item in new_action_items)
+        or "- No new action items proposed."
+    )
     detection_metrics = (
         f"- TTD (seconds): {incident_metrics['ttd_seconds']}\n"
         f"- TTM (seconds): {incident_metrics['ttm_seconds']}\n"
         f"- TTR (seconds): {incident_metrics['ttr_seconds']}\n"
-        f"- Estimated impacted users so far: {risk.get('current_impact', {}).get('estimated_users_impacted_so_far', 0)}\n"
-        f"- Blast radius mean users at risk: {risk.get('blast_radius', {}).get('users_at_risk', {}).get('mean', 0)}"
+        "- Estimated impacted users so far: "
+        f"{risk.get('current_impact', {}).get('estimated_users_impacted_so_far', 0)}\n"
+        "- Blast radius mean users at risk: "
+        f"{risk.get('blast_radius', {}).get('users_at_risk', {}).get('mean', 0)}"
     )
     lessons_learned = (
-        "Operational safety improves when evidence correlation, approval controls, and prevention tracking stay coupled."
+        "Operational safety improves when evidence correlation, "
+        "approval controls, and prevention tracking stay coupled."
     )
     appendices = (
         f"- Evidence items captured: {len(incident_context.evidence_items)}\n"

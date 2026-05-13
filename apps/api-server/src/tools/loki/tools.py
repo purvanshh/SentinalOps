@@ -15,12 +15,12 @@ _TRACE_EXCEPTION_MARKERS = (
 )
 
 _FRAME_PREFIXES = (
-    "\tat ",       # Java: at com.example.Foo.bar(Foo.java:42)
-    "  File \"",   # Python: File "path/to/file.py", line N
-    "\tFile \"",   # Python with tab indent
-    "    at ",     # Node.js / V8
-    "  at ",       # some JS runtimes
-    "\tat\t",      # Go-style goroutine frames
+    "\tat ",  # Java: at com.example.Foo.bar(Foo.java:42)
+    '  File "',  # Python: File "path/to/file.py", line N
+    '\tFile "',  # Python with tab indent
+    "    at ",  # Node.js / V8
+    "  at ",  # some JS runtimes
+    "\tat\t",  # Go-style goroutine frames
 )
 
 
@@ -91,7 +91,8 @@ def build_loki_registry(client: LokiClient | None = None) -> tuple[ToolRegistry,
         name="extract_stacktrace",
         description=(
             "Extract stack frame lines from a raw log entry string. "
-            "Returns structured frame data or explicit unavailability when no trace pattern is found."
+            "Returns structured frame data or explicit unavailability "
+            "when no trace pattern is found."
         ),
         parameters={
             "type": "object",
@@ -117,7 +118,8 @@ def build_loki_registry(client: LokiClient | None = None) -> tuple[ToolRegistry,
             }
 
         meaningful = [
-            ln for ln in frame_lines
+            ln
+            for ln in frame_lines
             if any(ln.startswith(p) for p in _FRAME_PREFIXES)
             or any(marker in ln for marker in _TRACE_EXCEPTION_MARKERS)
         ]

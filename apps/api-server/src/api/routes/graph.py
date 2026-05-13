@@ -1,30 +1,32 @@
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from api.dependencies import get_db, require_role
 from api.middleware.auth import AuthenticatedUser
 from api.schemas.approval import ApprovalDecisionRequest
 from db.repositories.incident_repo import IncidentRepository
 from db.repositories.task_repo import PendingTaskRepository
-from orchestration.checkpointing.checkpoint import WorkflowCheckpointStore
+from fastapi import APIRouter, Depends, HTTPException, status
 from memory.short_term.incident_state import IncidentStateStore
+from orchestration.checkpointing.checkpoint import WorkflowCheckpointStore
 from orchestration.graphs.main_graph import build_main_graph
-from orchestration.interrupts.commands import ResumeCommand
 from orchestration.interrupts.approval_store import ApprovalStore
+from orchestration.interrupts.commands import ResumeCommand
+from sqlalchemy.ext.asyncio import AsyncSession
 from tools.action_mapping import map_action_to_tool
 from tools.execution_guard import create_approval_token
 
 router = APIRouter(prefix="/graph", tags=["graph"])
+DB_DEPENDENCY = Depends(get_db)
+VIEWER_ROLE_DEPENDENCY = Depends(require_role(["viewer"]))
+OPERATOR_ROLE_DEPENDENCY = Depends(require_role(["operator"]))
 
 
 @router.post("/incidents/{incident_id}/start")
 async def start_graph(
     incident_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    _: AuthenticatedUser = Depends(require_role(["operator"])),
+    db: AsyncSession = DB_DEPENDENCY,
+    _: AuthenticatedUser = OPERATOR_ROLE_DEPENDENCY,
 ) -> dict:
     repository = IncidentRepository(db)
     incident = await repository.get(incident_id)
@@ -40,8 +42,8 @@ async def start_graph(
 async def resume_graph(
     incident_id: UUID,
     payload: ApprovalDecisionRequest,
-    db: AsyncSession = Depends(get_db),
-    user: AuthenticatedUser = Depends(require_role(["operator"])),
+    db: AsyncSession = DB_DEPENDENCY,
+    user: AuthenticatedUser = OPERATOR_ROLE_DEPENDENCY,
 ) -> dict:
     repository = IncidentRepository(db)
     incident = await repository.get(incident_id)
@@ -49,7 +51,9 @@ async def resume_graph(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Graph thread not found")
     approval_row = await ApprovalStore(db).get_approval(incident_id)
     if approval_row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Approval request not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Approval request not found"
+        )
     approval_token = ""
     if payload.approved:
         approval_token = create_approval_token(
@@ -80,8 +84,8 @@ async def resume_graph(
 @router.get("/incidents/{incident_id}/state")
 async def graph_state(
     incident_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    _: AuthenticatedUser = Depends(require_role(["viewer"])),
+    db: AsyncSession = DB_DEPENDENCY,
+    _: AuthenticatedUser = VIEWER_ROLE_DEPENDENCY,
 ) -> dict:
     repository = IncidentRepository(db)
     incident = await repository.get(incident_id)
@@ -96,8 +100,8 @@ async def graph_state(
 @router.get("/incidents/{incident_id}/graph-state")
 async def graph_visual_state(
     incident_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    _: AuthenticatedUser = Depends(require_role(["viewer"])),
+    db: AsyncSession = DB_DEPENDENCY,
+    _: AuthenticatedUser = VIEWER_ROLE_DEPENDENCY,
 ) -> dict:
     repository = IncidentRepository(db)
     incident = await repository.get(incident_id)
@@ -134,15 +138,18 @@ async def graph_visual_state(
         }
         for node_name in ordered_nodes
     ]
-    edges = [{"source": ordered_nodes[index], "target": ordered_nodes[index + 1]} for index in range(len(ordered_nodes) - 1)]
+    edges = [
+        {"source": ordered_nodes[index], "target": ordered_nodes[index + 1]}
+        for index in range(len(ordered_nodes) - 1)
+    ]
     return {"thread_id": incident.graph_thread_id, "nodes": nodes, "edges": edges, "state": state}
 
 
 @router.get("/incidents/{incident_id}/trace")
 async def graph_trace(
     incident_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    _: AuthenticatedUser = Depends(require_role(["viewer"])),
+    db: AsyncSession = DB_DEPENDENCY,
+    _: AuthenticatedUser = VIEWER_ROLE_DEPENDENCY,
 ) -> dict:
     repository = IncidentRepository(db)
     incident = await repository.get_with_context(incident_id)

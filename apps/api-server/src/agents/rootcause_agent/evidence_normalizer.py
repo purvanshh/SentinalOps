@@ -46,6 +46,9 @@ def normalize_agent_executions(executions: Iterable[AgentExecution]) -> list[dic
                         "content": {
                             **change,
                             "timestamp": change.get("time", created_at),
+                            "commit_sha": change.get("commit_sha", ""),
+                            "commit_author": change.get("commit_author", ""),
+                            "files_changed": change.get("files_changed", []),
                         },
                     }
                 )

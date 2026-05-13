@@ -39,7 +39,25 @@ class GitHubClient:
     async def get_commit_diff(self, repo: str, commit_sha: str) -> dict[str, Any]:
         response = await self._client.get(f"/repos/{repo}/commits/{commit_sha}")
         response.raise_for_status()
-        return response.json()
+        raw = response.json()
+        return _extract_commit_metadata(raw)
+
+
+def _extract_commit_metadata(raw: dict[str, Any]) -> dict[str, Any]:
+    """Extract structured provenance fields from a GitHub commits API response."""
+    commit_block = raw.get("commit", {})
+    author_block = commit_block.get("author", {}) or {}
+    files = raw.get("files", []) or []
+    return {
+        "sha": raw.get("sha", ""),
+        "author": author_block.get("name", ""),
+        "authored_at": author_block.get("date", ""),
+        "message": commit_block.get("message", ""),
+        "files_changed": [f["filename"] for f in files if "filename" in f],
+        "additions": sum(f.get("additions", 0) for f in files),
+        "deletions": sum(f.get("deletions", 0) for f in files),
+        "url": raw.get("html_url", ""),
+    }
 
     async def get_rollback_candidates(self, service: str) -> list[dict[str, Any]]:
         response = await self._client.get(f"/deployments/{service}/rollback-candidates")

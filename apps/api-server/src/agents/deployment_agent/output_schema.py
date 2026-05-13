@@ -6,6 +6,9 @@ class RecentChange(BaseModel):
     service: str
     version: str
     time: str
+    commit_sha: str = ""
+    commit_author: str = ""
+    files_changed: list[str] = Field(default_factory=list)
     commit_summary: str
     risk_score: float = Field(ge=0.0, le=1.0)
 

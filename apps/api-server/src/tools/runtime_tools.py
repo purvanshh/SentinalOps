@@ -11,7 +11,11 @@ def build_runtime_registry() -> ToolRegistry:
 
     @registry.tool(
         name="rollback_deployment",
-        description="Simulate rollback of a deployment for a service.",
+        description=(
+            "Request a deployment rollback for a service. "
+            "Requires an approved execution token. The action is authorized and recorded; "
+            "infrastructure execution is performed by the orchestration layer."
+        ),
         parameters={
             "type": "object",
             "properties": {
@@ -22,11 +26,20 @@ def build_runtime_registry() -> ToolRegistry:
         safety_level="dangerous",
     )
     async def rollback_deployment(service: str) -> dict[str, Any]:
-        return {"service": service, "status": "rolled_back", "mode": "simulated"}
+        return {
+            "service": service,
+            "action": "rollback_deployment",
+            "status": "execution_requested",
+            "requires_infrastructure_execution": True,
+        }
 
     @registry.tool(
         name="restart_service",
-        description="Simulate restarting a service.",
+        description=(
+            "Request a service restart. "
+            "Requires an approved execution token. The action is authorized and recorded; "
+            "infrastructure execution is performed by the orchestration layer."
+        ),
         parameters={
             "type": "object",
             "properties": {
@@ -37,11 +50,20 @@ def build_runtime_registry() -> ToolRegistry:
         safety_level="dangerous",
     )
     async def restart_service(service: str) -> dict[str, Any]:
-        return {"service": service, "status": "restarted", "mode": "simulated"}
+        return {
+            "service": service,
+            "action": "restart_service",
+            "status": "execution_requested",
+            "requires_infrastructure_execution": True,
+        }
 
     @registry.tool(
         name="scale_service",
-        description="Simulate scaling a service.",
+        description=(
+            "Request a service scaling operation. "
+            "Requires an approved execution token. The action is authorized and recorded; "
+            "infrastructure execution is performed by the orchestration layer."
+        ),
         parameters={
             "type": "object",
             "properties": {
@@ -53,7 +75,13 @@ def build_runtime_registry() -> ToolRegistry:
         safety_level="dangerous",
     )
     async def scale_service(service: str, replicas: int) -> dict[str, Any]:
-        return {"service": service, "replicas": replicas, "status": "scaled", "mode": "simulated"}
+        return {
+            "service": service,
+            "replicas": replicas,
+            "action": "scale_service",
+            "status": "execution_requested",
+            "requires_infrastructure_execution": True,
+        }
 
     @registry.tool(
         name="verify_metric",

@@ -1,0 +1,302 @@
+[
+  {
+    "incident_id": "INC-2026-001",
+    "ground_truth_root_cause": "db_connection_pool_exhaustion",
+    "ground_truth_resolution": "increase_connection_pool_size",
+    "session_hash": "",
+    "events": [
+      {"kind": "metric", "service": "api", "severity": "warning", "labels": {"metric": "db_connections", "value": "95"}, "incident_id": "INC-2026-001"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "DBConnectionsHigh"}, "incident_id": "INC-2026-001"},
+      {"kind": "log", "service": "api", "severity": "error", "labels": {"msg": "connection refused: pool exhausted"}, "incident_id": "INC-2026-001"},
+      {"kind": "metric", "service": "db", "severity": "warning", "labels": {"metric": "active_connections", "value": "100"}, "incident_id": "INC-2026-001"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-002",
+    "ground_truth_root_cause": "memory_leak_in_worker_process",
+    "ground_truth_resolution": "rolling_restart_workers",
+    "session_hash": "",
+    "events": [
+      {"kind": "metric", "service": "worker", "severity": "warning", "labels": {"metric": "memory_rss_mb", "value": "2048"}, "incident_id": "INC-2026-002"},
+      {"kind": "log", "service": "worker", "severity": "error", "labels": {"msg": "OOMKilled: worker-pod-7f8d"}, "incident_id": "INC-2026-002"},
+      {"kind": "alert", "service": "worker", "severity": "critical", "labels": {"alertname": "PodOOMKilled"}, "incident_id": "INC-2026-002"},
+      {"kind": "metric", "service": "worker", "severity": "error", "labels": {"metric": "memory_growth_rate", "value": "12.5"}, "incident_id": "INC-2026-002"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-003",
+    "ground_truth_root_cause": "cascading_cache_invalidation",
+    "ground_truth_resolution": "warm_cache_on_startup",
+    "session_hash": "",
+    "events": [
+      {"kind": "metric", "service": "cache", "severity": "warning", "labels": {"metric": "cache_miss_rate", "value": "0.92"}, "incident_id": "INC-2026-003"},
+      {"kind": "metric", "service": "api", "severity": "error", "labels": {"metric": "p99_latency_ms", "value": "4200"}, "incident_id": "INC-2026-003"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "HighLatency"}, "incident_id": "INC-2026-003"},
+      {"kind": "log", "service": "cache", "severity": "warning", "labels": {"msg": "cache cold start after pod restart"}, "incident_id": "INC-2026-003"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-004",
+    "ground_truth_root_cause": "bad_deployment_config",
+    "ground_truth_resolution": "rollback_deployment",
+    "session_hash": "",
+    "events": [
+      {"kind": "deployment", "service": "api", "severity": "info", "labels": {"ref": "main", "sha": "deadbeef1234"}, "incident_id": "INC-2026-004"},
+      {"kind": "metric", "service": "api", "severity": "error", "labels": {"metric": "error_rate", "value": "0.45"}, "incident_id": "INC-2026-004"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "ErrorRateHigh"}, "incident_id": "INC-2026-004"},
+      {"kind": "log", "service": "api", "severity": "error", "labels": {"msg": "invalid config: missing DB_URL env var"}, "incident_id": "INC-2026-004"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-005",
+    "ground_truth_root_cause": "disk_iops_saturation",
+    "ground_truth_resolution": "migrate_to_provisioned_iops",
+    "session_hash": "",
+    "events": [
+      {"kind": "metric", "service": "db", "severity": "warning", "labels": {"metric": "disk_iops_utilization", "value": "0.98"}, "incident_id": "INC-2026-005"},
+      {"kind": "alert", "service": "db", "severity": "critical", "labels": {"alertname": "DiskIOPSSaturated"}, "incident_id": "INC-2026-005"},
+      {"kind": "log", "service": "db", "severity": "error", "labels": {"msg": "write latency >500ms: IO wait"}, "incident_id": "INC-2026-005"},
+      {"kind": "metric", "service": "db", "severity": "error", "labels": {"metric": "write_latency_ms", "value": "820"}, "incident_id": "INC-2026-005"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-006",
+    "ground_truth_root_cause": "network_partition_between_zones",
+    "ground_truth_resolution": "failover_to_healthy_zone",
+    "session_hash": "",
+    "events": [
+      {"kind": "metric", "service": "api", "severity": "error", "labels": {"metric": "zone_b_rtt_ms", "value": "9999"}, "incident_id": "INC-2026-006"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "CrossZoneLatency"}, "incident_id": "INC-2026-006"},
+      {"kind": "log", "service": "api", "severity": "error", "labels": {"msg": "connection timeout to zone-b"}, "incident_id": "INC-2026-006"},
+      {"kind": "topology_change", "service": "infra", "severity": "critical", "labels": {"change": "zone_b_unreachable"}, "incident_id": "INC-2026-006"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-007",
+    "ground_truth_root_cause": "certificate_expiry",
+    "ground_truth_resolution": "renew_tls_certificate",
+    "session_hash": "",
+    "events": [
+      {"kind": "log", "service": "api-gateway", "severity": "error", "labels": {"msg": "TLS handshake failed: certificate expired"}, "incident_id": "INC-2026-007"},
+      {"kind": "alert", "service": "api-gateway", "severity": "critical", "labels": {"alertname": "TLSCertExpired"}, "incident_id": "INC-2026-007"},
+      {"kind": "metric", "service": "api-gateway", "severity": "critical", "labels": {"metric": "tls_error_rate", "value": "1.0"}, "incident_id": "INC-2026-007"},
+      {"kind": "log", "service": "api-gateway", "severity": "critical", "labels": {"msg": "cert expiry: 2026-05-01, now: 2026-05-14"}, "incident_id": "INC-2026-007"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-008",
+    "ground_truth_root_cause": "thundering_herd_on_cache_miss",
+    "ground_truth_resolution": "implement_probabilistic_early_expiry",
+    "session_hash": "",
+    "events": [
+      {"kind": "metric", "service": "api", "severity": "error", "labels": {"metric": "rps", "value": "12500"}, "incident_id": "INC-2026-008"},
+      {"kind": "metric", "service": "db", "severity": "critical", "labels": {"metric": "query_queue_depth", "value": "850"}, "incident_id": "INC-2026-008"},
+      {"kind": "alert", "service": "db", "severity": "critical", "labels": {"alertname": "DBOverloaded"}, "incident_id": "INC-2026-008"},
+      {"kind": "log", "service": "api", "severity": "error", "labels": {"msg": "cache expired simultaneously for hot key"}, "incident_id": "INC-2026-008"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-009",
+    "ground_truth_root_cause": "misconfigured_circuit_breaker",
+    "ground_truth_resolution": "tune_circuit_breaker_thresholds",
+    "session_hash": "",
+    "events": [
+      {"kind": "log", "service": "payment", "severity": "error", "labels": {"msg": "circuit breaker OPEN: all requests rejected"}, "incident_id": "INC-2026-009"},
+      {"kind": "alert", "service": "payment", "severity": "critical", "labels": {"alertname": "CircuitBreakerOpen"}, "incident_id": "INC-2026-009"},
+      {"kind": "metric", "service": "payment", "severity": "critical", "labels": {"metric": "success_rate", "value": "0.0"}, "incident_id": "INC-2026-009"},
+      {"kind": "metric", "service": "payment", "severity": "warning", "labels": {"metric": "upstream_error_rate", "value": "0.12"}, "incident_id": "INC-2026-009"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-010",
+    "ground_truth_root_cause": "log_volume_spike_filling_disk",
+    "ground_truth_resolution": "enable_log_sampling_and_rotate",
+    "session_hash": "",
+    "events": [
+      {"kind": "metric", "service": "logging", "severity": "warning", "labels": {"metric": "disk_free_gb", "value": "4.2"}, "incident_id": "INC-2026-010"},
+      {"kind": "alert", "service": "logging", "severity": "critical", "labels": {"alertname": "DiskAlmostFull"}, "incident_id": "INC-2026-010"},
+      {"kind": "log", "service": "api", "severity": "warning", "labels": {"msg": "DEBUG logging enabled in production"}, "incident_id": "INC-2026-010"},
+      {"kind": "metric", "service": "logging", "severity": "error", "labels": {"metric": "log_ingestion_rate_mbs", "value": "450"}, "incident_id": "INC-2026-010"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-011",
+    "ground_truth_root_cause": "slow_query_missing_index",
+    "ground_truth_resolution": "add_composite_index",
+    "session_hash": "",
+    "events": [
+      {"kind": "metric", "service": "db", "severity": "warning", "labels": {"metric": "slow_query_count", "value": "342"}, "incident_id": "INC-2026-011"},
+      {"kind": "alert", "service": "db", "severity": "error", "labels": {"alertname": "SlowQueryCount"}, "incident_id": "INC-2026-011"},
+      {"kind": "log", "service": "db", "severity": "warning", "labels": {"msg": "sequential scan on orders table: 14.2s"}, "incident_id": "INC-2026-011"},
+      {"kind": "metric", "service": "api", "severity": "error", "labels": {"metric": "p95_latency_ms", "value": "3800"}, "incident_id": "INC-2026-011"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-012",
+    "ground_truth_root_cause": "pod_eviction_due_to_node_pressure",
+    "ground_truth_resolution": "add_resource_requests_and_limits",
+    "session_hash": "",
+    "events": [
+      {"kind": "log", "service": "api", "severity": "error", "labels": {"msg": "Pod evicted: node memory pressure"}, "incident_id": "INC-2026-012"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "PodEvicted"}, "incident_id": "INC-2026-012"},
+      {"kind": "metric", "service": "k8s", "severity": "error", "labels": {"metric": "node_memory_pressure", "value": "true"}, "incident_id": "INC-2026-012"},
+      {"kind": "metric", "service": "api", "severity": "warning", "labels": {"metric": "pod_restarts", "value": "8"}, "incident_id": "INC-2026-012"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-013",
+    "ground_truth_root_cause": "rate_limit_misconfiguration",
+    "ground_truth_resolution": "adjust_rate_limit_per_endpoint",
+    "session_hash": "",
+    "events": [
+      {"kind": "metric", "service": "api-gateway", "severity": "warning", "labels": {"metric": "rate_limited_requests", "value": "1240"}, "incident_id": "INC-2026-013"},
+      {"kind": "alert", "service": "api-gateway", "severity": "error", "labels": {"alertname": "HighRateLimitHits"}, "incident_id": "INC-2026-013"},
+      {"kind": "log", "service": "api-gateway", "severity": "warning", "labels": {"msg": "429 Too Many Requests: /api/v1/search"}, "incident_id": "INC-2026-013"},
+      {"kind": "metric", "service": "api", "severity": "warning", "labels": {"metric": "client_error_rate", "value": "0.28"}, "incident_id": "INC-2026-013"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-014",
+    "ground_truth_root_cause": "dependency_version_conflict",
+    "ground_truth_resolution": "pin_dependency_versions",
+    "session_hash": "",
+    "events": [
+      {"kind": "deployment", "service": "checkout", "severity": "info", "labels": {"ref": "release/2.1.0"}, "incident_id": "INC-2026-014"},
+      {"kind": "log", "service": "checkout", "severity": "error", "labels": {"msg": "ImportError: cannot import 'PaymentGateway' from 'payments==2.0.1'"}, "incident_id": "INC-2026-014"},
+      {"kind": "alert", "service": "checkout", "severity": "critical", "labels": {"alertname": "ServiceStartupFailed"}, "incident_id": "INC-2026-014"},
+      {"kind": "metric", "service": "checkout", "severity": "critical", "labels": {"metric": "ready_pods", "value": "0"}, "incident_id": "INC-2026-014"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-015",
+    "ground_truth_root_cause": "deadlock_in_transaction_processing",
+    "ground_truth_resolution": "reorder_lock_acquisition",
+    "session_hash": "",
+    "events": [
+      {"kind": "log", "service": "db", "severity": "error", "labels": {"msg": "deadlock detected: process 1234 waits on ShareLock"}, "incident_id": "INC-2026-015"},
+      {"kind": "metric", "service": "db", "severity": "error", "labels": {"metric": "deadlock_count", "value": "47"}, "incident_id": "INC-2026-015"},
+      {"kind": "alert", "service": "db", "severity": "critical", "labels": {"alertname": "DeadlockSpike"}, "incident_id": "INC-2026-015"},
+      {"kind": "metric", "service": "api", "severity": "error", "labels": {"metric": "transaction_rollback_rate", "value": "0.34"}, "incident_id": "INC-2026-015"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-016",
+    "ground_truth_root_cause": "external_api_latency_degradation",
+    "ground_truth_resolution": "enable_timeout_and_fallback",
+    "session_hash": "",
+    "events": [
+      {"kind": "metric", "service": "notifications", "severity": "warning", "labels": {"metric": "external_api_latency_ms", "value": "8500"}, "incident_id": "INC-2026-016"},
+      {"kind": "log", "service": "notifications", "severity": "error", "labels": {"msg": "ReadTimeout: sendgrid.api.com after 8.5s"}, "incident_id": "INC-2026-016"},
+      {"kind": "alert", "service": "notifications", "severity": "error", "labels": {"alertname": "ExternalAPITimeout"}, "incident_id": "INC-2026-016"},
+      {"kind": "metric", "service": "notifications", "severity": "warning", "labels": {"metric": "queued_notifications", "value": "12000"}, "incident_id": "INC-2026-016"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-017",
+    "ground_truth_root_cause": "cpu_throttling_on_burst_workload",
+    "ground_truth_resolution": "increase_cpu_limits",
+    "session_hash": "",
+    "events": [
+      {"kind": "metric", "service": "api", "severity": "warning", "labels": {"metric": "cpu_throttled_percent", "value": "72"}, "incident_id": "INC-2026-017"},
+      {"kind": "alert", "service": "api", "severity": "error", "labels": {"alertname": "CPUThrottlingHigh"}, "incident_id": "INC-2026-017"},
+      {"kind": "log", "service": "api", "severity": "warning", "labels": {"msg": "request processing slow: CPU throttled"}, "incident_id": "INC-2026-017"},
+      {"kind": "metric", "service": "api", "severity": "error", "labels": {"metric": "p99_latency_ms", "value": "2100"}, "incident_id": "INC-2026-017"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-018",
+    "ground_truth_root_cause": "ingress_misconfiguration",
+    "ground_truth_resolution": "fix_ingress_routing_rules",
+    "session_hash": "",
+    "events": [
+      {"kind": "log", "service": "ingress", "severity": "error", "labels": {"msg": "404 Not Found: /api/v2/users (no route matched)"}, "incident_id": "INC-2026-018"},
+      {"kind": "metric", "service": "ingress", "severity": "error", "labels": {"metric": "404_rate", "value": "0.89"}, "incident_id": "INC-2026-018"},
+      {"kind": "alert", "service": "ingress", "severity": "critical", "labels": {"alertname": "High404Rate"}, "incident_id": "INC-2026-018"},
+      {"kind": "deployment", "service": "api", "severity": "info", "labels": {"ref": "v2-migration", "sha": "cafebabe5678"}, "incident_id": "INC-2026-018"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-019",
+    "ground_truth_root_cause": "kafka_consumer_lag",
+    "ground_truth_resolution": "scale_consumer_group",
+    "session_hash": "",
+    "events": [
+      {"kind": "metric", "service": "kafka", "severity": "warning", "labels": {"metric": "consumer_group_lag", "value": "850000"}, "incident_id": "INC-2026-019"},
+      {"kind": "alert", "service": "kafka", "severity": "error", "labels": {"alertname": "ConsumerLagHigh"}, "incident_id": "INC-2026-019"},
+      {"kind": "log", "service": "consumer", "severity": "warning", "labels": {"msg": "processing rate 120 msg/s, produce rate 1200 msg/s"}, "incident_id": "INC-2026-019"},
+      {"kind": "metric", "service": "consumer", "severity": "error", "labels": {"metric": "message_processing_delay_s", "value": "420"}, "incident_id": "INC-2026-019"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-020",
+    "ground_truth_root_cause": "service_mesh_sidecar_crash",
+    "ground_truth_resolution": "upgrade_envoy_version",
+    "session_hash": "",
+    "events": [
+      {"kind": "log", "service": "api", "severity": "error", "labels": {"msg": "envoy: segfault at address 0x00000000"}, "incident_id": "INC-2026-020"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "SidecarCrashLoop"}, "incident_id": "INC-2026-020"},
+      {"kind": "metric", "service": "api", "severity": "critical", "labels": {"metric": "sidecar_restarts", "value": "15"}, "incident_id": "INC-2026-020"},
+      {"kind": "metric", "service": "api", "severity": "error", "labels": {"metric": "connection_refused_rate", "value": "0.62"}, "incident_id": "INC-2026-020"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-021",
+    "ground_truth_root_cause": "autoscaler_flapping",
+    "ground_truth_resolution": "increase_scale_down_stabilization_window",
+    "session_hash": "",
+    "events": [
+      {"kind": "metric", "service": "k8s", "severity": "warning", "labels": {"metric": "hpa_scale_events_last_hour", "value": "42"}, "incident_id": "INC-2026-021"},
+      {"kind": "log", "service": "k8s", "severity": "warning", "labels": {"msg": "HPA: scaling down api from 20 to 4 replicas"}, "incident_id": "INC-2026-021"},
+      {"kind": "alert", "service": "api", "severity": "error", "labels": {"alertname": "AutoscalerFlapping"}, "incident_id": "INC-2026-021"},
+      {"kind": "metric", "service": "api", "severity": "error", "labels": {"metric": "p99_latency_ms", "value": "1800"}, "incident_id": "INC-2026-021"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-022",
+    "ground_truth_root_cause": "redis_eviction_under_memory_pressure",
+    "ground_truth_resolution": "resize_redis_memory_or_eviction_policy",
+    "session_hash": "",
+    "events": [
+      {"kind": "metric", "service": "redis", "severity": "warning", "labels": {"metric": "evicted_keys_per_sec", "value": "1200"}, "incident_id": "INC-2026-022"},
+      {"kind": "alert", "service": "redis", "severity": "error", "labels": {"alertname": "RedisEvictionHigh"}, "incident_id": "INC-2026-022"},
+      {"kind": "log", "service": "api", "severity": "warning", "labels": {"msg": "cache miss spike: session data evicted"}, "incident_id": "INC-2026-022"},
+      {"kind": "metric", "service": "redis", "severity": "error", "labels": {"metric": "memory_utilization", "value": "0.99"}, "incident_id": "INC-2026-022"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-023",
+    "ground_truth_root_cause": "dns_resolution_failure",
+    "ground_truth_resolution": "fix_coredns_config_and_restart",
+    "session_hash": "",
+    "events": [
+      {"kind": "log", "service": "api", "severity": "error", "labels": {"msg": "dial tcp: lookup db.svc.cluster.local: no such host"}, "incident_id": "INC-2026-023"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "DNSResolutionFailure"}, "incident_id": "INC-2026-023"},
+      {"kind": "metric", "service": "coredns", "severity": "error", "labels": {"metric": "dns_error_rate", "value": "0.78"}, "incident_id": "INC-2026-023"},
+      {"kind": "log", "service": "coredns", "severity": "error", "labels": {"msg": "SERVFAIL: svc.cluster.local"}, "incident_id": "INC-2026-023"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-024",
+    "ground_truth_root_cause": "goroutine_leak_in_http_handler",
+    "ground_truth_resolution": "fix_context_cancellation_handling",
+    "session_hash": "",
+    "events": [
+      {"kind": "metric", "service": "api", "severity": "warning", "labels": {"metric": "goroutine_count", "value": "45000"}, "incident_id": "INC-2026-024"},
+      {"kind": "alert", "service": "api", "severity": "error", "labels": {"alertname": "GoroutineLeaking"}, "incident_id": "INC-2026-024"},
+      {"kind": "log", "service": "api", "severity": "warning", "labels": {"msg": "runtime: goroutine count > 40000: possible leak"}, "incident_id": "INC-2026-024"},
+      {"kind": "metric", "service": "api", "severity": "error", "labels": {"metric": "memory_rss_mb", "value": "3800"}, "incident_id": "INC-2026-024"}
+    ]
+  },
+  {
+    "incident_id": "INC-2026-025",
+    "ground_truth_root_cause": "feature_flag_rollout_breaking_change",
+    "ground_truth_resolution": "disable_feature_flag_and_hotfix",
+    "session_hash": "",
+    "events": [
+      {"kind": "deployment", "service": "api", "severity": "info", "labels": {"ref": "feature/new-checkout-flow", "sha": "1a2b3c4d5e6f"}, "incident_id": "INC-2026-025"},
+      {"kind": "log", "service": "api", "severity": "error", "labels": {"msg": "TypeError: Cannot read property 'price' of undefined"}, "incident_id": "INC-2026-025"},
+      {"kind": "alert", "service": "api", "severity": "critical", "labels": {"alertname": "CheckoutErrors"}, "incident_id": "INC-2026-025"},
+      {"kind": "metric", "service": "api", "severity": "critical", "labels": {"metric": "checkout_error_rate", "value": "0.67"}, "incident_id": "INC-2026-025"}
+    ]
+  }
+]

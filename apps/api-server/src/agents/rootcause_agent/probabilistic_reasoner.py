@@ -15,19 +15,7 @@ from agents.uncertainty import (
     UncertaintyAssessment,
     UncertaintyEngine,
 )
-
-
-def _build_hypothesis_text(title: str, cause_service: str, affected_service: str) -> str:
-    return (
-        f"{title} in {cause_service} is the most likely contributor "
-        f"to the impact observed on {affected_service}."
-    )
-
-
-def _build_causal_chain(candidate_title: str, cause_service: str, affected_service: str) -> str:
-    if cause_service == affected_service:
-        return f"{candidate_title} -> degraded {affected_service} behavior -> user-facing impact"
-    return f"{candidate_title} in {cause_service} -> downstream impact on {affected_service}"
+from semantics.semantic_engine import MechanismInference, OperationalSemanticEngine
 
 
 def _serialize_evidence(events: list[Any]) -> list[HypothesisEvidence]:
@@ -80,6 +68,14 @@ def build_probabilistic_root_cause_analysis(
     candidates: list[CandidateCause],
     grounding_score: float,
 ) -> RootCauseAnalysis:
+    # Infer operational mechanism from evidence before candidate assessment
+    semantic_engine = OperationalSemanticEngine()
+    mechanism_inference: MechanismInference = semantic_engine.infer_mechanism(
+        evidence_items,
+        timed_events,
+        incident_type=incident_type,
+    )
+
     candidate_assessments: list[tuple[CandidateCause, CandidateAssessment, dict[str, float]]] = []
     for candidate in candidates:
         assessment_result = assess_candidate(candidate, timed_events)
@@ -122,23 +118,28 @@ def build_probabilistic_root_cause_analysis(
             or "deploy" in candidate.title.lower()
             and contradiction.category == "temporal_contradiction"
         ]
+        # Use mechanism-aware hypothesis and causal chain text
+        hypothesis_text = semantic_engine.build_mechanism_hypothesis_text(
+            candidate.title,
+            candidate.cause_service,
+            candidate.affected_service,
+            mechanism_inference,
+        )
+        causal_chain_text = semantic_engine.build_mechanism_causal_chain(
+            candidate.title,
+            candidate.cause_service,
+            candidate.affected_service,
+            mechanism_inference,
+        )
         hypothesis = RootCauseHypothesis(
             cause=candidate.title,
-            hypothesis=_build_hypothesis_text(
-                candidate.title,
-                candidate.cause_service,
-                candidate.affected_service,
-            ),
+            hypothesis=hypothesis_text,
             cause_service=candidate.cause_service,
             affected_service=candidate.affected_service,
             evidence_for=_serialize_evidence(assessment.evidence_for),
             evidence_against=_serialize_evidence(assessment.evidence_against),
             evidence_neutral=_serialize_evidence(assessment.evidence_neutral),
-            causal_chain=_build_causal_chain(
-                candidate.title,
-                candidate.cause_service,
-                candidate.affected_service,
-            ),
+            causal_chain=causal_chain_text,
             counterfactual_test=(
                 f"If {candidate.title.lower()} were absent, the correlated anomalies on "
                 f"{candidate.affected_service} would be less likely to appear together."
@@ -178,10 +179,18 @@ def build_probabilistic_root_cause_analysis(
     narrative = ""
     if hypotheses:
         top = hypotheses[0]
-        narrative = (
-            f"{top.cause or service} is the most likely contributor "
-            f"({(top.probability or 0.0):.0%} confidence)"
-        )
+        mechanism_prefix = mechanism_inference.to_hypothesis_prefix()
+        if mechanism_prefix:
+            narrative = (
+                f"{mechanism_prefix} "
+                f"{top.cause or service} is the leading candidate "
+                f"({(top.probability or 0.0):.0%} probability)"
+            )
+        else:
+            narrative = (
+                f"{top.cause or service} is the most likely contributor "
+                f"({(top.probability or 0.0):.0%} confidence)"
+            )
         if uncertainty.contradictions:
             narrative += ", though " f"{uncertainty.contradictions[0].description.lower()}"
         else:
@@ -194,6 +203,7 @@ def build_probabilistic_root_cause_analysis(
         f"retrieval grounding score {grounding_score:.2f}",
         f"generated {len(candidates)} candidate causes",
         f"uncertainty state {uncertainty.state}",
+        f"mechanism inference: {mechanism_inference.primary_mechanism_id or 'none'}",
     ]
 
     return RootCauseAnalysis(

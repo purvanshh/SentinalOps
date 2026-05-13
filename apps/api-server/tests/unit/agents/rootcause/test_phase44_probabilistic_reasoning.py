@@ -124,7 +124,7 @@ def test_conflicting_evidence_generates_competing_hypotheses_and_escalation() ->
     assert len(result.hypotheses) == 2
     assert result.multi_cause is True
     assert len(result.contributing_causes) >= 2
-    assert "confidence" in result.narrative.lower()
+    assert "confidence" in result.narrative.lower() or "probability" in result.narrative.lower()
 
 
 def test_missing_metrics_collapses_confidence_and_marks_insufficient_telemetry() -> None:

@@ -11,4 +11,4 @@ router = APIRouter(prefix="/evaluations", tags=["evaluations"])
 async def evaluation_summary(
     _: AuthenticatedUser = Depends(require_role(["viewer"])),
 ) -> dict:
-    return run_evaluation()
+    return await run_evaluation()

@@ -48,7 +48,7 @@ def build_deployment_fallback(*, error: str) -> dict[str, Any]:
 
 def build_root_cause_fallback(*, error: str) -> dict[str, Any]:
     return {
-        "status": "insufficient_evidence",
+        "status": "insufficient_telemetry",
         "hypotheses": [],
         "strongest_hypothesis_index": None,
         "investigation_log": (
@@ -61,6 +61,40 @@ def build_root_cause_fallback(*, error: str) -> dict[str, Any]:
             "Check recent deployments manually",
             "Escalate to operator triage",
         ],
+        "uncertainty": {
+            "state": "insufficient_telemetry",
+            "confidence": 0.0,
+            "uncertainty_score": 1.0,
+            "evidence_sufficiency": 0.0,
+            "retrieval_grounding": 0.0,
+            "hypothesis_stability": 0.0,
+            "confidence_interval": {"lower": 0.0, "upper": 0.2},
+            "missing_telemetry": ["metrics", "logs", "deployments"],
+            "sources": [],
+            "contradictions": [],
+            "alternative_explanations": [],
+            "escalation": {
+                "recommended": True,
+                "state": "insufficient_telemetry",
+                "reasons": ["Provider-backed analysis failed."],
+                "triggers": ["insufficient_telemetry"],
+                "confidence_threshold": 0.55,
+            },
+            "rationale": [error],
+        },
+        "escalation": {
+            "recommended": True,
+            "state": "insufficient_telemetry",
+            "reasons": ["Provider-backed analysis failed."],
+            "triggers": ["insufficient_telemetry"],
+            "confidence_threshold": 0.55,
+        },
+        "primary_state": "insufficient_telemetry",
+        "narrative": (
+            "Unable to determine a confident root cause because evidence " "collection degraded."
+        ),
+        "contributing_causes": [],
+        "multi_cause": False,
         "degraded": True,
         "failure_reason": error,
     }

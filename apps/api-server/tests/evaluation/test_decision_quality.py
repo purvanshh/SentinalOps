@@ -9,8 +9,8 @@ Validates:
 - Autonomous readiness gating
 - End-to-end Phase 39 pipeline
 """
-import pytest
 
+import pytest
 from evaluation.benchmark_suite import load_benchmark_suite
 from evaluation.regression.benchmark_replay import replay_benchmark
 from evaluation.scorers.execution_safety_scorer import (
@@ -98,19 +98,19 @@ class TestExecutionSafetyFromBenchmark:
         dangerous = suite.dangerous_incidents()
         for inc in dangerous:
             score = score_execution_safety(inc)
-            assert score.risk in (ExecutionRisk.CRITICAL, ExecutionRisk.HIGH), (
-                f"Dangerous incident {inc.id} classified as {score.risk}"
-            )
+            assert score.risk in (
+                ExecutionRisk.CRITICAL,
+                ExecutionRisk.HIGH,
+            ), f"Dangerous incident {inc.id} classified as {score.risk}"
 
     def test_safe_correct_incidents_not_blocked(self, suite) -> None:
         safe_correct = suite.by_remediation_class("SAFE_AND_CORRECT")
         not_blocked = [
-            inc for inc in safe_correct
-            if not score_execution_safety(inc).blocks_automation
+            inc for inc in safe_correct if not score_execution_safety(inc).blocks_automation
         ]
-        assert len(not_blocked) > len(safe_correct) // 2, (
-            "Most SAFE_AND_CORRECT incidents should not block automation"
-        )
+        assert (
+            len(not_blocked) > len(safe_correct) // 2
+        ), "Most SAFE_AND_CORRECT incidents should not block automation"
 
     def test_execution_safety_report_valid(self, suite) -> None:
         scores = [score_execution_safety(inc) for inc in suite.incidents]
@@ -120,6 +120,7 @@ class TestExecutionSafetyFromBenchmark:
 
     def test_to_dict_serializable(self, suite) -> None:
         import json
+
         inc = suite.incidents[0]
         score = score_execution_safety(inc)
         json.dumps(score.to_dict())
@@ -145,10 +146,12 @@ class TestOperatorTrustScoring:
         dangerous_decisions = [
             d for d in build_operator_decisions_from_benchmark(dangerous_incidents)
         ]
-        rejection_rate = sum(1 for d in dangerous_decisions if d.operator_action == "REJECT") / len(dangerous_decisions)
-        assert rejection_rate >= 0.80, (
-            f"Expected >= 80% of dangerous incidents rejected, got {rejection_rate:.2%}"
+        rejection_rate = sum(1 for d in dangerous_decisions if d.operator_action == "REJECT") / len(
+            dangerous_decisions
         )
+        assert (
+            rejection_rate >= 0.80
+        ), f"Expected >= 80% of dangerous incidents rejected, got {rejection_rate:.2%}"
 
     def test_per_category_trust_populated(self, suite) -> None:
         decisions = build_operator_decisions_from_benchmark(suite.incidents)
@@ -214,6 +217,7 @@ class TestTrustworthinessScorecard:
 
     def test_to_dict_serializable(self, scorecard: TrustworthinessScorecard) -> None:
         import json
+
         json.dumps(scorecard.to_dict())
 
     def test_component_scores_present(self, scorecard: TrustworthinessScorecard) -> None:
@@ -237,23 +241,22 @@ class TestEndToEndPipeline:
 
     def test_hallucination_rate_detects_known_hallucinations(self, replay_result) -> None:
         rate = replay_result.hallucination_summary.get("hallucination_detection_rate", 0.0)
-        assert rate > 0.0, (
-            "Expected some hallucination detections in the benchmark (known HALLUCINATED incidents)"
-        )
+        assert (
+            rate > 0.0
+        ), "Expected some hallucination detections in the benchmark (known HALLUCINATED incidents)"
 
     def test_dangerous_rate_detects_known_dangerous(self, replay_result) -> None:
         dangerous_rate = replay_result.remediation_quality.get("dangerous_rate", 0.0)
-        assert dangerous_rate > 0.0, (
-            "Expected some DANGEROUS incidents in the remediation quality report"
-        )
+        assert (
+            dangerous_rate > 0.0
+        ), "Expected some DANGEROUS incidents in the remediation quality report"
 
-    def test_safety_score_penalizes_dangerous_actions(
-        self, suite, replay_result
-    ) -> None:
+    def test_safety_score_penalizes_dangerous_actions(self, suite, replay_result) -> None:
         dangerous_count = len(suite.dangerous_incidents())
         total = len(suite.incidents)
         dangerous_proportion = dangerous_count / total
         safety_score = replay_result.aggregate_safety_score
         assert safety_score < 0.95, (
-            f"Safety score {safety_score:.3f} should be < 0.95 given {dangerous_proportion:.1%} dangerous incidents"
+            f"Safety score {safety_score:.3f} should be < 0.95 "
+            f"given {dangerous_proportion:.1%} dangerous incidents"
         )

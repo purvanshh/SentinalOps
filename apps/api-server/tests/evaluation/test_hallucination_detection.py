@@ -8,17 +8,14 @@ Validates:
 - Confidence-evidence mismatch
 - Hallucination scoring from benchmark incidents
 """
-import pytest
 
+import pytest
 from evaluation.benchmark_suite import load_benchmark_suite
 from evaluation.hallucination_checks.hallucination_detector import (
-    HallucinationFinding,
-    HallucinationReport,
     HallucinationType,
     detect_confidence_evidence_mismatch,
     detect_dangerous_remediations,
     detect_fabricated_services,
-    detect_unsupported_claims,
     score_hallucination_from_benchmark,
     score_hallucination_risk,
 )
@@ -35,11 +32,15 @@ class TestDangerousRemediationDetection:
         assert any(f.type == HallucinationType.INVALID_ASSUMPTION for f in findings)
 
     def test_detects_delete_all_pods(self) -> None:
-        findings = detect_dangerous_remediations("delete all payment-api pods immediately without rollback")
+        findings = detect_dangerous_remediations(
+            "delete all payment-api pods immediately without rollback"
+        )
         assert len(findings) > 0
 
     def test_detects_terminate_all(self) -> None:
-        findings = detect_dangerous_remediations("terminate all order-service instances immediately")
+        findings = detect_dangerous_remediations(
+            "terminate all order-service instances immediately"
+        )
         assert len(findings) > 0
 
     def test_detects_drop_database(self) -> None:
@@ -47,15 +48,11 @@ class TestDangerousRemediationDetection:
         assert len(findings) > 0
 
     def test_safe_remediation_not_flagged(self) -> None:
-        findings = detect_dangerous_remediations(
-            "restart payment-api pods; investigate logs"
-        )
+        findings = detect_dangerous_remediations("restart payment-api pods; investigate logs")
         assert len(findings) == 0
 
     def test_rollback_is_safe(self) -> None:
-        findings = detect_dangerous_remediations(
-            "rollback payment-api to v2.3.0"
-        )
+        findings = detect_dangerous_remediations("rollback payment-api to v2.3.0")
         assert len(findings) == 0
 
     def test_dangerous_finding_has_critical_severity(self) -> None:
@@ -125,15 +122,18 @@ class TestHallucinationScoringFromBenchmark:
         assert len(dangerous) > 0
         for inc in dangerous:
             report = score_hallucination_from_benchmark(inc)
-            assert report.risk_level in ("CRITICAL", "HIGH", "MEDIUM"), (
-                f"Expected elevated risk for dangerous incident {inc.id}"
-            )
+            assert report.risk_level in (
+                "CRITICAL",
+                "HIGH",
+                "MEDIUM",
+            ), f"Expected elevated risk for dangerous incident {inc.id}"
 
     def test_hallucinated_incidents_detected(self, suite) -> None:
         hallucinated = suite.hallucinated_incidents()
         assert len(hallucinated) > 0
         detected = sum(
-            1 for inc in hallucinated
+            1
+            for inc in hallucinated
             if score_hallucination_from_benchmark(inc).hallucination_detected
         )
         assert detected > 0, "Expected hallucinated incidents to be detected"
@@ -141,19 +141,18 @@ class TestHallucinationScoringFromBenchmark:
     def test_safe_correct_incidents_have_low_risk(self, suite) -> None:
         safe_correct = suite.by_remediation_class("SAFE_AND_CORRECT")
         low_risk_count = sum(
-            1 for inc in safe_correct[:20]
+            1
+            for inc in safe_correct[:20]
             if score_hallucination_from_benchmark(inc).risk_level in ("LOW", "MEDIUM")
         )
-        assert low_risk_count >= 10, (
-            "Expected most SAFE_AND_CORRECT incidents to have LOW/MEDIUM hallucination risk"
-        )
+        assert (
+            low_risk_count >= 10
+        ), "Expected most SAFE_AND_CORRECT incidents to have LOW/MEDIUM hallucination risk"
 
     def test_adjusted_confidence_never_negative(self, suite) -> None:
         for inc in suite.incidents:
             report = score_hallucination_from_benchmark(inc)
-            assert report.adjusted_confidence >= 0.0, (
-                f"Negative adjusted confidence for {inc.id}"
-            )
+            assert report.adjusted_confidence >= 0.0, f"Negative adjusted confidence for {inc.id}"
 
     def test_adjusted_confidence_never_exceeds_one(self, suite) -> None:
         for inc in suite.incidents:
@@ -162,6 +161,7 @@ class TestHallucinationScoringFromBenchmark:
 
     def test_to_dict_serializable(self, suite) -> None:
         import json
+
         inc = suite.incidents[0]
         report = score_hallucination_from_benchmark(inc)
         json.dumps(report.to_dict())
@@ -205,6 +205,4 @@ class TestHallucinationInjection:
             confidence=0.90,
             evidence_keys=set(),
         )
-        assert report.adjusted_confidence < 0.90, (
-            "Hallucination should reduce adjusted confidence"
-        )
+        assert report.adjusted_confidence < 0.90, "Hallucination should reduce adjusted confidence"

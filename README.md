@@ -115,10 +115,9 @@ These are engineering diagnostics from the current codebase. They measure specif
 
 | Metric | Value |
 |--------|-------|
-| Passing tests | 1473 |
+| Passing tests | 2139 |
 | Known failing test | 1 (pre-existing, `test_high_confidence_better_than_low`) |
-| Test files | 103 |
-| Test categories | unit, integration, evaluation, chaos, orchestration, production, resilience, replay, runtime |
+| Test categories | unit, integration, evaluation, chaos, orchestration, production, resilience, replay, runtime, reproducibility, redteam, readiness, diagnostics, integrity, architecture |
 
 Coverage includes deterministic evaluation, chaos testing, and operational replay.
 
@@ -202,6 +201,12 @@ What the system actually does:
 - Multi-layer provider resilience with automatic degraded-mode operation
 - Operator-in-the-loop approval built into the orchestration graph
 - Deterministic evaluation sandboxing with zero production side effects
+- Benchmark reproducibility with SHA-256 dataset fingerprinting and replay manifests
+- Adversarial red-team evaluation (9 scenarios: prompt injection, telemetry spoofing, causal spoofing, escalation spam, confidence inflation, and more)
+- Conservative deployment readiness classification (5 levels; autonomy prohibited without explicit evidence)
+- Live runtime diagnostics with Prometheus metrics (confidence drift, reasoning collapse, telemetry health)
+- Anti-contamination guards preventing golden labels from reaching scorers
+- Architecture validation with import graph analysis and layer boundary enforcement
 
 ---
 

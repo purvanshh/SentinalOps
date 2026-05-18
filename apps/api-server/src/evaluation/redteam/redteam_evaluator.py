@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from .adversarial_scenarios import AdversarialScenario, AttackType, ScenarioLibrary

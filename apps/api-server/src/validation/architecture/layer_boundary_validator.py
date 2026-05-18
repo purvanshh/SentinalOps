@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-
 
 # Allowed dependency directions. Key may depend on values — not the reverse.
 _ALLOWED_DIRECTION: dict[str, list[str]] = {

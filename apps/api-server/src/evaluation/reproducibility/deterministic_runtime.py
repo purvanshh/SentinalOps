@@ -116,7 +116,7 @@ class DeterministicRuntime:
                 sub = self._numeric_diff(a.get(k), b.get(k), f"{prefix}.{k}" if prefix else k)
                 diffs.update(sub)
         elif isinstance(a, list) and isinstance(b, list):
-            for i, (x, y) in enumerate(zip(a, b)):
+            for i, (x, y) in enumerate(zip(a, b, strict=False)):
                 sub = self._numeric_diff(x, y, f"{prefix}[{i}]")
                 diffs.update(sub)
         return diffs

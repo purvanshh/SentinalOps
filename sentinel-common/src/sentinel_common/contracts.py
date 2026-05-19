@@ -1,0 +1,13 @@
+"""Protocol contracts for agents and evaluation."""
+
+from typing import Any, Protocol
+
+
+class AgentContract(Protocol):
+    async def execute(self, input_data: dict[str, Any]) -> dict[str, Any]: ...
+    def validate_input(self, input_data: dict[str, Any]) -> bool: ...
+
+
+class EvaluationContract(Protocol):
+    def score(self, prediction: Any, ground_truth: Any) -> float: ...
+    def validate(self, result: Any) -> bool: ...

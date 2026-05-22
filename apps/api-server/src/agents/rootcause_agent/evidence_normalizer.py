@@ -11,12 +11,62 @@ def _now_iso() -> str:
 
 def _confidence_for_metric(anomaly: dict[str, Any]) -> float:
     """Derive a confidence score from the anomaly's deviation magnitude."""
-    deviation = anomaly.get("deviation_factor", anomaly.get("deviation", 0.0))
-    try:
-        magnitude = float(deviation)
-    except (TypeError, ValueError):
-        return 0.5
-    return min(round(0.5 + min(magnitude, 5.0) / 10.0, 2), 1.0)
+    deviation = anomaly.get("deviation_factor", anomaly.get("deviation"))
+    if deviation is not None:
+        try:
+            magnitude = float(deviation)
+        except (TypeError, ValueError):
+            magnitude = None
+        if magnitude is not None:
+            return round(min(0.95, max(0.5, magnitude / 2.0)), 2)
+
+    z_score = anomaly.get("z_score")
+    if z_score is not None:
+        try:
+            magnitude = float(z_score)
+        except (TypeError, ValueError):
+            magnitude = None
+        if magnitude is not None:
+            return round(min(0.95, max(0.5, magnitude / 10.0)), 2)
+
+    return 0.5
+
+
+def _infer_service_name(evidence_item: dict[str, Any], execution: AgentExecution) -> str | None:
+    service = evidence_item.get("service")
+    if service:
+        return str(service)
+
+    execution_input = execution.input or {}
+    service = execution_input.get("service")
+    if service:
+        return str(service)
+
+    raw_payload = execution_input.get("raw_payload", {})
+    if isinstance(raw_payload, dict):
+        service = raw_payload.get("labels", {}).get("service")
+        if service:
+            return str(service)
+
+    joined_text = " ".join(
+        str(value)
+        for key, value in evidence_item.items()
+        if key in {"metric", "signature", "sample", "summary"}
+    ).lower()
+    service_markers = {
+        "payment": "payment-api",
+        "search": "search-service",
+        "auth": "auth-service",
+        "gateway": "api-gateway",
+        "notification": "notification-service",
+        "order": "order-service",
+        "checkout": "checkout-service",
+        "user": "user-service",
+    }
+    for marker, inferred_service in service_markers.items():
+        if marker in joined_text:
+            return inferred_service
+    return None
 
 
 def _confidence_for_log(signature: dict[str, Any]) -> float:
@@ -65,11 +115,7 @@ def normalize_agent_executions(executions: Iterable[AgentExecution]) -> list[dic
                         "content": {
                             **anomaly,
                             "timestamp": created_at,
-                            "service": (
-                                execution.input.get("messages", [{}])[-1]
-                                if execution.input
-                                else None
-                            ),
+                            "service": _infer_service_name(anomaly, execution),
                         },
                     }
                 )
@@ -89,6 +135,7 @@ def normalize_agent_executions(executions: Iterable[AgentExecution]) -> list[dic
                             "timestamp": signature.get("first_seen") or created_at,
                             "fingerprint": signature.get("fingerprint", ""),
                             "trace_ids": signature.get("trace_ids", []),
+                            "service": _infer_service_name(signature, execution),
                         },
                     }
                 )

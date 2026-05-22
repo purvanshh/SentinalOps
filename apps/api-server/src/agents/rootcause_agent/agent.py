@@ -39,6 +39,12 @@ async def analyze_root_cause(
             "item_key": item.item_key,
             "source": item.source,
             "item_type": item.item_type,
+            "confidence": getattr(item, "confidence", item.content.get("confidence", 0.6)),
+            "uncertainty_status": getattr(
+                item,
+                "uncertainty_status",
+                item.content.get("uncertainty_status", "present"),
+            ),
             **item.content,
         }
         for item in evidence_rows

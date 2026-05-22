@@ -196,7 +196,7 @@ class UncertaintyEngine:
     def __init__(
         self,
         *,
-        calibration_temperature: float = 1.35,
+        calibration_temperature: float = 1.0,
         escalation_threshold: float = 0.55,
     ) -> None:
         self.calibration_temperature = calibration_temperature
@@ -240,7 +240,7 @@ class UncertaintyEngine:
         contradictions = self._detect_contradictions(timed_events, hypothesis_labels)
         missing_telemetry = self._missing_telemetry(evidence_items)
         probabilities = self.rank_hypotheses(raw_hypothesis_scores)
-        top_confidence = probabilities[0] if probabilities else 0.0
+        top_confidence = max(probabilities) if probabilities else 0.0
         evidence_sufficiency = self._evidence_sufficiency(evidence_items, missing_telemetry)
         stability = self._hypothesis_stability(probabilities)
         uncertainty_score = self._aggregate_uncertainty_score(
@@ -330,16 +330,28 @@ class UncertaintyEngine:
                 )
             )
 
-        if len(evidence_items) < 3:
+        if len(evidence_items) == 1:
             sources.append(
                 UncertaintySource(
                     source="sparse_evidence",
                     reason=(
-                        "Evidence volume is sparse, so confidence should "
-                        "collapse toward operator review."
+                        "Only one supporting signal is available, so attribution remains fragile."
                     ),
                     weight=0.7,
-                    penalty=0.18,
+                    penalty=0.1,
+                    evidence_keys=[item.get("item_key", "") for item in evidence_items],
+                )
+            )
+        elif len(evidence_items) == 2:
+            sources.append(
+                UncertaintySource(
+                    source="sparse_evidence",
+                    reason=(
+                        "Only two supporting signals are available, so confidence should "
+                        "remain cautious but specific."
+                    ),
+                    weight=0.55,
+                    penalty=0.05,
                     evidence_keys=[item.get("item_key", "") for item in evidence_items],
                 )
             )

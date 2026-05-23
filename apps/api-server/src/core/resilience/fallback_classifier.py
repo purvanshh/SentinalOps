@@ -370,8 +370,7 @@ class DeterministicFallbackClassifier:
             requires_immediate_investigation=severity in ("critical", "high"),
             recommended_workflow="human_triage",
             rationale=(
-                "Deterministic fallback: no classification rules matched."
-                " Routing to human triage."
+                "Deterministic fallback: no classification rules matched. Routing to human triage."
             ),
         )
 

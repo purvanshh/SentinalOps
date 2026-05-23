@@ -245,9 +245,7 @@ def _detect_deployment_timeline_contradiction(
     # If mechanism is NOT deployment-related but deployment evidence is strong,
     # note the under-weighting
     if not has_regression_claim and has_deployment_signal and inference is not None:
-        primary_name = (
-            inference.primary.mechanism.name if inference.primary else "unknown"
-        )
+        primary_name = inference.primary.mechanism.name if inference.primary else "unknown"
         contradictions.append(
             SemanticContradiction(
                 category="deployment_timeline_underweighted",
@@ -283,12 +281,8 @@ class SemanticContradictionDetector:
         contradictions.extend(
             _detect_mechanism_remediation_contradiction(inference, remediation_text)
         )
-        contradictions.extend(
-            _detect_workload_pattern_contradiction(evidence_items, inference)
-        )
-        contradictions.extend(
-            _detect_impossible_state_transition(evidence_items, timed_events)
-        )
+        contradictions.extend(_detect_workload_pattern_contradiction(evidence_items, inference))
+        contradictions.extend(_detect_impossible_state_transition(evidence_items, timed_events))
         contradictions.extend(
             _detect_deployment_timeline_contradiction(evidence_items, timed_events, inference)
         )

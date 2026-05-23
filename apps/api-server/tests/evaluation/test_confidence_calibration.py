@@ -168,9 +168,9 @@ class TestCalibrationReportFromBenchmark:
         json.dumps(calibration_report.to_dict())
 
     def test_ece_not_unreasonably_high(self, calibration_report: CalibrationReport) -> None:
-        assert (
-            calibration_report.expected_calibration_error < 0.40
-        ), f"ECE {calibration_report.expected_calibration_error:.3f} is unreasonably high"
+        assert calibration_report.expected_calibration_error < 0.40, (
+            f"ECE {calibration_report.expected_calibration_error:.3f} is unreasonably high"
+        )
 
 
 class TestPhase44Calibration:

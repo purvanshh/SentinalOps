@@ -94,7 +94,7 @@ class TestConfidenceDriftTracker:
             ConfidenceSample(
                 incident_id=f"INC-{i:03d}",
                 stated_confidence=0.40,  # low stated confidence
-                was_correct=True,        # but always correct
+                was_correct=True,  # but always correct
                 category="performance",
             )
             for i in range(10)
@@ -161,15 +161,19 @@ class TestConfidenceDriftTracker:
         tracker = ConfidenceDriftTracker()
         perf_samples = [
             ConfidenceSample(
-                incident_id=f"P{i}", stated_confidence=0.80,
-                was_correct=True, category="performance"
+                incident_id=f"P{i}",
+                stated_confidence=0.80,
+                was_correct=True,
+                category="performance",
             )
             for i in range(3)
         ]
         avail_samples = [
             ConfidenceSample(
-                incident_id=f"A{i}", stated_confidence=0.70,
-                was_correct=False, category="availability"
+                incident_id=f"A{i}",
+                stated_confidence=0.70,
+                was_correct=False,
+                category="availability",
             )
             for i in range(3)
         ]
@@ -196,8 +200,12 @@ class TestConfidenceDriftTracker:
         assert drift is not None
         d = drift.to_dict()
         for key in [
-            "window_id", "sample_count", "mean_stated_confidence",
-            "actual_accuracy", "calibration_error", "drift_direction",
+            "window_id",
+            "sample_count",
+            "mean_stated_confidence",
+            "actual_accuracy",
+            "calibration_error",
+            "drift_direction",
             "correction_recommendation",
         ]:
             assert key in d

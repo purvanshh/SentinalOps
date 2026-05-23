@@ -231,23 +231,19 @@ class ExecutionOutcomeMemory:
     def most_harmful_remediations(self, top_n: int = 5) -> list[tuple[str, float]]:
         """Return remediations sorted by harm rate descending."""
         classes = {r.remediation_class for r in self._records}
-        rates = [
-            (cls, self.rollback_rate_for_remediation(cls)) for cls in classes
-        ]
+        rates = [(cls, self.rollback_rate_for_remediation(cls)) for cls in classes]
         return sorted(rates, key=lambda x: x[1], reverse=True)[:top_n]
 
     def blast_radius_accuracy(self) -> float:
         """Fraction of outcomes where predicted blast radius was within 50% of actual."""
         recs = [
-            r for r in self._records
-            if r.predicted_blast_radius > 0 and r.actual_blast_radius > 0
+            r for r in self._records if r.predicted_blast_radius > 0 and r.actual_blast_radius > 0
         ]
         if not recs:
             return 1.0
         accurate = sum(
             1
             for r in recs
-            if abs(r.predicted_blast_radius - r.actual_blast_radius) / r.actual_blast_radius
-            <= 0.50
+            if abs(r.predicted_blast_radius - r.actual_blast_radius) / r.actual_blast_radius <= 0.50
         )
         return round(accurate / len(recs), 4)

@@ -44,9 +44,16 @@ class NormalizationResult:
 _CONCEPT_MAP: list[tuple[list[str], NormalizedConcept]] = [
     (
         [
-            "connection pool", "pool exhausted", "db timeout", "connection wait",
-            "acquisition latency", "connection limit", "waiting for connection",
-            "pool starvation", "db connections", "connection queue",
+            "connection pool",
+            "pool exhausted",
+            "db timeout",
+            "connection wait",
+            "acquisition latency",
+            "connection limit",
+            "waiting for connection",
+            "pool starvation",
+            "db connections",
+            "connection queue",
         ],
         NormalizedConcept(
             canonical_id="db_connection_exhaustion",
@@ -61,8 +68,14 @@ _CONCEPT_MAP: list[tuple[list[str], NormalizedConcept]] = [
     ),
     (
         [
-            "consumer lag", "kafka lag", "queue depth", "message backlog",
-            "consumer behind", "queue buildup", "backpressure", "producer blocked",
+            "consumer lag",
+            "kafka lag",
+            "queue depth",
+            "message backlog",
+            "consumer behind",
+            "queue buildup",
+            "backpressure",
+            "producer blocked",
         ],
         NormalizedConcept(
             canonical_id="queue_consumer_lag",
@@ -77,8 +90,13 @@ _CONCEPT_MAP: list[tuple[list[str], NormalizedConcept]] = [
     ),
     (
         [
-            "retry", "retrying", "retry storm", "request amplification",
-            "exponential backoff", "cascading retries", "thundering herd",
+            "retry",
+            "retrying",
+            "retry storm",
+            "request amplification",
+            "exponential backoff",
+            "cascading retries",
+            "thundering herd",
         ],
         NormalizedConcept(
             canonical_id="retry_amplification",
@@ -93,8 +111,14 @@ _CONCEPT_MAP: list[tuple[list[str], NormalizedConcept]] = [
     ),
     (
         [
-            "lock wait", "deadlock", "lock contention", "serialization failure",
-            "row lock", "table lock", "transaction block", "long transaction",
+            "lock wait",
+            "deadlock",
+            "lock contention",
+            "serialization failure",
+            "row lock",
+            "table lock",
+            "transaction block",
+            "long transaction",
         ],
         NormalizedConcept(
             canonical_id="db_lock_contention",
@@ -109,8 +133,13 @@ _CONCEPT_MAP: list[tuple[list[str], NormalizedConcept]] = [
     ),
     (
         [
-            "thread pool", "thread exhaustion", "thread starvation", "blocked threads",
-            "thread limit", "executor queue", "thread busy",
+            "thread pool",
+            "thread exhaustion",
+            "thread starvation",
+            "blocked threads",
+            "thread limit",
+            "executor queue",
+            "thread busy",
         ],
         NormalizedConcept(
             canonical_id="thread_pool_saturation",
@@ -125,8 +154,13 @@ _CONCEPT_MAP: list[tuple[list[str], NormalizedConcept]] = [
     ),
     (
         [
-            "stale cache", "cache poison", "stale data", "cache invalidation",
-            "cache inconsistency", "stale entry", "incorrect cached",
+            "stale cache",
+            "cache poison",
+            "stale data",
+            "cache invalidation",
+            "cache inconsistency",
+            "stale entry",
+            "incorrect cached",
         ],
         NormalizedConcept(
             canonical_id="cache_data_staleness",
@@ -141,8 +175,14 @@ _CONCEPT_MAP: list[tuple[list[str], NormalizedConcept]] = [
     ),
     (
         [
-            "n+1", "n plus one", "query fanout", "query amplification",
-            "orm query", "excessive queries", "too many queries", "db cpu",
+            "n+1",
+            "n plus one",
+            "query fanout",
+            "query amplification",
+            "orm query",
+            "excessive queries",
+            "too many queries",
+            "db cpu",
         ],
         NormalizedConcept(
             canonical_id="query_amplification",
@@ -157,8 +197,14 @@ _CONCEPT_MAP: list[tuple[list[str], NormalizedConcept]] = [
     ),
     (
         [
-            "memory pressure", "heap exhaustion", "gc pause", "oom", "out of memory",
-            "garbage collection", "memory leak", "heap usage",
+            "memory pressure",
+            "heap exhaustion",
+            "gc pause",
+            "oom",
+            "out of memory",
+            "garbage collection",
+            "memory leak",
+            "heap usage",
         ],
         NormalizedConcept(
             canonical_id="memory_exhaustion",
@@ -173,8 +219,12 @@ _CONCEPT_MAP: list[tuple[list[str], NormalizedConcept]] = [
     ),
     (
         [
-            "circuit breaker", "circuit open", "circuit tripped", "half open",
-            "breaker tripped", "circuit flapping",
+            "circuit breaker",
+            "circuit open",
+            "circuit tripped",
+            "half open",
+            "breaker tripped",
+            "circuit flapping",
         ],
         NormalizedConcept(
             canonical_id="circuit_breaker_activation",
@@ -189,8 +239,14 @@ _CONCEPT_MAP: list[tuple[list[str], NormalizedConcept]] = [
     ),
     (
         [
-            "deployment", "deploy", "rollback", "regression", "post-deploy",
-            "newly deployed", "commit introduced", "version bump",
+            "deployment",
+            "deploy",
+            "rollback",
+            "regression",
+            "post-deploy",
+            "newly deployed",
+            "commit introduced",
+            "version bump",
         ],
         NormalizedConcept(
             canonical_id="deployment_regression_signal",
@@ -205,8 +261,13 @@ _CONCEPT_MAP: list[tuple[list[str], NormalizedConcept]] = [
     ),
     (
         [
-            "cascading", "multi-service", "service chain", "spreading failure",
-            "blast radius", "propagating failure", "domino",
+            "cascading",
+            "multi-service",
+            "service chain",
+            "spreading failure",
+            "blast radius",
+            "propagating failure",
+            "domino",
         ],
         NormalizedConcept(
             canonical_id="cascading_service_failure",
@@ -281,9 +342,7 @@ class SemanticEvidenceNormalizer:
                 enriched_item["semantic_concept_name"] = result.canonical_concept.canonical_name
                 enriched_item["operational_meaning"] = result.canonical_concept.operational_meaning
                 enriched_item["mechanism_hints"] = result.canonical_concept.mechanism_hints
-                enriched_item["semantic_severity_weight"] = (
-                    result.canonical_concept.severity_weight
-                )
+                enriched_item["semantic_severity_weight"] = result.canonical_concept.severity_weight
             enriched.append(enriched_item)
         return enriched
 
@@ -311,9 +370,7 @@ class SemanticEvidenceNormalizer:
             clusters.setdefault(bucket, []).append(item)
         return clusters
 
-    def dominant_mechanism_hints(
-        self, evidence_items: list[dict[str, Any]]
-    ) -> list[str]:
+    def dominant_mechanism_hints(self, evidence_items: list[dict[str, Any]]) -> list[str]:
         """
         Return mechanism IDs suggested by the most common semantic concepts across evidence.
         """

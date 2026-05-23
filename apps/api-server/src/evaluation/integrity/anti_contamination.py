@@ -79,10 +79,15 @@ class AntiContaminationGuard:
             recommendation = "Minor contamination. Scrub fields before evaluation."
         elif rate < 0.50:
             severity = "medium"
-            recommendation = "Significant contamination. Evaluation results are unreliable — re-run after scrubbing."
+            recommendation = (
+                "Significant contamination. Evaluation results are unreliable — "
+                "re-run after scrubbing."
+            )
         else:
             severity = "critical"
-            recommendation = "Pervasive contamination. All benchmark results from this dataset are invalid."
+            recommendation = (
+                "Pervasive contamination. All benchmark results from this dataset are invalid."
+            )
 
         return ContaminationReport(
             clean=clean,
@@ -99,7 +104,8 @@ class AntiContaminationGuard:
         report = self.check(samples)
         if not report.clean:
             raise ContaminationError(
-                f"Contamination detected in {report.samples_contaminated}/{report.samples_checked} samples. "
+                f"Contamination detected in {report.samples_contaminated}/"
+                f"{report.samples_checked} samples. "
                 f"Fields: {report.contaminated_fields}. "
                 f"Recommendation: {report.recommendation}"
             )

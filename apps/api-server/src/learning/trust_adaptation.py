@@ -209,18 +209,14 @@ class TrustAdaptationEngine:
 
         return events
 
-    def apply_feedback_batch(
-        self, records: list[FeedbackRecord]
-    ) -> list[TrustUpdateEvent]:
+    def apply_feedback_batch(self, records: list[FeedbackRecord]) -> list[TrustUpdateEvent]:
         """Apply a batch of feedback records sequentially."""
         events: list[TrustUpdateEvent] = []
         for rec in records:
             events.extend(self.update_from_feedback(rec))
         return events
 
-    def apply_outcome_batch(
-        self, records: list[OutcomeRecord]
-    ) -> list[TrustUpdateEvent]:
+    def apply_outcome_batch(self, records: list[OutcomeRecord]) -> list[TrustUpdateEvent]:
         """Apply a batch of outcome records sequentially."""
         events: list[TrustUpdateEvent] = []
         for rec in records:
@@ -387,11 +383,7 @@ class TrustAdaptationEngine:
     def snapshot(self) -> dict[str, Any]:
         """Return a serializable snapshot of all current trust scores."""
         return {
-            "mechanism_trust": {
-                k: round(v, 4) for k, v in self._mechanism_trust.items()
-            },
-            "remediation_trust": {
-                k: round(v, 4) for k, v in self._remediation_trust.items()
-            },
+            "mechanism_trust": {k: round(v, 4) for k, v in self._mechanism_trust.items()},
+            "remediation_trust": {k: round(v, 4) for k, v in self._remediation_trust.items()},
             "total_update_events": len(self._history),
         }

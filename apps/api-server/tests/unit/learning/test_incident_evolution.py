@@ -159,43 +159,138 @@ class TestIncidentEvolutionTracker:
 
     def test_confidence_trend_increasing(self):
         tracker = IncidentEvolutionTracker()
-        tracker.start_incident("INC-001", ai_confidence=0.40, mechanism_id=None, remediation_class=None, timestamp_iso="2026-05-01T10:00:00Z")  # noqa: E501
-        tracker.advance_stage("INC-001", stage=IncidentStage.INVESTIGATING, ai_confidence=0.60, mechanism_id=None, remediation_class=None, timestamp_iso="2026-05-01T10:05:00Z")  # noqa: E501
-        tracker.advance_stage("INC-001", stage=IncidentStage.HYPOTHESIS_FORMED, ai_confidence=0.80, mechanism_id=None, remediation_class=None, timestamp_iso="2026-05-01T10:10:00Z")  # noqa: E501
+        tracker.start_incident(
+            "INC-001",
+            ai_confidence=0.40,
+            mechanism_id=None,
+            remediation_class=None,
+            timestamp_iso="2026-05-01T10:00:00Z",
+        )  # noqa: E501
+        tracker.advance_stage(
+            "INC-001",
+            stage=IncidentStage.INVESTIGATING,
+            ai_confidence=0.60,
+            mechanism_id=None,
+            remediation_class=None,
+            timestamp_iso="2026-05-01T10:05:00Z",
+        )  # noqa: E501
+        tracker.advance_stage(
+            "INC-001",
+            stage=IncidentStage.HYPOTHESIS_FORMED,
+            ai_confidence=0.80,
+            mechanism_id=None,
+            remediation_class=None,
+            timestamp_iso="2026-05-01T10:10:00Z",
+        )  # noqa: E501
         trace = tracker.trace_for("INC-001")
         assert trace.confidence_trend == "increasing"
 
     def test_close_incident(self):
         tracker = IncidentEvolutionTracker()
-        tracker.start_incident("INC-001", ai_confidence=0.70, mechanism_id="memory_pressure", remediation_class=None, timestamp_iso="2026-05-01T10:00:00Z")  # noqa: E501
-        tracker.close_incident("INC-001", final_mechanism_id="memory_pressure", final_remediation_class="scale_replicas", final_confidence=0.90, timestamp_iso="2026-05-01T11:00:00Z")  # noqa: E501
+        tracker.start_incident(
+            "INC-001",
+            ai_confidence=0.70,
+            mechanism_id="memory_pressure",
+            remediation_class=None,
+            timestamp_iso="2026-05-01T10:00:00Z",
+        )  # noqa: E501
+        tracker.close_incident(
+            "INC-001",
+            final_mechanism_id="memory_pressure",
+            final_remediation_class="scale_replicas",
+            final_confidence=0.90,
+            timestamp_iso="2026-05-01T11:00:00Z",
+        )  # noqa: E501
         trace = tracker.trace_for("INC-001")
         assert trace.current_stage == IncidentStage.CLOSED
 
     def test_initial_mechanism_and_final_mechanism(self):
         tracker = IncidentEvolutionTracker()
-        tracker.start_incident("INC-001", ai_confidence=0.60, mechanism_id="memory_pressure", remediation_class=None, timestamp_iso="2026-05-01T10:00:00Z")  # noqa: E501
-        tracker.advance_stage("INC-001", stage=IncidentStage.HYPOTHESIS_FORMED, ai_confidence=0.75, mechanism_id="retry_storm", remediation_class=None, timestamp_iso="2026-05-01T10:10:00Z")  # noqa: E501
+        tracker.start_incident(
+            "INC-001",
+            ai_confidence=0.60,
+            mechanism_id="memory_pressure",
+            remediation_class=None,
+            timestamp_iso="2026-05-01T10:00:00Z",
+        )  # noqa: E501
+        tracker.advance_stage(
+            "INC-001",
+            stage=IncidentStage.HYPOTHESIS_FORMED,
+            ai_confidence=0.75,
+            mechanism_id="retry_storm",
+            remediation_class=None,
+            timestamp_iso="2026-05-01T10:10:00Z",
+        )  # noqa: E501
         trace = tracker.trace_for("INC-001")
         assert trace.initial_mechanism == "memory_pressure"
         assert trace.final_mechanism == "retry_storm"
 
     def test_traces_with_revisions(self):
         tracker = IncidentEvolutionTracker()
-        tracker.start_incident("INC-001", ai_confidence=0.60, mechanism_id="memory_pressure", remediation_class=None, timestamp_iso="2026-05-01T10:00:00Z")  # noqa: E501
-        tracker.advance_stage("INC-001", stage=IncidentStage.INVESTIGATING, ai_confidence=0.65, mechanism_id="retry_storm", remediation_class=None, timestamp_iso="2026-05-01T10:05:00Z")  # noqa: E501
-        tracker.start_incident("INC-002", ai_confidence=0.70, mechanism_id="retry_storm", remediation_class=None, timestamp_iso="2026-05-01T11:00:00Z")  # noqa: E501
-        tracker.advance_stage("INC-002", stage=IncidentStage.INVESTIGATING, ai_confidence=0.75, mechanism_id="retry_storm", remediation_class=None, timestamp_iso="2026-05-01T11:05:00Z")  # noqa: E501
+        tracker.start_incident(
+            "INC-001",
+            ai_confidence=0.60,
+            mechanism_id="memory_pressure",
+            remediation_class=None,
+            timestamp_iso="2026-05-01T10:00:00Z",
+        )  # noqa: E501
+        tracker.advance_stage(
+            "INC-001",
+            stage=IncidentStage.INVESTIGATING,
+            ai_confidence=0.65,
+            mechanism_id="retry_storm",
+            remediation_class=None,
+            timestamp_iso="2026-05-01T10:05:00Z",
+        )  # noqa: E501
+        tracker.start_incident(
+            "INC-002",
+            ai_confidence=0.70,
+            mechanism_id="retry_storm",
+            remediation_class=None,
+            timestamp_iso="2026-05-01T11:00:00Z",
+        )  # noqa: E501
+        tracker.advance_stage(
+            "INC-002",
+            stage=IncidentStage.INVESTIGATING,
+            ai_confidence=0.75,
+            mechanism_id="retry_storm",
+            remediation_class=None,
+            timestamp_iso="2026-05-01T11:05:00Z",
+        )  # noqa: E501
         revised = tracker.traces_with_revisions()
         assert len(revised) == 1
         assert revised[0].incident_id == "INC-001"
 
     def test_mechanism_diagnosis_accuracy(self):
         tracker = IncidentEvolutionTracker()
-        tracker.start_incident("INC-001", ai_confidence=0.70, mechanism_id="memory_pressure", remediation_class=None, timestamp_iso="2026-05-01T10:00:00Z")  # noqa: E501
-        tracker.close_incident("INC-001", final_mechanism_id="memory_pressure", final_remediation_class=None, final_confidence=0.85, timestamp_iso="2026-05-01T11:00:00Z")  # noqa: E501
-        tracker.start_incident("INC-002", ai_confidence=0.65, mechanism_id="memory_pressure", remediation_class=None, timestamp_iso="2026-05-01T12:00:00Z")  # noqa: E501
-        tracker.close_incident("INC-002", final_mechanism_id="retry_storm", final_remediation_class=None, final_confidence=0.75, timestamp_iso="2026-05-01T13:00:00Z")  # noqa: E501
+        tracker.start_incident(
+            "INC-001",
+            ai_confidence=0.70,
+            mechanism_id="memory_pressure",
+            remediation_class=None,
+            timestamp_iso="2026-05-01T10:00:00Z",
+        )  # noqa: E501
+        tracker.close_incident(
+            "INC-001",
+            final_mechanism_id="memory_pressure",
+            final_remediation_class=None,
+            final_confidence=0.85,
+            timestamp_iso="2026-05-01T11:00:00Z",
+        )  # noqa: E501
+        tracker.start_incident(
+            "INC-002",
+            ai_confidence=0.65,
+            mechanism_id="memory_pressure",
+            remediation_class=None,
+            timestamp_iso="2026-05-01T12:00:00Z",
+        )  # noqa: E501
+        tracker.close_incident(
+            "INC-002",
+            final_mechanism_id="retry_storm",
+            final_remediation_class=None,
+            final_confidence=0.75,
+            timestamp_iso="2026-05-01T13:00:00Z",
+        )  # noqa: E501
         accuracy = tracker.mechanism_diagnosis_accuracy()
         assert "memory_pressure" in accuracy
         mp = accuracy["memory_pressure"]
@@ -203,9 +298,28 @@ class TestIncidentEvolutionTracker:
 
     def test_mean_revisions_per_incident(self):
         tracker = IncidentEvolutionTracker()
-        tracker.start_incident("INC-001", ai_confidence=0.60, mechanism_id="A", remediation_class=None, timestamp_iso="2026-05-01T10:00:00Z")  # noqa: E501
-        tracker.advance_stage("INC-001", stage=IncidentStage.INVESTIGATING, ai_confidence=0.65, mechanism_id="B", remediation_class=None, timestamp_iso="2026-05-01T10:05:00Z")  # noqa: E501
-        tracker.start_incident("INC-002", ai_confidence=0.70, mechanism_id="A", remediation_class=None, timestamp_iso="2026-05-01T11:00:00Z")  # noqa: E501
+        tracker.start_incident(
+            "INC-001",
+            ai_confidence=0.60,
+            mechanism_id="A",
+            remediation_class=None,
+            timestamp_iso="2026-05-01T10:00:00Z",
+        )  # noqa: E501
+        tracker.advance_stage(
+            "INC-001",
+            stage=IncidentStage.INVESTIGATING,
+            ai_confidence=0.65,
+            mechanism_id="B",
+            remediation_class=None,
+            timestamp_iso="2026-05-01T10:05:00Z",
+        )  # noqa: E501
+        tracker.start_incident(
+            "INC-002",
+            ai_confidence=0.70,
+            mechanism_id="A",
+            remediation_class=None,
+            timestamp_iso="2026-05-01T11:00:00Z",
+        )  # noqa: E501
         mean_revisions = tracker.mean_revisions_per_incident()
         assert mean_revisions == pytest.approx(0.5, abs=0.01)
 
@@ -215,11 +329,21 @@ class TestIncidentEvolutionTracker:
 
     def test_trace_to_dict(self):
         tracker = IncidentEvolutionTracker()
-        tracker.start_incident("INC-001", ai_confidence=0.70, mechanism_id="memory_pressure", remediation_class=None, timestamp_iso="2026-05-01T10:00:00Z")  # noqa: E501
+        tracker.start_incident(
+            "INC-001",
+            ai_confidence=0.70,
+            mechanism_id="memory_pressure",
+            remediation_class=None,
+            timestamp_iso="2026-05-01T10:00:00Z",
+        )  # noqa: E501
         trace = tracker.trace_for("INC-001")
         d = trace.to_dict()
         for key in [
-            "incident_id", "events", "current_stage", "assessment_was_revised",
-            "confidence_trajectory", "confidence_trend",
+            "incident_id",
+            "events",
+            "current_stage",
+            "assessment_was_revised",
+            "confidence_trajectory",
+            "confidence_trend",
         ]:
             assert key in d

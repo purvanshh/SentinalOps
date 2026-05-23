@@ -73,7 +73,10 @@ class ReasoningCollapseDetector:
                     severity="medium",
                     incident_id=incident_id,
                     description="Explanation is absent or too short to be meaningful",
-                    evidence={"explanation_length": len(str(explanation).strip()), "confidence": confidence},
+                    evidence={
+                        "explanation_length": len(str(explanation).strip()),
+                        "confidence": confidence,
+                    },
                 )
             )
 

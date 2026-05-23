@@ -82,12 +82,10 @@ class DegradedModeVerifier:
         scenarios = self._evaluate_scenarios(system_profile)
 
         telemetry_ok = any(
-            s["scenario"] == "telemetry_stream_loss" and s["survived"]
-            for s in scenarios
+            s["scenario"] == "telemetry_stream_loss" and s["survived"] for s in scenarios
         )
         replay_ok = any(
-            s["scenario"] == "replay_dataset_corrupted" and s["survived"]
-            for s in scenarios
+            s["scenario"] == "replay_dataset_corrupted" and s["survived"] for s in scenarios
         )
         llm_fallback = bool(system_profile.get("llm_fallback"))
         async_resilience = bool(system_profile.get("async_resilience"))
@@ -97,7 +95,9 @@ class DegradedModeVerifier:
         survivability = round(survived_count / len(scenarios), 4) if scenarios else 0.0
 
         recovery_times = [s["estimated_recovery_seconds"] for s in scenarios]
-        avg_recovery = round(sum(recovery_times) / len(recovery_times), 1) if recovery_times else 0.0
+        avg_recovery = (
+            round(sum(recovery_times) / len(recovery_times), 1) if recovery_times else 0.0
+        )
 
         return DegradedModeReport(
             telemetry_survivable=telemetry_ok,
@@ -124,7 +124,11 @@ class DegradedModeVerifier:
         for scenario in _DEGRADATION_SCENARIOS:
             key = scenario["scenario"]
             survived = bool(capability_map.get(key, False))
-            recovery = scenario["max_recovery_seconds"] if survived else scenario["max_recovery_seconds"] * 5.0
+            recovery = (
+                scenario["max_recovery_seconds"]
+                if survived
+                else scenario["max_recovery_seconds"] * 5.0
+            )
             results.append(
                 {
                     "scenario": key,
@@ -143,4 +147,8 @@ class DegradedModeVerifier:
             return "System handles all documented degradation scenarios."
         if survivability >= 0.60:
             return f"System survives most failures. Unhandled: {', '.join(failed)}."
-        return f"System is fragile under failure conditions. Critical gaps: {', '.join(failed)}. Do not deploy without remediation."
+        return (
+            "System is fragile under failure conditions. "
+            f"Critical gaps: {', '.join(failed)}. "
+            "Do not deploy without remediation."
+        )

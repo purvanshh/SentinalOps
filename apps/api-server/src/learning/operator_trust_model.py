@@ -102,9 +102,7 @@ class OperatorTrustModel:
         if record.remediation_class:
             key_r = (record.operator_id, record.remediation_class)
             self._operator_remediation_records.setdefault(key_r, []).append(record)
-            self._remediation_global_records.setdefault(record.remediation_class, []).append(
-                record
-            )
+            self._remediation_global_records.setdefault(record.remediation_class, []).append(record)
 
     def ingest_batch(self, records: list[FeedbackRecord]) -> None:
         for rec in records:
@@ -204,7 +202,9 @@ class OperatorTrustModel:
             correction_kinds[r.feedback_kind.value] = (
                 correction_kinds.get(r.feedback_kind.value, 0) + 1
             )
-        most_common = max(correction_kinds, key=lambda k: correction_kinds[k]) if correction_kinds else "none"  # noqa: E501
+        most_common = (
+            max(correction_kinds, key=lambda k: correction_kinds[k]) if correction_kinds else "none"
+        )  # noqa: E501
 
         return OperatorMechanismProfile(
             operator_id=operator_id,

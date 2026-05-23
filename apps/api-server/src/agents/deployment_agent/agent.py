@@ -27,7 +27,7 @@ async def analyze_deployments(
     @registry.tool(
         name="score_deployment_risk",
         description=(
-            "Estimate deployment risk from change type, recency, " "and historical similarity."
+            "Estimate deployment risk from change type, recency, and historical similarity."
         ),
         parameters={
             "type": "object",

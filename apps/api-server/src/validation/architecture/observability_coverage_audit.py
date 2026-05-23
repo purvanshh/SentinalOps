@@ -82,10 +82,16 @@ class ObservabilityCoverageAuditor:
 
     def _recommendation(self, rate: float, uninstrumented: list[str]) -> str:
         if rate >= 0.80:
-            return f"Good observability coverage ({rate:.0%}). {len(uninstrumented)} modules lack instrumentation."
+            return (
+                f"Good observability coverage ({rate:.0%}). "
+                f"{len(uninstrumented)} modules lack instrumentation."
+            )
         if rate >= 0.50:
             return (
                 f"Moderate coverage ({rate:.0%}). Priority: add logging to "
                 f"{', '.join(uninstrumented[:5])}{'...' if len(uninstrumented) > 5 else ''}."
             )
-        return f"Low observability coverage ({rate:.0%}). Most modules lack instrumentation — significant blind spot in production."
+        return (
+            f"Low observability coverage ({rate:.0%}). Most modules lack instrumentation "
+            "— significant blind spot in production."
+        )

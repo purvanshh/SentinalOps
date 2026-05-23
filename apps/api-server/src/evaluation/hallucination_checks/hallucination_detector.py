@@ -152,7 +152,7 @@ def detect_unsupported_claims(
                     HallucinationFinding(
                         type=HallucinationType.UNSUPPORTED_CLAIM,
                         description=(
-                            f"Strong claim using '{keyword}' with no " "supporting evidence keys"
+                            f"Strong claim using '{keyword}' with no supporting evidence keys"
                         ),
                         severity="MEDIUM",
                         evidence_fragment=keyword,

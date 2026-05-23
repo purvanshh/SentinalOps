@@ -100,9 +100,7 @@ class TestReasoningSelfCritic:
 
     def test_confidence_adjustment_bounded(self):
         # Trigger multiple high-severity findings
-        report = self._sound_critique(
-            evidence_count=0, hypothesis_count=1, has_mechanism=False
-        )
+        report = self._sound_critique(evidence_count=0, hypothesis_count=1, has_mechanism=False)
         assert report.recommended_confidence_adjustment >= -0.20
 
     def test_critique_summary_mentions_finding_codes(self):
@@ -149,8 +147,12 @@ class TestReasoningSelfCritic:
         report = self._sound_critique()
         d = report.to_dict()
         for key in [
-            "incident_id", "findings", "total_findings", "high_severity_count",
-            "reasoning_quality_score", "recommended_confidence_adjustment",
+            "incident_id",
+            "findings",
+            "total_findings",
+            "high_severity_count",
+            "reasoning_quality_score",
+            "recommended_confidence_adjustment",
             "critique_summary",
         ]:
             assert key in d

@@ -145,9 +145,9 @@ class TestHallucinationScoringFromBenchmark:
             for inc in safe_correct[:20]
             if score_hallucination_from_benchmark(inc).risk_level in ("LOW", "MEDIUM")
         )
-        assert (
-            low_risk_count >= 10
-        ), "Expected most SAFE_AND_CORRECT incidents to have LOW/MEDIUM hallucination risk"
+        assert low_risk_count >= 10, (
+            "Expected most SAFE_AND_CORRECT incidents to have LOW/MEDIUM hallucination risk"
+        )
 
     def test_adjusted_confidence_never_negative(self, suite) -> None:
         for inc in suite.incidents:

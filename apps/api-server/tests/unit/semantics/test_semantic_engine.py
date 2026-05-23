@@ -135,9 +135,7 @@ def test_build_mechanism_hypothesis_text_cross_service(engine: OperationalSemant
 
 
 def test_build_mechanism_hypothesis_text_no_inference(engine: OperationalSemanticEngine) -> None:
-    text = engine.build_mechanism_hypothesis_text(
-        "Unknown spike", "svc-a", "svc-b", None
-    )
+    text = engine.build_mechanism_hypothesis_text("Unknown spike", "svc-a", "svc-b", None)
     assert "svc-a" in text
     assert "svc-b" in text
 
@@ -145,9 +143,7 @@ def test_build_mechanism_hypothesis_text_no_inference(engine: OperationalSemanti
 def test_build_mechanism_causal_chain_includes_latent(engine: OperationalSemanticEngine) -> None:
     evidence = [_make_evidence("connection pool exhausted pool starvation")]
     inference = engine.infer_mechanism(evidence, [])
-    chain = engine.build_mechanism_causal_chain(
-        "Pool exhaustion", "db-svc", "api-svc", inference
-    )
+    chain = engine.build_mechanism_causal_chain("Pool exhaustion", "db-svc", "api-svc", inference)
     assert "->" in chain
     assert "api-svc" in chain
 

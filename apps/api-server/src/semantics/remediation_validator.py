@@ -69,30 +69,54 @@ class RemediationValidation:
 # Canonical remediation action tokens for incompatibility detection
 _REMEDIATION_ACTION_PATTERNS: dict[str, list[str]] = {
     "scale_frontend": [
-        "scale frontend", "increase frontend replicas", "scale web", "add frontend pods",
-        "scale api pods", "increase api replicas",
+        "scale frontend",
+        "increase frontend replicas",
+        "scale web",
+        "add frontend pods",
+        "scale api pods",
+        "increase api replicas",
     ],
     "flush_cache": [
-        "flush cache", "clear cache", "invalidate cache", "cache flush",
-        "redis flush", "memcache flush",
+        "flush cache",
+        "clear cache",
+        "invalidate cache",
+        "cache flush",
+        "redis flush",
+        "memcache flush",
     ],
     "add_database_index": [
-        "add index", "create index", "database index", "add db index",
+        "add index",
+        "create index",
+        "database index",
+        "add db index",
     ],
     "scale_database": [
-        "scale database", "increase db", "add db replica", "scale postgres",
+        "scale database",
+        "increase db",
+        "add db replica",
+        "scale postgres",
     ],
     "scale_consumers": [
-        "scale consumer", "add consumer", "increase consumer", "consumer scale",
+        "scale consumer",
+        "add consumer",
+        "increase consumer",
+        "consumer scale",
     ],
     "restart_load_balancer": [
-        "restart load balancer", "restart nginx", "restart haproxy",
+        "restart load balancer",
+        "restart nginx",
+        "restart haproxy",
     ],
     "rollback_deployment": [
-        "rollback", "revert deployment", "revert release", "rollback deploy",
+        "rollback",
+        "revert deployment",
+        "revert release",
+        "rollback deploy",
     ],
     "increase_pool_size": [
-        "increase pool size", "pool size", "connection pool limit",
+        "increase pool size",
+        "pool size",
+        "connection pool limit",
     ],
 }
 

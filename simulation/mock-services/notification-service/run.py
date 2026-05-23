@@ -24,7 +24,10 @@ notification_delivery_latency 0.34
 async def logs() -> dict[str, list[str]]:
     return {
         "entries": [
-            "2026-05-11T09:05:00Z Notification dispatch delayed by downstream rate limit trace=notify-001",
+            (
+                "2026-05-11T09:05:00Z Notification dispatch delayed by downstream "
+                "rate limit trace=notify-001"
+            ),
             "2026-05-11T09:05:03Z Queue backlog crossed warning threshold trace=notify-002",
         ]
     }

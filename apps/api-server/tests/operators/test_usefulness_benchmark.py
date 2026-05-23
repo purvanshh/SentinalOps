@@ -130,7 +130,6 @@ def _make_session(
 
 
 class TestWorkflowBenchmark:
-
     # ---- Return type -------------------------------------------------------
 
     def test_returns_benchmark_result_dataclass(self) -> None:
@@ -401,7 +400,6 @@ class TestWorkflowBenchmark:
 
 
 class TestOperationalUsefulnessEvaluator:
-
     # ---- Return type -------------------------------------------------------
 
     def test_returns_report_dataclass(self) -> None:
@@ -706,7 +704,6 @@ class TestOperationalUsefulnessEvaluator:
 
 
 class TestLongitudinalOperatorEvaluator:
-
     # ---- Basic round-trip --------------------------------------------------
 
     def test_evaluate_operator_with_no_sessions_returns_default_trend(self) -> None:

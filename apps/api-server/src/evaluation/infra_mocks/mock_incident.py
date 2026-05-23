@@ -62,7 +62,11 @@ class MockIncident:
     agent_executions: list[MockAgentExecution] = field(default_factory=list)
 
 
-def build_mock_incident_from_benchmark(benchmark: "BenchmarkIncident") -> MockIncident:
+def build_mock_incident_from_benchmark(
+    benchmark: "BenchmarkIncident",
+    *,
+    incident_id: UUID | None = None,
+) -> MockIncident:
     """
     Build a MockIncident from a BenchmarkIncident.
 
@@ -76,4 +80,5 @@ def build_mock_incident_from_benchmark(benchmark: "BenchmarkIncident") -> MockIn
         severity=payload.get("severity", "medium"),
         source=payload.get("source", "prometheus"),
         raw_payload=payload,
+        id=incident_id or uuid4(),
     )

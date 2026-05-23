@@ -309,12 +309,8 @@ class OperatorFeedbackEngine:
         notes = [r.note for r in corrections if r.note]
         dominant_reason = notes[0] if notes else "no correction note provided"
 
-        mechs_with_corrections = list(
-            {r.mechanism_id for r in corrections if r.mechanism_id}
-        )
-        rems_with_rollbacks = list(
-            {r.remediation_class for r in rollbacks if r.remediation_class}
-        )
+        mechs_with_corrections = list({r.mechanism_id for r in corrections if r.mechanism_id})
+        rems_with_rollbacks = list({r.remediation_class for r in rollbacks if r.remediation_class})
 
         return FeedbackSummary(
             total_events=total,

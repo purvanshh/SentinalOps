@@ -40,10 +40,10 @@ class ProviderConfig:
     base_url: str
     api_key: str
     model: str
-    timeout: float = 30.0
+    timeout: float = 15.0
     max_retries: int = 2
     initial_backoff: float = 1.0
-    max_backoff: float = 16.0
+    max_backoff: float = 5.0
     backoff_multiplier: float = 2.0
     circuit_breaker_threshold: int = 3
     circuit_breaker_recovery: float = 30.0
@@ -129,6 +129,12 @@ class ProviderChain:
     def mode_manager(self) -> OperatingModeManager:
         return self._mode_manager
 
+    def _next_provider_name(self, current_layer: int) -> str | None:
+        for provider in self._providers:
+            if provider.layer > current_layer:
+                return provider.name
+        return None
+
     async def generate(
         self,
         messages: Sequence[dict[str, Any]],
@@ -188,7 +194,17 @@ class ProviderChain:
                 )
             else:
                 # Provider failed, signal mode manager
+                previous_mode = self._mode_manager.current_mode
                 self._mode_manager.on_provider_failure(provider.name, provider.layer)
+                logger.warning(
+                    "provider_failover_transition",
+                    provider=provider.name,
+                    layer=provider.layer,
+                    failure_reason=attempt.error,
+                    failover_target=self._next_provider_name(provider.layer),
+                    previous_mode=previous_mode.value,
+                    operating_mode=self._mode_manager.current_mode.value,
+                )
 
         # All providers exhausted
         total_latency = (time.time() - start_time) * 1000
@@ -251,9 +267,13 @@ class ProviderChain:
                 )
                 return result
 
-            except ProviderFastFailError as exc:
+            except (ProviderFastFailError, httpx.TimeoutException) as exc:
                 retry_count = attempt_num + 1
-                last_error = str(exc)
+                last_error = (
+                    str(exc)
+                    if isinstance(exc, ProviderFastFailError)
+                    else f"{type(exc).__name__}: {exc}"
+                )
                 cb.trip()
 
                 logger.warning(
@@ -262,6 +282,7 @@ class ProviderChain:
                     layer=provider.layer,
                     attempt=retry_count,
                     error=last_error,
+                    failover_target=self._next_provider_name(provider.layer),
                 )
                 return ProviderAttempt(
                     provider_name=provider.name,
@@ -283,6 +304,7 @@ class ProviderChain:
                     attempt=attempt_num + 1,
                     max_retries=provider.max_retries,
                     error=last_error,
+                    failover_target=self._next_provider_name(provider.layer),
                 )
 
                 # Don't backoff after the last attempt

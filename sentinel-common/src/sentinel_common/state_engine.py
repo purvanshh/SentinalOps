@@ -56,13 +56,15 @@ class IncidentState:
 
     def apply_event(self, event: Event) -> None:
         """Apply an event to evolve incident state."""
-        self.timeline.append(TimelineEntry(
-            timestamp=event.timestamp,
-            event_type=event.event_type,
-            source=event.source,
-            summary=event.payload.get("summary", ""),
-            metadata=event.payload,
-        ))
+        self.timeline.append(
+            TimelineEntry(
+                timestamp=event.timestamp,
+                event_type=event.event_type,
+                source=event.source,
+                summary=event.payload.get("summary", ""),
+                metadata=event.payload,
+            )
+        )
         self.updated_at = event.timestamp
         self._transition_phase(event)
 

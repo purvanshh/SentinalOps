@@ -185,7 +185,9 @@ def test_production_required_config_includes_llm_key_check():
         app_env="production",
         auth0_secret_key="strong-secret-abc",
         approval_token_secret="strong-secret-xyz",
+        llm_provider="openai_compatible",
         llm_api_key="dummy-key",
+        nvidia_api_key="",
     )
     issues = settings.validate_required_configuration()
     assert any("LLM_API_KEY" in i for i in issues)
@@ -194,7 +196,12 @@ def test_production_required_config_includes_llm_key_check():
 def test_development_does_not_fail_on_dummy_llm_key():
     from core.config import Settings
 
-    settings = Settings(app_env="development", llm_api_key="dummy-key")
+    settings = Settings(
+        app_env="development",
+        llm_provider="openai_compatible",
+        llm_api_key="dummy-key",
+        nvidia_api_key="",
+    )
     issues = settings.validate_required_configuration()
     assert not any("LLM_API_KEY" in i for i in issues)
 

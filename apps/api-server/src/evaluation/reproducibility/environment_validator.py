@@ -65,12 +65,16 @@ class EnvironmentValidator:
         warnings: list[str] = []
 
         if baseline.python_version != current.python_version:
-            warnings.append(f"python_version_changed:{baseline.python_version!r}->{current.python_version!r}")
+            warnings.append(
+                f"python_version_changed:{baseline.python_version!r}->{current.python_version!r}"
+            )
 
         if baseline.platform_info != current.platform_info:
             warnings.append("platform_changed")
 
-        added, removed, changed = self._diff_packages(baseline.package_versions, current.package_versions)
+        added, removed, changed = self._diff_packages(
+            baseline.package_versions, current.package_versions
+        )
         for pkg in added:
             warnings.append(f"package_added:{pkg}={current.package_versions[pkg]}")
         for pkg in removed:
@@ -80,10 +84,7 @@ class EnvironmentValidator:
                 f"package_changed:{pkg}:{baseline.package_versions[pkg]}->{current.package_versions[pkg]}"
             )
 
-        critical_drifted = [
-            w for w in warnings
-            if any(p in w for p in CRITICAL_PACKAGES)
-        ]
+        critical_drifted = [w for w in warnings if any(p in w for p in CRITICAL_PACKAGES)]
 
         return {
             "clean": len(warnings) == 0,
@@ -93,9 +94,7 @@ class EnvironmentValidator:
             "hash_match": baseline.environment_hash == current.environment_hash,
         }
 
-    def validate_against_snapshot(
-        self, snapshot_path: str, strict: bool = False
-    ) -> dict[str, Any]:
+    def validate_against_snapshot(self, snapshot_path: str, strict: bool = False) -> dict[str, Any]:
         import pathlib
 
         p = pathlib.Path(snapshot_path)

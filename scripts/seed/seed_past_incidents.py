@@ -10,11 +10,11 @@ API_SRC = ROOT / "apps" / "api-server" / "src"
 if str(API_SRC) not in sys.path:
     sys.path.insert(0, str(API_SRC))
 
-from core.config import get_settings
-from retrieval.embeddings.embedding_client import EmbeddingClient
-
 
 async def seed() -> None:
+    from core.config import get_settings
+    from retrieval.embeddings.embedding_client import EmbeddingClient
+
     settings = get_settings()
     fixtures_path = ROOT / "configs" / "development" / "past_incidents.json"
     incidents = json.loads(fixtures_path.read_text())

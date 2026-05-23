@@ -143,9 +143,7 @@ class FailureRecurrenceAnalyzer:
         mech = mechanism_id or "unknown"
         return f"{mech}:{incident_category}"
 
-    def _build_pattern(
-        self, key: str, fps: list[IncidentFingerprint]
-    ) -> RecurrencePattern:
+    def _build_pattern(self, key: str, fps: list[IncidentFingerprint]) -> RecurrencePattern:
         timestamps = [fp.timestamp_iso for fp in fps if fp.timestamp_iso]
         sorted_ts = sorted(timestamps)
         first = sorted_ts[0] if sorted_ts else ""
@@ -180,9 +178,7 @@ class FailureRecurrenceAnalyzer:
         gaps_hours = []
         for i in range(1, len(sorted_iso)):
             try:
-                t0 = datetime.fromisoformat(
-                    sorted_iso[i - 1].replace("Z", "+00:00")
-                )
+                t0 = datetime.fromisoformat(sorted_iso[i - 1].replace("Z", "+00:00"))
                 t1 = datetime.fromisoformat(sorted_iso[i].replace("Z", "+00:00"))
                 gap = (t1 - t0).total_seconds() / 3600.0
                 if gap >= 0:

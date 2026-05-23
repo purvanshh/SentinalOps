@@ -5,6 +5,7 @@ from typing import Any
 import httpx
 from core.config import get_settings
 from core.exceptions import SentinelOpsError
+from core.runtime_context import live_provider_access_allowed
 from memory.short_term.llm_cache import get_cached, set_cached
 from pydantic import BaseModel, ValidationError
 
@@ -19,28 +20,41 @@ class LLMClient:
         base_url: str | None = None,
         api_key: str | None = None,
         model: str | None = None,
-        timeout: float = 30.0,
+        timeout: float = 15.0,
         max_retries: int = 2,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
+        if not live_provider_access_allowed() and transport is None:
+            raise LLMClientError(
+                "Live LLMClient initialization is disabled in evaluation mode. "
+                "Inject a mock client."
+            )
         settings = get_settings()
         self.base_url = (base_url or settings.resolved_llm_base_url).rstrip("/")
         self.api_key = api_key or settings.resolved_llm_api_key
         self.model = model or settings.resolved_llm_model
         self.timeout = timeout
         self.max_retries = max_retries
-        self._client = httpx.AsyncClient(
-            base_url=self.base_url,
-            timeout=timeout,
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            transport=transport,
-        )
+        self._transport = transport
+        self._client: httpx.AsyncClient | None = None
 
     async def close(self) -> None:
-        await self._client.aclose()
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
+
+    def _get_client(self) -> httpx.AsyncClient:
+        if self._client is None:
+            self._client = httpx.AsyncClient(
+                base_url=self.base_url,
+                timeout=self.timeout,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                transport=self._transport,
+            )
+        return self._client
 
     async def generate(
         self,
@@ -67,7 +81,7 @@ class LLMClient:
         last_error: Exception | None = None
         for _attempt in range(self.max_retries + 1):
             try:
-                response = await self._client.post("/chat/completions", json=payload)
+                response = await self._get_client().post("/chat/completions", json=payload)
                 response.raise_for_status()
                 body = response.json()
                 message = body["choices"][0]["message"]

@@ -97,9 +97,7 @@ def _build_combined_text(evidence_items: list[dict[str, Any]], timed_events: lis
     return " ".join(parts)
 
 
-def _extract_keywords_matched(
-    mechanism: FailureMechanism, text: str
-) -> list[str]:
+def _extract_keywords_matched(mechanism: FailureMechanism, text: str) -> list[str]:
     lower = text.lower()
     return [kw for kw in mechanism.symptom_keywords if kw in lower]
 
@@ -110,7 +108,8 @@ def _supporting_evidence_keys(
     keys: list[str] = []
     for item in evidence_items:
         item_text = " ".join(
-            str(v) for k, v in item.items()
+            str(v)
+            for k, v in item.items()
             if k in ("summary", "metric", "signature", "description", "item_type")
         ).lower()
         if any(kw in item_text for kw in mechanism.symptom_keywords):
@@ -270,8 +269,7 @@ class OperationalSemanticEngine:
                     f"-> user-facing impact"
                 )
             return (
-                f"{candidate_title} in {cause_service} -> "
-                f"downstream impact on {affected_service}"
+                f"{candidate_title} in {cause_service} -> downstream impact on {affected_service}"
             )
 
         mechanism = inference.primary.mechanism

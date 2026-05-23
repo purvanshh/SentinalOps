@@ -20,7 +20,7 @@ def evaluate_contributing_factors(context: dict[str, Any]) -> list[dict[str, str
             "factor": "Monitoring lag",
             "detected": high_latency,
             "detail": (
-                "Alert and anomaly windows indicate whether detection " "lagged the first symptom."
+                "Alert and anomaly windows indicate whether detection lagged the first symptom."
             ),
         },
         {

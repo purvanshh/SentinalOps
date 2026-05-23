@@ -141,11 +141,13 @@ class TestOperatorTrustModel:
         model = OperatorTrustModel()
         # Make scale_replicas controversial
         for i in range(2):
-            model.ingest(_fb(f"INC-A{i}", FeedbackKind.APPROVAL,
-                             remediation_class="scale_replicas"))
+            model.ingest(
+                _fb(f"INC-A{i}", FeedbackKind.APPROVAL, remediation_class="scale_replicas")
+            )
         for i in range(2):
-            model.ingest(_fb(f"INC-B{i}", FeedbackKind.REJECTION,
-                             remediation_class="scale_replicas"))
+            model.ingest(
+                _fb(f"INC-B{i}", FeedbackKind.REJECTION, remediation_class="scale_replicas")
+            )
         # Make flush_cache non-controversial
         for i in range(5):
             model.ingest(_fb(f"INC-C{i}", FeedbackKind.APPROVAL, remediation_class="flush_cache"))

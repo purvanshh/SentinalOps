@@ -1,6 +1,5 @@
 """Tests for operational readiness validation."""
 
-import pytest
 from runtime.readiness.degraded_mode import DegradedModeVerifier
 from runtime.readiness.dependency_validator import OperationalDependencyValidator
 from runtime.readiness.deployment_readiness import (
@@ -8,10 +7,10 @@ from runtime.readiness.deployment_readiness import (
     ReadinessLevel,
 )
 
-
 # ---------------------------------------------------------------------------
 # DeploymentReadinessValidator
 # ---------------------------------------------------------------------------
+
 
 class TestDeploymentReadinessValidator:
     def _minimal_profile(self) -> dict:
@@ -59,7 +58,10 @@ class TestDeploymentReadinessValidator:
     def test_production_level(self):
         validator = DeploymentReadinessValidator()
         report = validator.assess(self._production_profile())
-        assert report.level in (ReadinessLevel.PRODUCTION_CAPABLE, ReadinessLevel.HIGH_RISK_PRODUCTION)
+        assert report.level in (
+            ReadinessLevel.PRODUCTION_CAPABLE,
+            ReadinessLevel.HIGH_RISK_PRODUCTION,
+        )
 
     def test_autonomy_not_permitted_at_experimental(self):
         validator = DeploymentReadinessValidator()
@@ -79,6 +81,7 @@ class TestDeploymentReadinessValidator:
 
     def test_report_to_dict_serializable(self):
         import json
+
         validator = DeploymentReadinessValidator()
         report = validator.assess(self._minimal_profile())
         json.dumps(report.to_dict())
@@ -110,6 +113,7 @@ class TestDeploymentReadinessValidator:
 # OperationalDependencyValidator
 # ---------------------------------------------------------------------------
 
+
 class TestOperationalDependencyValidator:
     def test_validate_from_imports_returns_report(self):
         validator = OperationalDependencyValidator()
@@ -126,14 +130,15 @@ class TestOperationalDependencyValidator:
 
     def test_validate_missing_package(self):
         validator = OperationalDependencyValidator()
-        report = validator.validate([
-            {"name": "definitely_not_installed_xyz_abc_123", "required": True}
-        ])
+        report = validator.validate(
+            [{"name": "definitely_not_installed_xyz_abc_123", "required": True}]
+        )
         assert not report.all_required_available
         assert "definitely_not_installed_xyz_abc_123" in report.failed_required
 
     def test_report_serializable(self):
         import json
+
         validator = OperationalDependencyValidator()
         report = validator.validate_from_imports()
         json.dumps(report.to_dict())
@@ -142,6 +147,7 @@ class TestOperationalDependencyValidator:
 # ---------------------------------------------------------------------------
 # DegradedModeVerifier
 # ---------------------------------------------------------------------------
+
 
 class TestDegradedModeVerifier:
     def _full_profile(self) -> dict:
@@ -188,6 +194,7 @@ class TestDegradedModeVerifier:
 
     def test_report_serializable(self):
         import json
+
         verifier = DegradedModeVerifier()
         report = verifier.verify(self._full_profile())
         json.dumps(report.to_dict())

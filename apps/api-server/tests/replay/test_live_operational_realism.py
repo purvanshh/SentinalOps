@@ -56,9 +56,9 @@ class TestLiveReplayDataset:
         valid_kinds = {"metric", "log", "alert", "deployment", "topology_change"}
         for rec in incident_records:
             for ev in rec["events"]:
-                assert (
-                    ev["kind"] in valid_kinds
-                ), f"Invalid kind '{ev['kind']}' in {rec['incident_id']}"
+                assert ev["kind"] in valid_kinds, (
+                    f"Invalid kind '{ev['kind']}' in {rec['incident_id']}"
+                )
 
     def test_all_incidents_have_unique_ids(self, incident_records):
         ids = [r["incident_id"] for r in incident_records]

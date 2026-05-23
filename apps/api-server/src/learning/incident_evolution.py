@@ -204,8 +204,7 @@ class IncidentEvolutionTracker:
         if trace.events:
             prev = trace.events[-1]
             changed = (
-                prev.mechanism_id != mechanism_id
-                or prev.remediation_class != remediation_class
+                prev.mechanism_id != mechanism_id or prev.remediation_class != remediation_class
             )
 
         ev = EvolutionEvent(

@@ -124,9 +124,16 @@ def test_to_dict_required_keys(
     result = validator.validate("increase pool size", inference)
     d = result.to_dict()
     required_keys = [
-        "mechanism_id", "mechanism_name", "overall_compatible", "alignment_score",
-        "issue_count", "issues", "compatible_actions", "incompatible_actions",
-        "suggested_alternatives", "validation_rationale",
+        "mechanism_id",
+        "mechanism_name",
+        "overall_compatible",
+        "alignment_score",
+        "issue_count",
+        "issues",
+        "compatible_actions",
+        "incompatible_actions",
+        "suggested_alternatives",
+        "validation_rationale",
     ]
     for key in required_keys:
         assert key in d, f"Missing key: {key}"
@@ -147,9 +154,7 @@ def test_mixed_actions_partial_alignment(
 ) -> None:
     inference = _infer(engine, "connection pool exhausted pool starvation")
     # Both compatible (increase pool size) and incompatible (scale frontend) present
-    result = validator.validate(
-        "increase pool size and scale frontend replicas", inference
-    )
+    result = validator.validate("increase pool size and scale frontend replicas", inference)
     # overall_compatible should be False (has incompatible)
     assert not result.overall_compatible
     assert 0.3 < result.alignment_score < 0.8  # partially aligned

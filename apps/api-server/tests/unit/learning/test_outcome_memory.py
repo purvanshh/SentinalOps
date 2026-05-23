@@ -111,8 +111,12 @@ class TestOutcomeRecord:
     def test_to_dict_keys(self):
         d = _success_record().to_dict()
         for key in [
-            "outcome_id", "incident_id", "remediation_class", "success",
-            "effectiveness_score", "was_harmful",
+            "outcome_id",
+            "incident_id",
+            "remediation_class",
+            "success",
+            "effectiveness_score",
+            "was_harmful",
         ]:
             assert key in d
 
@@ -152,12 +156,14 @@ class TestExecutionOutcomeMemory:
         for i in range(3):
             mem.store(_success_record(outcome_id=f"OUT-S{i}", incident_id=f"INC-S{i}"))
         for i in range(2):
-            mem.store(_harmful_record(
-                outcome_id=f"OUT-H{i}",
-                incident_id=f"INC-H{i}",
-                remediation_class="scale_replicas",
-                mechanism_id="memory_pressure",
-            ))
+            mem.store(
+                _harmful_record(
+                    outcome_id=f"OUT-H{i}",
+                    incident_id=f"INC-H{i}",
+                    remediation_class="scale_replicas",
+                    mechanism_id="memory_pressure",
+                )
+            )
         profile = mem.reliability_for_remediation("scale_replicas")
         assert profile.rollback_count == 2
         assert profile.harm_rate == pytest.approx(0.4, abs=0.01)
@@ -165,12 +171,14 @@ class TestExecutionOutcomeMemory:
     def test_rollback_rate_for_remediation(self):
         mem = ExecutionOutcomeMemory()
         mem.store(_success_record())
-        mem.store(_harmful_record(
-            outcome_id="OUT-H1",
-            incident_id="INC-H1",
-            remediation_class="scale_replicas",
-            mechanism_id="memory_pressure",
-        ))
+        mem.store(
+            _harmful_record(
+                outcome_id="OUT-H1",
+                incident_id="INC-H1",
+                remediation_class="scale_replicas",
+                mechanism_id="memory_pressure",
+            )
+        )
         rate = mem.rollback_rate_for_remediation("scale_replicas")
         assert rate == pytest.approx(0.5, abs=0.01)
 
@@ -181,12 +189,14 @@ class TestExecutionOutcomeMemory:
     def test_mean_effectiveness_for_mechanism_remediation(self):
         mem = ExecutionOutcomeMemory()
         mem.store(_success_record())
-        mem.store(_failure_record(
-            outcome_id="OUT-F1",
-            incident_id="INC-F1",
-            remediation_class="scale_replicas",
-            mechanism_id="memory_pressure",
-        ))
+        mem.store(
+            _failure_record(
+                outcome_id="OUT-F1",
+                incident_id="INC-F1",
+                remediation_class="scale_replicas",
+                mechanism_id="memory_pressure",
+            )
+        )
         eff = mem.mean_effectiveness_for_mechanism_remediation("memory_pressure", "scale_replicas")
         assert eff == pytest.approx((1.0 + 0.25) / 2, abs=0.01)
 
@@ -198,10 +208,14 @@ class TestExecutionOutcomeMemory:
     def test_most_harmful_remediations(self):
         mem = ExecutionOutcomeMemory()
         mem.store(_harmful_record())
-        mem.store(_harmful_record(
-            outcome_id="OUT-H2", incident_id="INC-H2",
-            remediation_class="increase_pool_size", mechanism_id="connection_pool_starvation"
-        ))
+        mem.store(
+            _harmful_record(
+                outcome_id="OUT-H2",
+                incident_id="INC-H2",
+                remediation_class="increase_pool_size",
+                mechanism_id="connection_pool_starvation",
+            )
+        )
         mem.store(_success_record())
         harmful = mem.most_harmful_remediations(top_n=3)
         assert any(cls == "increase_pool_size" for cls, _ in harmful)

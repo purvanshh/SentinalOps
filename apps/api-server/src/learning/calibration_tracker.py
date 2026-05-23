@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from typing import Any
 
 _MIN_WINDOW_SIZE = 5
-_OVERCONFIDENCE_THRESHOLD = 0.10   # expected > actual by this margin
+_OVERCONFIDENCE_THRESHOLD = 0.10  # expected > actual by this margin
 _UNDERCONFIDENCE_THRESHOLD = 0.10  # actual > expected by this margin
 _MAX_POSITIVE_CORRECTION = 0.10
 _MAX_NEGATIVE_CORRECTION = -0.15
@@ -50,7 +50,7 @@ class DriftWindow:
     mean_stated_confidence: float
     actual_accuracy: float
     calibration_error: float
-    drift_direction: str   # "overconfident" | "underconfident" | "calibrated"
+    drift_direction: str  # "overconfident" | "underconfident" | "calibrated"
     correction_recommendation: float  # bounded
     sample_size_adequate: bool
 
@@ -86,7 +86,7 @@ class ConfidenceDriftTracker:
         self._samples.append(sample)
         # Compute a new window every time we fill a window
         if len(self._samples) >= self._window_size and len(self._samples) % self._window_size == 0:
-            window_samples = self._samples[-self._window_size:]
+            window_samples = self._samples[-self._window_size :]
             self._windows.append(self._compute_window(window_samples))
 
     def record_batch(self, samples: list[ConfidenceSample]) -> None:

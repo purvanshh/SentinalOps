@@ -97,9 +97,7 @@ class BenchmarkInvariantChecker:
     def _check_scorer_never_sees_labels(self, ctx: dict[str, Any]) -> InvariantViolation | None:
         scorer_inputs = ctx.get("scorer_inputs", [])
         for inp in scorer_inputs:
-            if any(
-                k in str(inp).lower() for k in ["golden", "true_label", "ground_truth"]
-            ):
+            if any(k in str(inp).lower() for k in ["golden", "true_label", "ground_truth"]):
                 return InvariantViolation(
                     invariant_name="scorer_never_sees_labels",
                     description="Scorer input contains golden label fields",
@@ -109,10 +107,7 @@ class BenchmarkInvariantChecker:
 
     def _check_confidence_bounds(self, ctx: dict[str, Any]) -> InvariantViolation | None:
         predictions = ctx.get("predictions", [])
-        violations = [
-            p for p in predictions
-            if not (0.0 <= float(p.get("confidence", 0.5)) <= 1.0)
-        ]
+        violations = [p for p in predictions if not (0.0 <= float(p.get("confidence", 0.5)) <= 1.0)]
         if violations:
             return InvariantViolation(
                 invariant_name="confidence_in_unit_interval",
@@ -121,10 +116,13 @@ class BenchmarkInvariantChecker:
             )
         return None
 
-    def _check_attribution_requires_evidence(self, ctx: dict[str, Any]) -> InvariantViolation | None:
+    def _check_attribution_requires_evidence(
+        self, ctx: dict[str, Any]
+    ) -> InvariantViolation | None:
         predictions = ctx.get("predictions", [])
         bad = [
-            p for p in predictions
+            p
+            for p in predictions
             if p.get("attribution") is not None
             and float(p.get("confidence", 1.0)) < 0.20
             and not p.get("uncertainty_flagged", False)
@@ -137,7 +135,9 @@ class BenchmarkInvariantChecker:
             )
         return None
 
-    def _check_evaluation_uses_runtime_outputs(self, ctx: dict[str, Any]) -> InvariantViolation | None:
+    def _check_evaluation_uses_runtime_outputs(
+        self, ctx: dict[str, Any]
+    ) -> InvariantViolation | None:
         if ctx.get("evaluation_uses_mock_outputs", False):
             return InvariantViolation(
                 invariant_name="evaluation_uses_runtime_outputs",
@@ -150,7 +150,10 @@ class BenchmarkInvariantChecker:
         if ctx.get("evaluation_only_code_path_active", False):
             return InvariantViolation(
                 invariant_name="no_evaluation_only_shortcuts",
-                description="Evaluation-only code path is active — results may not reflect production behavior",
+                description=(
+                    "Evaluation-only code path is active — results may not "
+                    "reflect production behavior"
+                ),
                 evidence={"evaluation_only_code_path_active": True},
             )
         return None

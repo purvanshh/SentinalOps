@@ -7,10 +7,10 @@ API_SRC = ROOT / "apps" / "api-server" / "src"
 if str(API_SRC) not in sys.path:
     sys.path.insert(0, str(API_SRC))
 
-from db.session import initialize_database
-
 
 def main() -> None:
+    from db.session import initialize_database
+
     asyncio.run(initialize_database())
 
 

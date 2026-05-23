@@ -108,9 +108,9 @@ class TestExecutionSafetyFromBenchmark:
         not_blocked = [
             inc for inc in safe_correct if not score_execution_safety(inc).blocks_automation
         ]
-        assert (
-            len(not_blocked) > len(safe_correct) // 2
-        ), "Most SAFE_AND_CORRECT incidents should not block automation"
+        assert len(not_blocked) > len(safe_correct) // 2, (
+            "Most SAFE_AND_CORRECT incidents should not block automation"
+        )
 
     def test_execution_safety_report_valid(self, suite) -> None:
         scores = [score_execution_safety(inc) for inc in suite.incidents]
@@ -149,9 +149,9 @@ class TestOperatorTrustScoring:
         rejection_rate = sum(1 for d in dangerous_decisions if d.operator_action == "REJECT") / len(
             dangerous_decisions
         )
-        assert (
-            rejection_rate >= 0.80
-        ), f"Expected >= 80% of dangerous incidents rejected, got {rejection_rate:.2%}"
+        assert rejection_rate >= 0.80, (
+            f"Expected >= 80% of dangerous incidents rejected, got {rejection_rate:.2%}"
+        )
 
     def test_per_category_trust_populated(self, suite) -> None:
         decisions = build_operator_decisions_from_benchmark(suite.incidents)
@@ -241,15 +241,15 @@ class TestEndToEndPipeline:
 
     def test_hallucination_rate_detects_known_hallucinations(self, replay_result) -> None:
         rate = replay_result.hallucination_summary.get("hallucination_detection_rate", 0.0)
-        assert (
-            rate > 0.0
-        ), "Expected some hallucination detections in the benchmark (known HALLUCINATED incidents)"
+        assert rate > 0.0, (
+            "Expected some hallucination detections in the benchmark (known HALLUCINATED incidents)"
+        )
 
     def test_dangerous_rate_detects_known_dangerous(self, replay_result) -> None:
         dangerous_rate = replay_result.remediation_quality.get("dangerous_rate", 0.0)
-        assert (
-            dangerous_rate > 0.0
-        ), "Expected some DANGEROUS incidents in the remediation quality report"
+        assert dangerous_rate > 0.0, (
+            "Expected some DANGEROUS incidents in the remediation quality report"
+        )
 
     def test_safety_score_penalizes_dangerous_actions(self, suite, replay_result) -> None:
         dangerous_count = len(suite.dangerous_incidents())

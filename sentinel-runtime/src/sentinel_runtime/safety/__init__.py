@@ -1,7 +1,5 @@
 """Safety engine, tool allowlists, and risk classification."""
 
-from dataclasses import dataclass
-
 
 class SafetyEngine:
     """Validates actions before execution."""

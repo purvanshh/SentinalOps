@@ -305,17 +305,17 @@ def replay_benchmark_with_chaos(
     )
 
     # execution_truth_score: fraction without hold-back (proxy for verified success)
-    execution_truth_score = sum(
-        1 for r in incident_results if not r.should_hold_back
-    ) / len(incident_results)
+    execution_truth_score = sum(1 for r in incident_results if not r.should_hold_back) / len(
+        incident_results
+    )
 
     causal_ambiguity_score = sum(
         1 for r in incident_results if r.causal_state == CausalRealityState.STABLE_CAUSE.value
     ) / len(incident_results)
 
-    replay_instability_score = sum(
-        1 for r in incident_results if not r.is_causally_stable
-    ) / len(incident_results)
+    replay_instability_score = sum(1 for r in incident_results if not r.is_causally_stable) / len(
+        incident_results
+    )
 
     return ChaosReplayResult(
         base_result=base,

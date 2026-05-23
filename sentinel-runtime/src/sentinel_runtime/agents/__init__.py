@@ -2,8 +2,6 @@
 
 from typing import Any
 
-from sentinel_common.contracts import AgentContract
-
 
 class BaseAgent:
     """Base class for all runtime agents."""

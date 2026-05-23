@@ -44,7 +44,7 @@ def _candidate_actions(root_cause_execution: dict | None) -> list[str]:
         return ["restart payment-api"]
     top = hypotheses[payload.get("strongest_hypothesis_index", 0)] if hypotheses else {}
     text = (
-        f"{top.get('hypothesis', '')} " f"{top.get('causal_chain', '')} " f"{contributing_causes}"
+        f"{top.get('hypothesis', '')} {top.get('causal_chain', '')} {contributing_causes}"
     ).lower()
     actions: list[str] = []
     if "deploy" in text or "regression" in text:

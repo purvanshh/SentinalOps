@@ -10,6 +10,8 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
 
+_HIGH_CONFIDENCE_THRESHOLD = 0.85
+
 
 @dataclass
 class RouterPrediction:
@@ -146,8 +148,8 @@ def score_router_quality(predictions: list[RouterPrediction]) -> RouterQualityRe
 
     fallback_preds = [p for p in predictions if p.is_fallback]
     degraded_preds = [p for p in predictions if p.is_degraded_mode]
-    high_conf_preds = [p for p in predictions if p.confidence >= 0.75]
-    low_conf_preds = [p for p in predictions if p.confidence < 0.60]
+    high_conf_preds = [p for p in predictions if p.confidence >= _HIGH_CONFIDENCE_THRESHOLD]
+    low_conf_preds = [p for p in predictions if p.confidence < _HIGH_CONFIDENCE_THRESHOLD]
 
     thresholds = [0.5, 0.6, 0.7, 0.8, 0.9]
     threshold_analysis: dict[str, float] = {}

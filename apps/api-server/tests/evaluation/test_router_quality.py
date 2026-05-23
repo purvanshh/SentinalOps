@@ -127,17 +127,17 @@ class TestRouterQualityFromBenchmark:
         json.dumps(d)
 
     def test_benchmark_accuracy_above_threshold(self, report: RouterQualityReport) -> None:
-        assert (
-            report.accuracy >= 0.55
-        ), f"Router accuracy {report.accuracy:.3f} below minimum threshold of 0.55"
+        assert report.accuracy >= 0.55, (
+            f"Router accuracy {report.accuracy:.3f} below minimum threshold of 0.55"
+        )
 
     def test_high_confidence_better_than_low(self, report: RouterQualityReport) -> None:
         hc = report.high_confidence_accuracy
         lc = report.low_confidence_accuracy
         if hc >= 0 and lc >= 0:
-            assert (
-                hc >= lc
-            ), "High-confidence predictions should be more accurate than low-confidence"
+            assert hc >= lc, (
+                "High-confidence predictions should be more accurate than low-confidence"
+            )
 
 
 class TestPerfectClassifier:

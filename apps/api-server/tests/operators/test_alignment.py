@@ -69,7 +69,6 @@ def _rec(
 
 
 class TestOperatorAlignmentBenchmark:
-
     # ---- Return type -------------------------------------------------------
 
     def test_returns_operator_alignment_report(self) -> None:
@@ -483,7 +482,6 @@ class TestOperatorAlignmentBenchmark:
 
 
 class TestTrustRealismModel:
-
     # ---- Initial state -------------------------------------------------------
 
     def test_initial_trust_is_0_60(self) -> None:
@@ -740,7 +738,6 @@ class TestTrustRealismModel:
 
 
 class TestDisagreementAnalyzer:
-
     # ---- Empty state -------------------------------------------------------
 
     def test_empty_analyze_returns_report(self) -> None:

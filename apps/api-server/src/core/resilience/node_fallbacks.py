@@ -91,7 +91,7 @@ def build_root_cause_fallback(*, error: str) -> dict[str, Any]:
         },
         "primary_state": "insufficient_telemetry",
         "narrative": (
-            "Unable to determine a confident root cause because evidence " "collection degraded."
+            "Unable to determine a confident root cause because evidence collection degraded."
         ),
         "contributing_causes": [],
         "multi_cause": False,

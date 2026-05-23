@@ -245,7 +245,9 @@ def test_production_dummy_llm_key_flagged():
         app_env="production",
         auth0_secret_key="super-secret-prod-key-abc123",
         approval_token_secret="another-real-secret-xyz456",
+        llm_provider="openai_compatible",
         llm_api_key="dummy-key",
+        nvidia_api_key="",
     )
     issues = settings.validate_required_configuration()
     assert any("LLM_API_KEY" in i for i in issues)

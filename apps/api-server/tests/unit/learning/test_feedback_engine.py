@@ -85,8 +85,12 @@ class TestFeedbackRecord:
     def test_to_dict_contains_all_keys(self):
         d = _approval().to_dict()
         for key in [
-            "incident_id", "feedback_kind", "is_correction", "signal_weight",
-            "ai_confidence", "operator_id",
+            "incident_id",
+            "feedback_kind",
+            "is_correction",
+            "signal_weight",
+            "ai_confidence",
+            "operator_id",
         ]:
             assert key in d
 

@@ -69,8 +69,7 @@ class OutcomeConsistencyChecker:
         # Case 1: declared success but truth says otherwise
         if declared_outcome in ("resolved", "success") and not truth_record.is_genuine_success:
             inconsistencies.append(
-                f"declared '{declared_outcome}' but execution truth is "
-                f"'{truth_record.state.value}'"
+                f"declared '{declared_outcome}' but execution truth is '{truth_record.state.value}'"
             )
 
         # Case 2: operator rejected after declared success

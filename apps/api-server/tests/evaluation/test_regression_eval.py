@@ -82,9 +82,9 @@ class TestRegressionDetection:
     def test_identical_runs_have_no_regressions(self, suite) -> None:
         result = replay_benchmark(suite)
         regressions = detect_regressions(result, result)
-        assert (
-            len(regressions) == 0
-        ), f"Identical runs should have no regressions, got: {[r.metric for r in regressions]}"
+        assert len(regressions) == 0, (
+            f"Identical runs should have no regressions, got: {[r.metric for r in regressions]}"
+        )
 
     def test_degraded_accuracy_detected_as_regression(self, baseline_result: ReplayResult) -> None:
         degraded = ReplayResult(

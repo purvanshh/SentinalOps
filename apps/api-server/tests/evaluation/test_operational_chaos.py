@@ -255,9 +255,7 @@ class TestObservabilityOnDataset:
 
 def _make_hypotheses_from_incident(incident: dict) -> list[dict]:
     """Create minimal synthetic hypotheses from an incident's events."""
-    mechanisms = list(
-        {ev.get("service", "unknown") + "_failure" for ev in incident["events"]}
-    )[:3]
+    mechanisms = list({ev.get("service", "unknown") + "_failure" for ev in incident["events"]})[:3]
     n = len(mechanisms)
     hyps = []
     for i, mech in enumerate(mechanisms):

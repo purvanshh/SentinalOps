@@ -14,10 +14,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install minimal dependencies
+      - name: Install project
         run: |
           python -m pip install --upgrade pip
-          pip install pydantic fastapi sqlalchemy prometheus_client PyYAML
+          pip install -e ".[dev]"
       - name: Run evaluation summary
         run: |
-          PYTHONPATH=apps/api-server/src python -c "from evaluation.runner import run_evaluation; import json; print(json.dumps(run_evaluation(), indent=2))"
+          PYTHONPATH=apps/api-server/src python -c "import asyncio, json; from evaluation.runner import run_evaluation; print(json.dumps(asyncio.run(run_evaluation()), indent=2))"

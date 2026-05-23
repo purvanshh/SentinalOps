@@ -23,7 +23,7 @@ jobs:
       - name: Pytest
         run: pytest apps/api-server/tests/unit apps/api-server/tests/integration
       - name: Evaluation
-        run: python -c "from evaluation.runner import run_evaluation; print(run_evaluation()['count'])"
+        run: python -c "import asyncio; from evaluation.runner import run_evaluation; print(asyncio.run(run_evaluation())['count'])"
         env:
           PYTHONPATH: apps/api-server/src
 

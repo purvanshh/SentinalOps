@@ -1,16 +1,15 @@
 """Tests for evaluation reproducibility framework."""
 
-import pytest
 from evaluation.reproducibility.dataset_fingerprint import DatasetFingerprint
 from evaluation.reproducibility.deterministic_runtime import DeterministicRuntime
 from evaluation.reproducibility.environment_validator import EnvironmentValidator
 from evaluation.reproducibility.replay_consistency import ReplayConsistencyChecker
 from evaluation.reproducibility.replay_manifest import ReplayManifest
 
-
 # ---------------------------------------------------------------------------
 # Dataset fingerprint
 # ---------------------------------------------------------------------------
+
 
 class TestDatasetFingerprint:
     def _sample_dataset(self) -> list[dict]:
@@ -87,6 +86,7 @@ class TestDatasetFingerprint:
 # Deterministic runtime
 # ---------------------------------------------------------------------------
 
+
 class TestDeterministicRuntime:
     def test_same_seed_produces_same_random(self):
         runtime = DeterministicRuntime(seed=99)
@@ -129,7 +129,6 @@ class TestDeterministicRuntime:
 
     def test_detect_time_dependency_unstable(self):
         runtime = DeterministicRuntime()
-        import time
         results = [{"value": i} for i in range(5)]
         r = runtime.detect_time_dependency(results)
         assert r["unique_outputs"] > 1
@@ -139,6 +138,7 @@ class TestDeterministicRuntime:
 # ---------------------------------------------------------------------------
 # Environment validator
 # ---------------------------------------------------------------------------
+
 
 class TestEnvironmentValidator:
     def test_snapshot_returns_report(self):
@@ -165,6 +165,7 @@ class TestEnvironmentValidator:
         ev = EnvironmentValidator()
         r1 = ev.snapshot()
         import dataclasses
+
         r2 = dataclasses.replace(r1, python_version="3.8.0")
         result = ev.compare(r1, r2)
         assert not result["clean"]
@@ -182,6 +183,7 @@ class TestEnvironmentValidator:
 # ---------------------------------------------------------------------------
 # Replay consistency
 # ---------------------------------------------------------------------------
+
 
 class TestReplayConsistencyChecker:
     def test_identical_results_are_consistent(self):
@@ -232,6 +234,7 @@ class TestReplayConsistencyChecker:
 # ---------------------------------------------------------------------------
 # Replay manifest
 # ---------------------------------------------------------------------------
+
 
 class TestReplayManifest:
     def test_record_and_verify(self):

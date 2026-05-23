@@ -50,7 +50,6 @@ def _make_checker() -> NarrativeConsistencyChecker:
 
 
 class TestExplainabilityQualityAnalyzer:
-
     # ---- Overall score computation ----------------------------------------
 
     def test_returns_explainability_score_dataclass(self) -> None:
@@ -325,7 +324,6 @@ class TestExplainabilityQualityAnalyzer:
 
 
 class TestRationaleValidator:
-
     # ---- Passing case -----------------------------------------------------
 
     def test_clean_rationale_passes(self) -> None:
@@ -637,7 +635,6 @@ class TestRationaleValidator:
 
 
 class TestNarrativeConsistencyChecker:
-
     # ---- Empty / single input --------------------------------------------
 
     def test_empty_narratives_returns_consistent(self) -> None:

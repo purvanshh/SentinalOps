@@ -65,7 +65,7 @@ class ValidationResult:
 
     incident_id: str
     blast_radius_error: float  # |predicted - actual| / max(actual, 1)
-    risk_score_error: float    # |predicted_risk - severity_numeric|
+    risk_score_error: float  # |predicted_risk - severity_numeric|
     resolution_time_error: float | None  # |predicted_minutes - actual| / max(actual, 1)
     remediation_matched: bool
     prediction_accurate: bool  # overall: all errors within tolerance
@@ -129,23 +129,17 @@ class PostExecutionValidator:
     to detect systematic over- or under-confidence.
     """
 
-    _BLAST_TOLERANCE = 0.50    # 50% relative error = within tolerance
-    _RISK_TOLERANCE = 0.25     # 0.25 difference in risk score = within tolerance
+    _BLAST_TOLERANCE = 0.50  # 50% relative error = within tolerance
+    _RISK_TOLERANCE = 0.25  # 0.25 difference in risk score = within tolerance
     _RESOLUTION_TOLERANCE = 0.50  # 50% relative error = within tolerance
 
     def __init__(self) -> None:
         self._results: list[ValidationResult] = []
 
-    def validate(
-        self, prediction: PredictionRecord, actual: ActualOutcome
-    ) -> ValidationResult:
+    def validate(self, prediction: PredictionRecord, actual: ActualOutcome) -> ValidationResult:
         """Validate a single prediction against its actual outcome."""
-        blast_err = self._blast_error(
-            prediction.predicted_blast_radius, actual.actual_blast_radius
-        )
-        risk_err = self._risk_error(
-            prediction.predicted_risk_score, actual.actual_severity
-        )
+        blast_err = self._blast_error(prediction.predicted_blast_radius, actual.actual_blast_radius)
+        risk_err = self._risk_error(prediction.predicted_risk_score, actual.actual_severity)
         res_err = self._resolution_error(
             prediction.predicted_resolution_minutes, actual.actual_resolution_minutes
         )
@@ -160,9 +154,7 @@ class PostExecutionValidator:
         resolution_ok = res_err is None or res_err <= self._RESOLUTION_TOLERANCE
         prediction_accurate = blast_ok and risk_ok and resolution_ok
 
-        confidence_justified = not (
-            prediction.ai_confidence >= 0.80 and not actual.success
-        )
+        confidence_justified = not (prediction.ai_confidence >= 0.80 and not actual.success)
 
         discrepancy_parts = []
         if not blast_ok:

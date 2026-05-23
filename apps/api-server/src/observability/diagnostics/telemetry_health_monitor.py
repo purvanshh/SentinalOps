@@ -100,7 +100,9 @@ class TelemetryHealthMonitor:
         else:
             status = "corrupt"
 
-        recommendations = self._recommendations(corrupt_rate, missing_rate, impossible_rate, staleness)
+        recommendations = self._recommendations(
+            corrupt_rate, missing_rate, impossible_rate, staleness
+        )
 
         return TelemetryHealthReport(
             total_samples=self._total_count,
@@ -141,7 +143,9 @@ class TelemetryHealthMonitor:
         if missing > 0.20:
             recs.append(f"Missing fields in {missing:.0%} of samples — check metric exporters")
         if impossible > 0.05:
-            recs.append(f"Impossible values in {impossible:.0%} of samples — possible metric poisoning")
+            recs.append(
+                f"Impossible values in {impossible:.0%} of samples — possible metric poisoning"
+            )
         if staleness > 60.0:
             recs.append(f"Last sample {staleness:.0f}s ago — telemetry stream may have stopped")
         return recs

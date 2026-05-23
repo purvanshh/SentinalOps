@@ -192,7 +192,7 @@ def build_probabilistic_root_cause_analysis(
                 f"({(top.probability or 0.0):.0%} confidence)"
             )
         if uncertainty.contradictions:
-            narrative += ", though " f"{uncertainty.contradictions[0].description.lower()}"
+            narrative += f", though {uncertainty.contradictions[0].description.lower()}"
         else:
             narrative += "."
     else:

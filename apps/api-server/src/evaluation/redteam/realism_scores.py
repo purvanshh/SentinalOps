@@ -33,9 +33,20 @@ class RealismReport:
 
 
 _ATTACK_DIMENSION_MAP = {
-    "attribution_resilience": ["causal_spoofing", "fabricated_deployment_history", "replay_manipulation"],
-    "deception_resistance": ["operator_deception", "confidence_inflation", "prompt_injection"],
-    "telemetry_spoof_resistance": ["fake_telemetry_poisoning", "contradictory_evidence_flooding"],
+    "attribution_resilience": [
+        "causal_spoofing",
+        "fabricated_deployment_history",
+        "replay_manipulation",
+    ],
+    "deception_resistance": [
+        "operator_deception",
+        "confidence_inflation",
+        "prompt_injection",
+    ],
+    "telemetry_spoof_resistance": [
+        "fake_telemetry_poisoning",
+        "contradictory_evidence_flooding",
+    ],
     "escalation_integrity": ["escalation_spam"],
     "hallucination_resistance": ["prompt_injection", "confidence_inflation"],
 }
@@ -63,7 +74,9 @@ class AdversarialRealismScorer:
             if not relevant:
                 dimension_scores[dimension] = 1.0  # no tests = no evidence of failure
             else:
-                dimension_scores[dimension] = round(sum(1 for r in relevant if r.passed) / len(relevant), 4)
+                dimension_scores[dimension] = round(
+                    sum(1 for r in relevant if r.passed) / len(relevant), 4
+                )
 
         composite = round(
             sum(dimension_scores[d] * _DIMENSION_WEIGHTS[d] for d in _DIMENSION_WEIGHTS), 4

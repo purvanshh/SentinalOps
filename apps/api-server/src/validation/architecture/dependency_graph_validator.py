@@ -35,7 +35,11 @@ _FORBIDDEN_CROSS_IMPORTS = [
     # evaluation must not import from production runtime
     {"from_layer": "evaluation", "to_layer": "runtime", "reason": "eval→runtime coupling"},
     # diagnostics must not import from evaluation scorers
-    {"from_layer": "observability/diagnostics", "to_layer": "evaluation/scorers", "reason": "diag→scorer coupling"},
+    {
+        "from_layer": "observability/diagnostics",
+        "to_layer": "evaluation/scorers",
+        "reason": ("diag→scorer coupling"),
+    },
 ]
 
 
@@ -154,7 +158,8 @@ class DependencyGraphValidator:
         for imports in graph.values():
             all_imported.update(imports)
         orphans = [
-            m for m in graph
+            m
+            for m in graph
             if m not in all_imported
             and not m.endswith("__init__")
             and not m.endswith("__main__")
@@ -162,9 +167,7 @@ class DependencyGraphValidator:
         ]
         return orphans[:20]  # cap for readability
 
-    def _summarize(
-        self, cycles: list, forbidden: list, orphans: list, total: int
-    ) -> str:
+    def _summarize(self, cycles: list, forbidden: list, orphans: list, total: int) -> str:
         if not cycles and not forbidden:
             return f"Dependency graph clean. {total} modules, {len(orphans)} potential orphans."
         issues = []

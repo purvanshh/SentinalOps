@@ -1,7 +1,7 @@
 """Tests for architecture validation suite."""
 
-import pytest
 from pathlib import Path
+
 from validation.architecture.dependency_graph_validator import DependencyGraphValidator
 from validation.architecture.layer_boundary_validator import LayerBoundaryValidator
 from validation.architecture.observability_coverage_audit import ObservabilityCoverageAuditor
@@ -12,6 +12,7 @@ SRC_ROOT = Path(__file__).parent.parent.parent / "src"
 # ---------------------------------------------------------------------------
 # DependencyGraphValidator
 # ---------------------------------------------------------------------------
+
 
 class TestDependencyGraphValidator:
     def test_validate_src_returns_report(self):
@@ -35,6 +36,7 @@ class TestDependencyGraphValidator:
 
     def test_report_serializable(self):
         import json
+
         validator = DependencyGraphValidator()
         report = validator.validate(SRC_ROOT)
         json.dumps(report.to_dict())
@@ -62,6 +64,7 @@ class TestDependencyGraphValidator:
 # LayerBoundaryValidator
 # ---------------------------------------------------------------------------
 
+
 class TestLayerBoundaryValidator:
     def test_validate_src_returns_report(self):
         validator = LayerBoundaryValidator()
@@ -70,6 +73,7 @@ class TestLayerBoundaryValidator:
 
     def test_report_serializable(self):
         import json
+
         validator = LayerBoundaryValidator()
         report = validator.validate(SRC_ROOT)
         json.dumps(report.to_dict())
@@ -94,6 +98,7 @@ class TestLayerBoundaryValidator:
 # ObservabilityCoverageAuditor
 # ---------------------------------------------------------------------------
 
+
 class TestObservabilityCoverageAuditor:
     def test_audit_src_returns_report(self):
         auditor = ObservabilityCoverageAuditor()
@@ -108,6 +113,7 @@ class TestObservabilityCoverageAuditor:
 
     def test_report_serializable(self):
         import json
+
         auditor = ObservabilityCoverageAuditor()
         report = auditor.audit(SRC_ROOT)
         json.dumps(report.to_dict())
@@ -125,9 +131,12 @@ class TestObservabilityCoverageAuditor:
     def test_instrumented_module_detection(self):
         # A module with 'logger' in it should be detected as instrumented
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            (tmp / "module_with_logging.py").write_text("import logging\nlogger = logging.getLogger(__name__)\n")
+            (tmp / "module_with_logging.py").write_text(
+                "import logging\nlogger = logging.getLogger(__name__)\n"
+            )
             (tmp / "module_without.py").write_text("def foo(): return 1\n")
             auditor = ObservabilityCoverageAuditor()
             report = auditor.audit(tmp)

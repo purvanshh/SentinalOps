@@ -21,6 +21,7 @@ from core.resilience.fallback_classifier import (
 )
 from core.resilience.operating_mode import OperatingMode, OperatingModeManager
 from core.resilience.provider_chain import ProviderChain, ProviderChainResult, ProviderConfig
+from core.runtime_context import live_provider_access_allowed
 from pydantic import BaseModel
 
 logger = structlog.get_logger(__name__)
@@ -97,7 +98,7 @@ def build_provider_chain_from_settings() -> ProviderChain:
             base_url=local_base_url,
             api_key="ollama",  # Ollama doesn't require a real key
             model=local_model,
-            timeout=20.0,
+            timeout=15.0,
             max_retries=0,
             initial_backoff=0.5,
             max_backoff=2.0,
@@ -117,6 +118,10 @@ _FALLBACK_CLASSIFIER: DeterministicFallbackClassifier | None = None
 def get_provider_chain() -> ProviderChain:
     """Get or create the singleton provider chain."""
     global _PROVIDER_CHAIN
+    if not live_provider_access_allowed():
+        raise RuntimeError(
+            "Live provider chains are disabled in evaluation mode. Use injected mocks instead."
+        )
     if _PROVIDER_CHAIN is None:
         _PROVIDER_CHAIN = build_provider_chain_from_settings()
     return _PROVIDER_CHAIN

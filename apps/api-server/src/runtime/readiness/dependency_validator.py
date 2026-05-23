@@ -131,5 +131,11 @@ class OperationalDependencyValidator:
         if not failed and not degraded:
             return "All dependencies satisfied. System is dependency-ready."
         if failed:
-            return f"BLOCKING: Missing required dependencies: {', '.join(failed)}. System cannot start."
-        return f"WARNING: Optional dependencies degraded: {', '.join(degraded)}. Some features may be unavailable."
+            return (
+                "BLOCKING: Missing required dependencies: "
+                f"{', '.join(failed)}. System cannot start."
+            )
+        return (
+            "WARNING: Optional dependencies degraded: "
+            f"{', '.join(degraded)}. Some features may be unavailable."
+        )

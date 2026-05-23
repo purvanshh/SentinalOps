@@ -36,10 +36,10 @@ class DatasetFingerprint:
 
     SAMPLE_SIZE = 10
 
-    def compute(self, dataset: Sequence[dict[str, Any]], label_field: str = "label") -> FingerprintRecord:
-        sorted_items = sorted(
-            [json.dumps(item, sort_keys=True, default=str) for item in dataset]
-        )
+    def compute(
+        self, dataset: Sequence[dict[str, Any]], label_field: str = "label"
+    ) -> FingerprintRecord:
+        sorted_items = sorted([json.dumps(item, sort_keys=True, default=str) for item in dataset])
         full_blob = "\n".join(sorted_items)
         checksum = self._sha(full_blob)
 
@@ -93,7 +93,9 @@ class DatasetFingerprint:
         label_field: str = "label",
     ) -> dict[str, Any]:
         """Detect if predictions suspiciously match golden labels with perfect accuracy."""
-        golden_map = {str(g[id_field]): g[label_field] for g in golden if id_field in g and label_field in g}
+        golden_map = {
+            str(g[id_field]): g[label_field] for g in golden if id_field in g and label_field in g
+        }
         perfect_matches = 0
         checked = 0
         for pred in predictions:

@@ -56,17 +56,27 @@ class ReplayConsistencyChecker:
         if contamination:
             flags.append("suspicious_score_inflation")
 
-        drift_score = min(1.0, metric_drift + (0.2 if structural else 0.0) + (0.3 if contamination else 0.0))
+        drift_score = min(
+            1.0, metric_drift + (0.2 if structural else 0.0) + (0.3 if contamination else 0.0)
+        )
         consistent = drift_score <= _CONSISTENCY_THRESHOLD and not flags
 
         if drift_score == 0.0:
             recommendation = "Benchmark results are reproducible — no action needed."
         elif contamination:
-            recommendation = "Score inflation detected. Verify no golden labels leaked into evaluation."
+            recommendation = (
+                "Score inflation detected. Verify no golden labels leaked into evaluation."
+            )
         elif structural:
-            recommendation = "Schema changed. Re-run full benchmark suite from scratch with fresh dataset snapshot."
+            recommendation = (
+                "Schema changed. Re-run full benchmark suite from scratch with "
+                "fresh dataset snapshot."
+            )
         else:
-            recommendation = f"Metric drift {drift_score:.3f} within manageable range. Investigate: {', '.join(diverged[:3])}."
+            recommendation = (
+                f"Metric drift {drift_score:.3f} within manageable range. "
+                f"Investigate: {', '.join(diverged[:3])}."
+            )
 
         return ConsistencyResult(
             consistent=consistent,
@@ -120,7 +130,9 @@ class ReplayConsistencyChecker:
         return [f"missing:{k}" for k in a_keys - b_keys] + [f"added:{k}" for k in b_keys - a_keys]
 
     def _detect_contamination(self, baseline: dict[str, Any], current: dict[str, Any]) -> bool:
-        numeric_keys = [k for k in set(baseline) & set(current) if isinstance(baseline[k], (int, float))]
+        numeric_keys = [
+            k for k in set(baseline) & set(current) if isinstance(baseline[k], (int, float))
+        ]
         if not numeric_keys:
             return False
         improvements = sum(

@@ -75,15 +75,11 @@ def enrich_remediation_risk(
     enriched = dict(risk_result)
     enriched["semantic_alignment_score"] = validation.alignment_score
     enriched["semantic_compatible"] = validation.overall_compatible
-    enriched["semantic_issues"] = [
-        issue.description for issue in validation.issues
-    ]
+    enriched["semantic_issues"] = [issue.description for issue in validation.issues]
     # If semantically incompatible, penalize the risk score upward
     if not validation.overall_compatible and validation.issues:
         penalty = min(0.30, 0.10 * len(validation.issues))
-        enriched["risk_score"] = round(
-            min(1.0, enriched.get("risk_score", 0.5) + penalty), 4
-        )
+        enriched["risk_score"] = round(min(1.0, enriched.get("risk_score", 0.5) + penalty), 4)
         if enriched.get("recommendation") == "safe to proceed":
             enriched["recommendation"] = "review — semantic mismatch with inferred mechanism"
     return enriched

@@ -11,5 +11,10 @@ class CalibrationEngine:
 class ECECalculator:
     """Expected Calibration Error calculator."""
 
-    def calculate_ece(self, confidences: list[float], accuracies: list[bool], n_bins: int = 10) -> float:
+    def calculate_ece(
+        self,
+        confidences: list[float],
+        accuracies: list[bool],
+        n_bins: int = 10,
+    ) -> float:
         raise NotImplementedError

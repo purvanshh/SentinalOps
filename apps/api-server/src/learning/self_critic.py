@@ -32,7 +32,7 @@ class CritiqueFinding:
     """A single self-critique finding."""
 
     finding_code: str
-    severity: str     # "low" | "medium" | "high"
+    severity: str  # "low" | "medium" | "high"
     description: str
     affected_field: str
     suggested_action: str
@@ -69,9 +69,7 @@ class CritiqueReport:
             "high_severity_count": self.high_severity_count,
             "medium_severity_count": self.medium_severity_count,
             "low_severity_count": self.low_severity_count,
-            "recommended_confidence_adjustment": round(
-                self.recommended_confidence_adjustment, 4
-            ),
+            "recommended_confidence_adjustment": round(self.recommended_confidence_adjustment, 4),
             "reasoning_quality_score": round(self.reasoning_quality_score, 4),
             "critique_summary": self.critique_summary,
         }
@@ -141,13 +139,11 @@ class ReasoningSelfCritic:
                     finding_code="SINGLE_HYPOTHESIS",
                     severity="medium" if confidence >= 0.60 else "low",
                     description=(
-                        "Only one hypothesis was considered. Alternative explanations "
-                        "may exist."
+                        "Only one hypothesis was considered. Alternative explanations may exist."
                     ),
                     affected_field="hypotheses",
                     suggested_action=(
-                        "Generate at least two competing hypotheses before "
-                        "finalizing root cause."
+                        "Generate at least two competing hypotheses before finalizing root cause."
                     ),
                 )
             )
@@ -176,8 +172,7 @@ class ReasoningSelfCritic:
                     finding_code="MISSING_PROPAGATION_PATH",
                     severity="low",
                     description=(
-                        "No propagation path was identified. The causal chain "
-                        "is incomplete."
+                        "No propagation path was identified. The causal chain is incomplete."
                     ),
                     affected_field="propagation_path",
                     suggested_action="Map downstream effect services to complete the causal chain.",
@@ -257,9 +252,7 @@ class ReasoningSelfCritic:
             critique_summary=summary,
         )
 
-    def _inspect_artifact(
-        self, artifact: dict[str, Any], findings: list[CritiqueFinding]
-    ) -> None:
+    def _inspect_artifact(self, artifact: dict[str, Any], findings: list[CritiqueFinding]) -> None:
         """Optional deep inspection of the raw artifact dict."""
         # Flag empty why_statements
         why = artifact.get("why", [])

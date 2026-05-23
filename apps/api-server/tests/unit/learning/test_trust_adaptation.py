@@ -50,29 +50,33 @@ class TestTrustAdaptationEngine:
     def test_trust_bounded_below_by_min(self):
         engine = TrustAdaptationEngine()
         for i in range(50):
-            engine.update_from_feedback(FeedbackRecord(
-                incident_id=f"INC-{i:03d}",
-                feedback_kind=FeedbackKind.ROLLBACK,
-                mechanism_id="retry_storm",
-                remediation_class="scale_replicas",
-                incident_category="availability",
-                ai_confidence=0.80,
-                operator_id="ops-1",
-            ))
+            engine.update_from_feedback(
+                FeedbackRecord(
+                    incident_id=f"INC-{i:03d}",
+                    feedback_kind=FeedbackKind.ROLLBACK,
+                    mechanism_id="retry_storm",
+                    remediation_class="scale_replicas",
+                    incident_category="availability",
+                    ai_confidence=0.80,
+                    operator_id="ops-1",
+                )
+            )
         assert engine.mechanism_trust("retry_storm") >= 0.10
 
     def test_trust_bounded_above_by_max(self):
         engine = TrustAdaptationEngine()
         for i in range(50):
-            engine.update_from_feedback(FeedbackRecord(
-                incident_id=f"INC-{i:03d}",
-                feedback_kind=FeedbackKind.APPROVAL,
-                mechanism_id="memory_pressure",
-                remediation_class="scale_replicas",
-                incident_category="performance",
-                ai_confidence=0.75,
-                operator_id="ops-1",
-            ))
+            engine.update_from_feedback(
+                FeedbackRecord(
+                    incident_id=f"INC-{i:03d}",
+                    feedback_kind=FeedbackKind.APPROVAL,
+                    mechanism_id="memory_pressure",
+                    remediation_class="scale_replicas",
+                    incident_category="performance",
+                    ai_confidence=0.75,
+                    operator_id="ops-1",
+                )
+            )
         assert engine.mechanism_trust("memory_pressure") <= 0.95
 
     def test_outcome_harmful_decreases_trust(self):
@@ -104,15 +108,17 @@ class TestTrustAdaptationEngine:
     def test_dampened_flag_cleared_after_enough_samples(self):
         engine = TrustAdaptationEngine()
         for i in range(6):
-            engine.update_from_feedback(FeedbackRecord(
-                incident_id=f"INC-{i:03d}",
-                feedback_kind=FeedbackKind.APPROVAL,
-                mechanism_id="memory_pressure",
-                remediation_class="scale_replicas",
-                incident_category="performance",
-                ai_confidence=0.75,
-                operator_id="ops-1",
-            ))
+            engine.update_from_feedback(
+                FeedbackRecord(
+                    incident_id=f"INC-{i:03d}",
+                    feedback_kind=FeedbackKind.APPROVAL,
+                    mechanism_id="memory_pressure",
+                    remediation_class="scale_replicas",
+                    incident_category="performance",
+                    ai_confidence=0.75,
+                    operator_id="ops-1",
+                )
+            )
         ts = engine.trust_score_for_mechanism("memory_pressure")
         assert ts.sample_size_warning is False
 
@@ -128,45 +134,51 @@ class TestTrustAdaptationEngine:
         engine = TrustAdaptationEngine()
         # Force high trust by inserting many approvals
         for i in range(30):
-            engine.update_from_feedback(FeedbackRecord(
-                incident_id=f"INC-{i:03d}",
-                feedback_kind=FeedbackKind.APPROVAL,
-                mechanism_id="memory_pressure",
-                remediation_class="scale_replicas",
-                incident_category="performance",
-                ai_confidence=0.75,
-                operator_id="ops-1",
-            ))
+            engine.update_from_feedback(
+                FeedbackRecord(
+                    incident_id=f"INC-{i:03d}",
+                    feedback_kind=FeedbackKind.APPROVAL,
+                    mechanism_id="memory_pressure",
+                    remediation_class="scale_replicas",
+                    incident_category="performance",
+                    ai_confidence=0.75,
+                    operator_id="ops-1",
+                )
+            )
         modifier = engine.confidence_modifier_for_mechanism("memory_pressure")
         assert modifier >= 0.0
 
     def test_confidence_modifier_negative_for_low_trust(self):
         engine = TrustAdaptationEngine()
         for i in range(30):
-            engine.update_from_feedback(FeedbackRecord(
-                incident_id=f"INC-{i:03d}",
-                feedback_kind=FeedbackKind.ROLLBACK,
-                mechanism_id="retry_storm",
-                remediation_class="scale_replicas",
-                incident_category="availability",
-                ai_confidence=0.80,
-                operator_id="ops-1",
-            ))
+            engine.update_from_feedback(
+                FeedbackRecord(
+                    incident_id=f"INC-{i:03d}",
+                    feedback_kind=FeedbackKind.ROLLBACK,
+                    mechanism_id="retry_storm",
+                    remediation_class="scale_replicas",
+                    incident_category="availability",
+                    ai_confidence=0.80,
+                    operator_id="ops-1",
+                )
+            )
         modifier = engine.confidence_modifier_for_mechanism("retry_storm")
         assert modifier <= 0.0
 
     def test_remediation_risk_modifier_negative_for_low_trust(self):
         engine = TrustAdaptationEngine()
         for i in range(20):
-            engine.update_from_feedback(FeedbackRecord(
-                incident_id=f"INC-{i:03d}",
-                feedback_kind=FeedbackKind.ROLLBACK,
-                mechanism_id=None,
-                remediation_class="flush_cache",
-                incident_category="performance",
-                ai_confidence=0.65,
-                operator_id="ops-1",
-            ))
+            engine.update_from_feedback(
+                FeedbackRecord(
+                    incident_id=f"INC-{i:03d}",
+                    feedback_kind=FeedbackKind.ROLLBACK,
+                    mechanism_id=None,
+                    remediation_class="flush_cache",
+                    incident_category="performance",
+                    ai_confidence=0.65,
+                    operator_id="ops-1",
+                )
+            )
         modifier = engine.remediation_risk_modifier("flush_cache")
         assert modifier <= 0.0
 

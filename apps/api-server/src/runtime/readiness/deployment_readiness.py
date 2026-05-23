@@ -148,7 +148,9 @@ class DeploymentReadinessValidator:
 
     def _blocking_gaps(self, level: ReadinessLevel, missing: list[str]) -> list[str]:
         if level == ReadinessLevel.PRODUCTION_CAPABLE:
-            return [m for m in missing if m in _LEVEL_REQUIREMENTS[ReadinessLevel.HIGH_RISK_PRODUCTION]]
+            return [
+                m for m in missing if m in _LEVEL_REQUIREMENTS[ReadinessLevel.HIGH_RISK_PRODUCTION]
+            ]
         return []
 
     def _autonomy_permitted(self, level: ReadinessLevel, profile: dict[str, Any]) -> bool:
@@ -164,13 +166,19 @@ class DeploymentReadinessValidator:
     def _build_caveats(self, profile: dict[str, Any], level: ReadinessLevel) -> list[str]:
         caveats = []
         if level in (ReadinessLevel.EXPERIMENTAL, ReadinessLevel.STAGING_CAPABLE):
-            caveats.append("This system is simulation-only. No production telemetry has been processed.")
+            caveats.append(
+                "This system is simulation-only. No production telemetry has been processed."
+            )
         if not profile.get("real_incident_validation"):
-            caveats.append("Evaluation is based on synthetic/simulated incidents, not production data.")
+            caveats.append(
+                "Evaluation is based on synthetic/simulated incidents, not production data."
+            )
         if not profile.get("security_audit"):
             caveats.append("No external security audit has been completed.")
         if profile.get("llm_dependency"):
-            caveats.append("System depends on external LLM API — availability and behavior not guaranteed.")
+            caveats.append(
+                "System depends on external LLM API — availability and behavior not guaranteed."
+            )
         return caveats
 
     def _summarize(
@@ -181,7 +189,11 @@ class DeploymentReadinessValidator:
         autonomy: bool,
     ) -> str:
         level_label = level.value.replace("_", " ").title()
-        autonomy_str = "Autonomous operation: NOT PERMITTED" if not autonomy else "Autonomous operation: permitted with oversight"
+        autonomy_str = (
+            "Autonomous operation: NOT PERMITTED"
+            if not autonomy
+            else "Autonomous operation: permitted with oversight"
+        )
         if missing:
             gap_str = f" Missing {len(missing)} criteria."
         else:

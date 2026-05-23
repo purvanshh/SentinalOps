@@ -128,9 +128,9 @@ def test_task_below_max_attempts_is_eligible_for_replay():
 def test_max_replay_attempts_constant_is_bounded():
     from workers.tasks.incident_pipeline import _MAX_REPLAY_ATTEMPTS
 
-    assert (
-        3 <= _MAX_REPLAY_ATTEMPTS <= 10
-    ), f"_MAX_REPLAY_ATTEMPTS={_MAX_REPLAY_ATTEMPTS} is outside safe range [3, 10]"
+    assert 3 <= _MAX_REPLAY_ATTEMPTS <= 10, (
+        f"_MAX_REPLAY_ATTEMPTS={_MAX_REPLAY_ATTEMPTS} is outside safe range [3, 10]"
+    )
 
 
 # ---------------------------------------------------------------------------

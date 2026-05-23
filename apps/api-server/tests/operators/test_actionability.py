@@ -73,7 +73,6 @@ _NO_ROLLBACK: str | None = None
 
 
 class TestActionabilityAnalyzer:
-
     # ---- Return type -------------------------------------------------------
 
     def test_returns_actionability_score_dataclass(self) -> None:
@@ -387,7 +386,6 @@ class TestActionabilityAnalyzer:
 
 
 class TestRemediationUsefulnessEvaluator:
-
     # ---- Return type -------------------------------------------------------
 
     def test_returns_report_dataclass(self) -> None:
@@ -404,9 +402,9 @@ class TestRemediationUsefulnessEvaluator:
         evaluator = _make_usefulness_evaluator()
         for rec in [_GOOD_REC, _MINIMAL_REC, "", "x" * 200]:
             result = evaluator.evaluate("inc-u02", rec, "oom")
-            assert (
-                0.0 <= result.usefulness_score <= 1.0
-            ), f"Score {result.usefulness_score} out of range for rec: {rec[:30]!r}"
+            assert 0.0 <= result.usefulness_score <= 1.0, (
+                f"Score {result.usefulness_score} out of range for rec: {rec[:30]!r}"
+            )
 
     def test_recommendation_length_chars_correct(self) -> None:
         evaluator = _make_usefulness_evaluator()
@@ -725,7 +723,6 @@ class TestRemediationUsefulnessEvaluator:
 
 
 class TestOperationalFrictionAnalyzer:
-
     # ---- Return type -------------------------------------------------------
 
     def test_returns_report_dataclass(self) -> None:

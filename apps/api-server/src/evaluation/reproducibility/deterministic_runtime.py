@@ -86,8 +86,10 @@ class DeterministicRuntime:
             "deviations": diff,
         }
 
-    def detect_time_dependency(self, results: list[Any], max_variance: float = 0.01) -> dict[str, Any]:
-        """Run the same nominal operation multiple times and check variance — time-seeded code drifts."""
+    def detect_time_dependency(
+        self, results: list[Any], max_variance: float = 0.01
+    ) -> dict[str, Any]:
+        """Run the same nominal operation multiple times and check variance."""
         import json
 
         checksums = [

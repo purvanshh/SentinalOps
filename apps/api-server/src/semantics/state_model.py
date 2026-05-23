@@ -77,8 +77,12 @@ _STATE_DEFINITIONS: list[dict[str, Any]] = [
             "waiting for connections to become available."
         ),
         "positive_signals": [
-            "db timeout", "connection wait", "pool", "connection limit",
-            "acquisition latency", "connection queue",
+            "db timeout",
+            "connection wait",
+            "pool",
+            "connection limit",
+            "acquisition latency",
+            "connection queue",
         ],
         "negative_signals": ["cpu high", "disk io", "network timeout"],
         "neutral_signals": ["latency", "p99", "request queue"],
@@ -99,8 +103,13 @@ _STATE_DEFINITIONS: list[dict[str, Any]] = [
             "potentially due to ORM lazy loading or missing join optimizations."
         ),
         "positive_signals": [
-            "n+1", "n plus one", "query fanout", "orm", "excessive queries",
-            "too many queries", "db cpu",
+            "n+1",
+            "n plus one",
+            "query fanout",
+            "orm",
+            "excessive queries",
+            "too many queries",
+            "db cpu",
         ],
         "negative_signals": ["connection pool", "lock", "deadlock"],
         "neutral_signals": ["latency", "deployment"],
@@ -121,7 +130,11 @@ _STATE_DEFINITIONS: list[dict[str, Any]] = [
             "concurrent writes. Other transactions are queued waiting for the lock."
         ),
         "positive_signals": [
-            "lock", "deadlock", "lock wait", "lock contention", "serialization",
+            "lock",
+            "deadlock",
+            "lock wait",
+            "lock contention",
+            "serialization",
             "transaction block",
         ],
         "negative_signals": ["thread pool", "cache", "retry"],
@@ -143,8 +156,12 @@ _STATE_DEFINITIONS: list[dict[str, Any]] = [
             "Queue depth is growing and consumer lag is increasing."
         ),
         "positive_signals": [
-            "consumer lag", "kafka lag", "queue depth", "message backlog",
-            "backpressure", "consumer behind",
+            "consumer lag",
+            "kafka lag",
+            "queue depth",
+            "message backlog",
+            "backpressure",
+            "consumer behind",
         ],
         "negative_signals": ["db timeout", "connection pool", "thread pool"],
         "neutral_signals": ["latency", "deployment", "throughput"],
@@ -165,8 +182,12 @@ _STATE_DEFINITIONS: list[dict[str, Any]] = [
             "waiting for free threads, typically because threads are blocked on I/O."
         ),
         "positive_signals": [
-            "thread pool", "thread exhaustion", "thread starvation", "blocked threads",
-            "executor queue", "thread limit",
+            "thread pool",
+            "thread exhaustion",
+            "thread starvation",
+            "blocked threads",
+            "executor queue",
+            "thread limit",
         ],
         "negative_signals": ["cpu high", "connection pool", "consumer lag"],
         "neutral_signals": ["latency", "request queue"],
@@ -188,13 +209,19 @@ _STATE_DEFINITIONS: list[dict[str, Any]] = [
             "regression."
         ),
         "positive_signals": [
-            "deployment", "deploy", "regression", "rollback", "post-deploy",
-            "newly deployed", "release",
+            "deployment",
+            "deploy",
+            "regression",
+            "rollback",
+            "post-deploy",
+            "newly deployed",
+            "release",
         ],
         "negative_signals": ["traffic spike", "noisy alert", "self-resolving"],
         "neutral_signals": ["latency", "error rate", "cpu"],
         "implied_mechanisms": [
-            "deployment_induced_regression", "query_fanout_amplification",
+            "deployment_induced_regression",
+            "query_fanout_amplification",
             "connection_pool_starvation",
         ],
         "recommended_investigations": [
@@ -213,8 +240,13 @@ _STATE_DEFINITIONS: list[dict[str, Any]] = [
             "introducing latency spikes without proportional CPU increase."
         ),
         "positive_signals": [
-            "memory", "heap", "gc pause", "oom", "out of memory",
-            "garbage collection", "memory leak",
+            "memory",
+            "heap",
+            "gc pause",
+            "oom",
+            "out of memory",
+            "garbage collection",
+            "memory leak",
         ],
         "negative_signals": ["connection pool", "consumer lag", "lock"],
         "neutral_signals": ["latency", "cpu"],
@@ -235,7 +267,10 @@ _STATE_DEFINITIONS: list[dict[str, Any]] = [
             "unavailable or intermittently unavailable."
         ),
         "positive_signals": [
-            "circuit breaker", "circuit open", "circuit tripped", "half open",
+            "circuit breaker",
+            "circuit open",
+            "circuit tripped",
+            "half open",
             "circuit flapping",
         ],
         "negative_signals": ["consumer lag", "thread pool", "connection pool"],
@@ -257,8 +292,12 @@ _STATE_DEFINITIONS: list[dict[str, Any]] = [
             "The increased load prevents the service from recovering."
         ),
         "positive_signals": [
-            "retry", "retry storm", "request amplification", "exponential backoff",
-            "thundering herd", "cascading retries",
+            "retry",
+            "retry storm",
+            "request amplification",
+            "exponential backoff",
+            "thundering herd",
+            "cascading retries",
         ],
         "negative_signals": ["consumer lag", "thread pool", "lock"],
         "neutral_signals": ["latency", "error rate", "deployment"],
@@ -280,7 +319,10 @@ _STATE_DEFINITIONS: list[dict[str, Any]] = [
             "the cache warms up."
         ),
         "positive_signals": [
-            "cache miss", "cache cold", "cache flush", "cache invalidation",
+            "cache miss",
+            "cache cold",
+            "cache flush",
+            "cache invalidation",
             "cache hit rate low",
         ],
         "negative_signals": ["connection pool", "thread pool", "consumer lag"],
@@ -304,15 +346,9 @@ def _score_state(
 ) -> float:
     lower = signal_text.lower()
 
-    positive_score = sum(
-        1 for sig in state_def["positive_signals"] if sig in lower
-    )
-    negative_score = sum(
-        1 for sig in state_def["negative_signals"] if sig in lower
-    )
-    neutral_score = sum(
-        0.3 for sig in state_def["neutral_signals"] if sig in lower
-    )
+    positive_score = sum(1 for sig in state_def["positive_signals"] if sig in lower)
+    negative_score = sum(1 for sig in state_def["negative_signals"] if sig in lower)
+    neutral_score = sum(0.3 for sig in state_def["neutral_signals"] if sig in lower)
 
     raw = state_def["base_weight"] * (positive_score + neutral_score - 0.5 * negative_score)
 
@@ -367,8 +403,7 @@ class InfrastructureStateModel:
         observable_summary = _build_observable_summary(evidence_items, timed_events)
 
         raw_scores = [
-            _score_state(state_def, signal_text, stable_cpu)
-            for state_def in _STATE_DEFINITIONS
+            _score_state(state_def, signal_text, stable_cpu) for state_def in _STATE_DEFINITIONS
         ]
         normalized = _normalize_scores(raw_scores)
 
@@ -421,9 +456,7 @@ class InfrastructureStateModel:
         )
 
 
-def _build_signal_text(
-    evidence_items: list[dict[str, Any]], timed_events: list[Any]
-) -> str:
+def _build_signal_text(evidence_items: list[dict[str, Any]], timed_events: list[Any]) -> str:
     parts: list[str] = []
     for item in evidence_items:
         for key in ("summary", "metric", "signature", "description", "item_type"):

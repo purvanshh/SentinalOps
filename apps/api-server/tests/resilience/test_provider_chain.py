@@ -139,6 +139,25 @@ class TestProviderChain:
         assert primary_route.call_count == 1
         assert chain._circuit_breakers["primary"].state.value == "OPEN"
 
+    async def test_timeout_fast_fails_to_secondary_without_retry(self):
+        """Timeouts should trip the circuit and degrade immediately."""
+        chain = ProviderChain(_make_providers())
+        messages = [{"role": "user", "content": "test"}]
+
+        with respx.mock:
+            primary_route = respx.post("http://primary.test/v1/chat/completions").mock(
+                side_effect=httpx.ReadTimeout("provider timed out")
+            )
+            respx.post("http://secondary.test/v1/chat/completions").mock(
+                return_value=_success_response()
+            )
+
+            result = await chain.generate(messages)
+
+        assert result.provider_used == "secondary"
+        assert primary_route.call_count == 1
+        assert chain._circuit_breakers["primary"].state.value == "OPEN"
+
     async def test_fallback_to_local_when_primary_and_secondary_fail(self):
         """Both primary and secondary fail, falls back to local."""
         chain = ProviderChain(_make_providers())

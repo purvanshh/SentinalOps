@@ -94,7 +94,7 @@ class TelemetryIntegrityChecker:
                         event_id=seq_sorted[i].get("event_id", "unknown"),
                         description=(
                             f"Timestamp regresses between seq "
-                            f"{seq_sorted[i-1].get('sequence_number')} → "
+                            f"{seq_sorted[i - 1].get('sequence_number')} → "
                             f"{seq_sorted[i].get('sequence_number')}"
                         ),
                         impact="medium",

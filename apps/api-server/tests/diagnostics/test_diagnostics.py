@@ -6,10 +6,10 @@ from observability.diagnostics.reasoning_collapse_detector import ReasoningColla
 from observability.diagnostics.runtime_integrity_snapshot import RuntimeIntegritySnapshot
 from observability.diagnostics.telemetry_health_monitor import TelemetryHealthMonitor
 
-
 # ---------------------------------------------------------------------------
 # ConfidenceDriftMonitor
 # ---------------------------------------------------------------------------
+
 
 class TestConfidenceDriftMonitor:
     def test_record_single_value(self):
@@ -78,6 +78,7 @@ class TestConfidenceDriftMonitor:
 # ---------------------------------------------------------------------------
 # ReasoningCollapseDetector
 # ---------------------------------------------------------------------------
+
 
 class TestReasoningCollapseDetector:
     def test_no_collapse_clean_response(self):
@@ -159,6 +160,7 @@ class TestReasoningCollapseDetector:
 # RuntimeIntegritySnapshot
 # ---------------------------------------------------------------------------
 
+
 class TestRuntimeIntegritySnapshot:
     def test_capture_without_monitors(self):
         snapper = RuntimeIntegritySnapshot()
@@ -197,6 +199,7 @@ class TestRuntimeIntegritySnapshot:
 
     def test_report_serializable(self):
         import json
+
         snapper = RuntimeIntegritySnapshot()
         report = snapper.capture()
         json.dumps(report.to_dict())
@@ -211,11 +214,10 @@ class TestRuntimeIntegritySnapshot:
 # TelemetryHealthMonitor
 # ---------------------------------------------------------------------------
 
+
 class TestTelemetryHealthMonitor:
     def _healthy_sample(self) -> dict:
-        return {
-            "metrics": {"error_rate": 0.05, "latency_p99": 200.0}
-        }
+        return {"metrics": {"error_rate": 0.05, "latency_p99": 200.0}}
 
     def _corrupt_sample(self) -> dict:
         return {
@@ -277,6 +279,7 @@ class TestTelemetryHealthMonitor:
 
     def test_report_serializable(self):
         import json
+
         monitor = TelemetryHealthMonitor()
         monitor.record(self._healthy_sample())
         report = monitor.generate_report()

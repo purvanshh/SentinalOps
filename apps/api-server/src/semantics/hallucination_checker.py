@@ -152,9 +152,7 @@ def _check_causal_chain_coherence(
     # Check if chain references mechanisms incompatible with the primary inference
     if inference.alternatives:
         alt_keywords = [
-            kw
-            for alt in inference.alternatives[:2]
-            for kw in alt.mechanism.symptom_keywords[:3]
+            kw for alt in inference.alternatives[:2] for kw in alt.mechanism.symptom_keywords[:3]
         ]
         primary_keywords = list(mechanism.symptom_keywords[:5])
 
@@ -195,8 +193,7 @@ def _check_remediation_plausibility(
 
     # Check for presence of plausible remediations
     plausible_present = any(
-        rem.replace("_", " ") in lower or rem in lower
-        for rem in mechanism.plausible_remediations
+        rem.replace("_", " ") in lower or rem in lower for rem in mechanism.plausible_remediations
     )
 
     # Check for incompatible remediations
@@ -297,23 +294,13 @@ class SemanticHallucinationChecker:
     ) -> SemanticHallucinationReport:
         findings: list[SemanticHallucinationFinding] = []
 
-        findings.extend(
-            _check_mechanism_plausibility(hypothesis_text, inference, confidence)
-        )
-        findings.extend(
-            _check_causal_chain_coherence(causal_chain, inference)
-        )
-        findings.extend(
-            _check_remediation_plausibility(remediation_text, inference)
-        )
-        findings.extend(
-            _check_latent_state_consistency(evidence_items, inference)
-        )
+        findings.extend(_check_mechanism_plausibility(hypothesis_text, inference, confidence))
+        findings.extend(_check_causal_chain_coherence(causal_chain, inference))
+        findings.extend(_check_remediation_plausibility(remediation_text, inference))
+        findings.extend(_check_latent_state_consistency(evidence_items, inference))
 
         total_penalty = sum(f.confidence_penalty for f in findings)
-        mechanism_plausibility = (
-            inference.mechanism_confidence if inference is not None else 0.0
-        )
+        mechanism_plausibility = inference.mechanism_confidence if inference is not None else 0.0
 
         # Risk level
         has_critical = any(f.severity == "CRITICAL" for f in findings)

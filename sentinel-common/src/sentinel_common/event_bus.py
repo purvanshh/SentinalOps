@@ -5,12 +5,11 @@ from __future__ import annotations
 import asyncio
 import json
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable, Awaitable
+from typing import Any, Awaitable, Callable
 
 from .events import Event, EventType
-
 
 EventHandler = Callable[[Event], Awaitable[None]]
 
@@ -34,7 +33,12 @@ class EventBus:
         self._subscriptions: list[Subscription] = []
         self._handlers: dict[EventType, list[EventHandler]] = defaultdict(list)
 
-    def subscribe(self, event_types: list[EventType], handler: EventHandler, group: str = "default") -> None:
+    def subscribe(
+        self,
+        event_types: list[EventType],
+        handler: EventHandler,
+        group: str = "default",
+    ) -> None:
         sub = Subscription(event_types=event_types, handler=handler, group=group)
         self._subscriptions.append(sub)
         for et in event_types:
@@ -85,6 +89,7 @@ class RedisStreamBackend(StreamBackend):
     async def _ensure_client(self) -> Any:
         if self._client is None:
             import redis.asyncio as aioredis
+
             self._client = aioredis.from_url(self._redis_url)
         return self._client
 

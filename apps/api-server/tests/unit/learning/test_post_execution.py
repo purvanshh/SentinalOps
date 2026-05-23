@@ -163,8 +163,12 @@ class TestPostExecutionValidator:
         result = v.validate(_prediction(), _actual())
         d = result.to_dict()
         for key in [
-            "incident_id", "blast_radius_error", "risk_score_error",
-            "remediation_matched", "prediction_accurate", "confidence_was_justified",
+            "incident_id",
+            "blast_radius_error",
+            "risk_score_error",
+            "remediation_matched",
+            "prediction_accurate",
+            "confidence_was_justified",
             "discrepancy_summary",
         ]:
             assert key in d

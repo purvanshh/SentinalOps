@@ -61,6 +61,7 @@ class CausalEdge:
 @dataclass
 class CausalPath:
     """A chain of causal relationships from trigger to impact."""
+
     edges: list[CausalEdge]
     total_weight: float = 0.0
     start_time: datetime | None = None
@@ -158,8 +159,13 @@ class CausalKnowledgeGraph:
         return [self._entities[eid] for eid in visited if eid in self._entities]
 
     def _dfs_forward(
-        self, current: str, path: list[CausalEdge], weight: float,
-        max_depth: int, edge_types: list[EdgeType] | None, results: list[CausalPath]
+        self,
+        current: str,
+        path: list[CausalEdge],
+        weight: float,
+        max_depth: int,
+        edge_types: list[EdgeType] | None,
+        results: list[CausalPath],
     ) -> None:
         if len(path) >= max_depth:
             return
@@ -173,12 +179,19 @@ class CausalKnowledgeGraph:
             if any(e.target_id == edge.target_id for e in path):
                 continue
             path.append(edge)
-            self._dfs_forward(edge.target_id, path, weight + edge.weight, max_depth, edge_types, results)
+            self._dfs_forward(
+                edge.target_id, path, weight + edge.weight, max_depth, edge_types, results
+            )
             path.pop()
 
     def _dfs_backward(
-        self, current: str, path: list[CausalEdge], weight: float,
-        max_depth: int, edge_types: list[EdgeType] | None, results: list[CausalPath]
+        self,
+        current: str,
+        path: list[CausalEdge],
+        weight: float,
+        max_depth: int,
+        edge_types: list[EdgeType] | None,
+        results: list[CausalPath],
     ) -> None:
         if len(path) >= max_depth:
             return
@@ -192,29 +205,40 @@ class CausalKnowledgeGraph:
             if any(e.source_id == edge.source_id for e in path):
                 continue
             path.append(edge)
-            self._dfs_backward(edge.source_id, path, weight + edge.weight, max_depth, edge_types, results)
+            self._dfs_backward(
+                edge.source_id, path, weight + edge.weight, max_depth, edge_types, results
+            )
             path.pop()
 
     def _dfs_temporal(
-        self, current: str, path: list[CausalEdge], weight: float,
-        t_start: datetime, t_end: datetime, visited: set[str], results: list[CausalPath]
+        self,
+        current: str,
+        path: list[CausalEdge],
+        weight: float,
+        t_start: datetime,
+        t_end: datetime,
+        visited: set[str],
+        results: list[CausalPath],
     ) -> None:
         if len(path) >= 10 or current in visited:
             return
         visited.add(current)
         edges = self._adjacency.get(current, [])
-        temporal_edges = [
-            e for e in edges
-            if e.timestamp and t_start <= e.timestamp <= t_end
-        ]
+        temporal_edges = [e for e in edges if e.timestamp and t_start <= e.timestamp <= t_end]
         if not temporal_edges and path:
-            results.append(CausalPath(
-                edges=list(path), total_weight=weight,
-                start_time=t_start, end_time=t_end,
-            ))
+            results.append(
+                CausalPath(
+                    edges=list(path),
+                    total_weight=weight,
+                    start_time=t_start,
+                    end_time=t_end,
+                )
+            )
             return
         for edge in temporal_edges:
             path.append(edge)
-            self._dfs_temporal(edge.target_id, path, weight + edge.weight, t_start, t_end, visited, results)
+            self._dfs_temporal(
+                edge.target_id, path, weight + edge.weight, t_start, t_end, visited, results
+            )
             path.pop()
         visited.discard(current)

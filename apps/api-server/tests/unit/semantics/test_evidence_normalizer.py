@@ -90,9 +90,19 @@ def test_normalize_confidence_scales_with_matches(normalizer: SemanticEvidenceNo
 
 
 def test_normalize_confidence_capped_at_one(normalizer: SemanticEvidenceNormalizer) -> None:
-    text = " ".join(["connection pool", "pool exhausted", "db timeout", "connection wait",
-                     "acquisition latency", "connection limit", "waiting for connection",
-                     "pool starvation", "db connections"])
+    text = " ".join(
+        [
+            "connection pool",
+            "pool exhausted",
+            "db timeout",
+            "connection wait",
+            "acquisition latency",
+            "connection limit",
+            "waiting for connection",
+            "pool starvation",
+            "db connections",
+        ]
+    )
     result = normalizer.normalize_text(text)
     assert result.confidence <= 1.0
 
@@ -161,8 +171,11 @@ def test_dominant_mechanism_hints(normalizer: SemanticEvidenceNormalizer) -> Non
     assert isinstance(hints, list)
     # connection pool evidence dominates → connection_pool_starvation hint should come first
     assert "connection_pool_starvation" in hints
-    assert hints.index("connection_pool_starvation") < hints.index("queue_buildup_backpressure") \
-        if "queue_buildup_backpressure" in hints else True
+    assert (
+        hints.index("connection_pool_starvation") < hints.index("queue_buildup_backpressure")
+        if "queue_buildup_backpressure" in hints
+        else True
+    )
 
 
 def test_dominant_mechanism_hints_empty(normalizer: SemanticEvidenceNormalizer) -> None:

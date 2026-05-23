@@ -20,10 +20,11 @@ Side effects enforced:
 
 from __future__ import annotations
 
+import hashlib
 import time
 from dataclasses import dataclass, field
 from typing import Any
-from uuid import uuid4
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from agents.deployment_agent.agent import analyze_deployments
 from agents.deployment_agent.output_schema import DeploymentSummary
@@ -44,6 +45,7 @@ from agents.rootcause_agent.probabilistic_reasoner import (
 )
 from agents.router_agent.agent import classify_incident
 from agents.router_agent.output_schema import RouterOutput
+from core.runtime_context import disallow_live_providers
 from evaluation.benchmark_suite import BenchmarkIncident
 from evaluation.execution_mode import ExecutionMode
 from evaluation.infra_mocks.mock_incident import (
@@ -85,6 +87,18 @@ _DEFAULT_REMEDIATION_HISTORY: list[dict[str, Any]] = [
         "severity_on_failure": 0.3,
     },
 ]
+
+
+def _evaluation_execution_metadata(benchmark: BenchmarkIncident) -> tuple[str, str, UUID]:
+    seed_material = (
+        f"{benchmark.id}:{benchmark.name}:"
+        f"{benchmark.golden_classification}:{benchmark.golden_root_cause}"
+    )
+    digest = hashlib.sha256(seed_material.encode()).hexdigest()
+    execution_id = f"eval-{digest[:16]}"
+    thread_id = f"eval-{benchmark.id}-{digest[:8]}"
+    incident_id = uuid5(NAMESPACE_URL, f"sentinelops-eval:{benchmark.id}")
+    return execution_id, thread_id, incident_id
 
 
 @dataclass
@@ -335,100 +349,100 @@ async def run_agent_pipeline(
     - Fully deterministic for same benchmark inputs
     """
     assert execution_mode == ExecutionMode.EVALUATION, (
-        "run_agent_pipeline must only be called in EVALUATION mode. " f"Received: {execution_mode}"
+        f"run_agent_pipeline must only be called in EVALUATION mode. Received: {execution_mode}"
     )
 
     _assert_no_golden_contamination(benchmark)
 
-    execution_id = str(uuid4())
-    thread_id = f"eval-{benchmark.id}-{execution_id[:8]}"
+    execution_id, thread_id, incident_id = _evaluation_execution_metadata(benchmark)
     trace = EvaluationTrace(
         benchmark_id=benchmark.id,
         execution_id=execution_id,
         thread_id=thread_id,
     )
 
-    incident = build_mock_incident_from_benchmark(benchmark)
+    with disallow_live_providers():
+        incident = build_mock_incident_from_benchmark(benchmark, incident_id=incident_id)
 
-    # ── Step 1: Router agent ─────────────────────────────────────────────────
-    # REAL classify_incident() with MOCK LLM returning mocked_tool_responses.router
-    t0 = time.perf_counter()
-    router_output = await classify_incident(
-        incident,
-        llm_client=build_router_mock_client(benchmark.mocked_tool_responses),
-        searcher=NullIncidentHistorySearcher(),
-    )
-    trace.record_timing("router", time.perf_counter() - t0)
-    trace.record_agent_output("router", router_output)
-    trace.confidence_scores["router"] = router_output.confidence
+        # ── Step 1: Router agent ─────────────────────────────────────────────
+        # REAL classify_incident() with MOCK LLM returning mocked_tool_responses.router
+        t0 = time.perf_counter()
+        router_output = await classify_incident(
+            incident,
+            llm_client=build_router_mock_client(benchmark.mocked_tool_responses),
+            searcher=NullIncidentHistorySearcher(),
+        )
+        trace.record_timing("router", time.perf_counter() - t0)
+        trace.record_agent_output("router", router_output)
+        trace.confidence_scores["router"] = router_output.confidence
 
-    incident.incident_type = router_output.incident_type
-    incident.classification_confidence = router_output.confidence
+        incident.incident_type = router_output.incident_type
+        incident.classification_confidence = router_output.confidence
 
-    # ── Step 2: Metrics agent ────────────────────────────────────────────────
-    # REAL analyze_metrics() agent_loop with MOCK LLM (no tool calls)
-    t0 = time.perf_counter()
-    metrics_output = await analyze_metrics(
-        incident,
-        llm_client=build_metrics_mock_client(benchmark.mocked_tool_responses),
-    )
-    trace.record_timing("metrics", time.perf_counter() - t0)
-    trace.record_agent_output("metrics", metrics_output)
+        # ── Step 2: Metrics agent ────────────────────────────────────────────
+        # REAL analyze_metrics() agent_loop with MOCK LLM (no tool calls)
+        t0 = time.perf_counter()
+        metrics_output = await analyze_metrics(
+            incident,
+            llm_client=build_metrics_mock_client(benchmark.mocked_tool_responses),
+        )
+        trace.record_timing("metrics", time.perf_counter() - t0)
+        trace.record_agent_output("metrics", metrics_output)
 
-    # ── Step 3: Logs agent ───────────────────────────────────────────────────
-    # REAL analyze_logs() agent_loop with MOCK LLM (no tool calls)
-    t0 = time.perf_counter()
-    logs_output = await analyze_logs(
-        incident,
-        llm_client=build_logs_mock_client(benchmark.mocked_tool_responses),
-    )
-    trace.record_timing("logs", time.perf_counter() - t0)
-    trace.record_agent_output("logs", logs_output)
+        # ── Step 3: Logs agent ───────────────────────────────────────────────
+        # REAL analyze_logs() agent_loop with MOCK LLM (no tool calls)
+        t0 = time.perf_counter()
+        logs_output = await analyze_logs(
+            incident,
+            llm_client=build_logs_mock_client(benchmark.mocked_tool_responses),
+        )
+        trace.record_timing("logs", time.perf_counter() - t0)
+        trace.record_agent_output("logs", logs_output)
 
-    # ── Step 4: Deployment agent ─────────────────────────────────────────────
-    # REAL analyze_deployments() agent_loop with MOCK LLM (no tool calls)
-    t0 = time.perf_counter()
-    deployment_output = await analyze_deployments(
-        incident,
-        llm_client=build_deployment_mock_client(benchmark.mocked_tool_responses),
-    )
-    trace.record_timing("deployment", time.perf_counter() - t0)
-    trace.record_agent_output("deployment", deployment_output)
+        # ── Step 4: Deployment agent ─────────────────────────────────────────
+        # REAL analyze_deployments() agent_loop with MOCK LLM (no tool calls)
+        t0 = time.perf_counter()
+        deployment_output = await analyze_deployments(
+            incident,
+            llm_client=build_deployment_mock_client(benchmark.mocked_tool_responses),
+        )
+        trace.record_timing("deployment", time.perf_counter() - t0)
+        trace.record_agent_output("deployment", deployment_output)
 
-    # ── Step 5: Root cause agent ─────────────────────────────────────────────
-    # REAL algorithmic reasoning: normalize → timed_events → candidates →
-    # assess → score. No LLM. No DB. Evidence from ACTUAL agent outputs above.
-    t0 = time.perf_counter()
-    rootcause_output = await _eval_rootcause(
-        benchmark=benchmark,
-        metrics_output=metrics_output,
-        logs_output=logs_output,
-        deployment_output=deployment_output,
-        incident_type=router_output.incident_type,
-    )
-    trace.record_timing("rootcause", time.perf_counter() - t0)
-    trace.record_agent_output("rootcause", rootcause_output)
-    trace.reasoning_summaries["rootcause"] = rootcause_output.investigation_log
-    if rootcause_output.hypotheses:
-        trace.confidence_scores["rootcause"] = rootcause_output.hypotheses[0].confidence or 0.0
+        # ── Step 5: Root cause agent ─────────────────────────────────────────
+        # REAL algorithmic reasoning: normalize → timed_events → candidates →
+        # assess → score. No LLM. No DB. Evidence from ACTUAL agent outputs above.
+        t0 = time.perf_counter()
+        rootcause_output = await _eval_rootcause(
+            benchmark=benchmark,
+            metrics_output=metrics_output,
+            logs_output=logs_output,
+            deployment_output=deployment_output,
+            incident_type=router_output.incident_type,
+        )
+        trace.record_timing("rootcause", time.perf_counter() - t0)
+        trace.record_agent_output("rootcause", rootcause_output)
+        trace.reasoning_summaries["rootcause"] = rootcause_output.investigation_log
+        if rootcause_output.hypotheses:
+            trace.confidence_scores["rootcause"] = rootcause_output.hypotheses[0].confidence or 0.0
 
-    # ── Step 6: Risk agent ───────────────────────────────────────────────────
-    # REAL blast radius and remediation risk scoring. No DB. No Prometheus.
-    t0 = time.perf_counter()
-    risk_output = await _eval_risk(
-        incident=incident,
-        benchmark=benchmark,
-        rootcause_output=rootcause_output,
-    )
-    trace.record_timing("risk", time.perf_counter() - t0)
-    trace.record_agent_output("risk", risk_output)
+        # ── Step 6: Risk agent ───────────────────────────────────────────────
+        # REAL blast radius and remediation risk scoring. No DB. No Prometheus.
+        t0 = time.perf_counter()
+        risk_output = await _eval_risk(
+            incident=incident,
+            benchmark=benchmark,
+            rootcause_output=rootcause_output,
+        )
+        trace.record_timing("risk", time.perf_counter() - t0)
+        trace.record_agent_output("risk", risk_output)
 
-    # ── Step 7: Remediation agent ────────────────────────────────────────────
-    # REAL remediation plan built from ACTUAL risk output. No DB.
-    t0 = time.perf_counter()
-    remediation_output = _eval_remediation(risk_output)
-    trace.record_timing("remediation", time.perf_counter() - t0)
-    trace.record_agent_output("remediation", remediation_output)
+        # ── Step 7: Remediation agent ────────────────────────────────────────
+        # REAL remediation plan built from ACTUAL risk output. No DB.
+        t0 = time.perf_counter()
+        remediation_output = _eval_remediation(risk_output)
+        trace.record_timing("remediation", time.perf_counter() - t0)
+        trace.record_agent_output("remediation", remediation_output)
 
     trace.completed_at = time.time()
 

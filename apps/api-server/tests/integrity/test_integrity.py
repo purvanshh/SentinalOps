@@ -11,10 +11,10 @@ from evaluation.integrity.benchmark_invariants import (
 )
 from evaluation.integrity.evaluation_path_auditor import EvaluationPathAuditor
 
-
 # ---------------------------------------------------------------------------
 # AntiContaminationGuard
 # ---------------------------------------------------------------------------
+
 
 class TestAntiContaminationGuard:
     def _clean_sample(self) -> dict:
@@ -65,7 +65,9 @@ class TestAntiContaminationGuard:
 
     def test_check_partial_contamination(self):
         guard = AntiContaminationGuard()
-        samples = [self._clean_sample() for _ in range(8)] + [self._contaminated_sample() for _ in range(2)]
+        samples = [self._clean_sample() for _ in range(8)] + [
+            self._contaminated_sample() for _ in range(2)
+        ]
         report = guard.check(samples)
         assert not report.clean
         assert report.contamination_rate == 0.2
@@ -101,6 +103,7 @@ class TestAntiContaminationGuard:
 
     def test_report_serializable(self):
         import json
+
         guard = AntiContaminationGuard()
         report = guard.check([self._clean_sample()])
         json.dumps(report.to_dict())
@@ -109,6 +112,7 @@ class TestAntiContaminationGuard:
 # ---------------------------------------------------------------------------
 # BenchmarkInvariantChecker
 # ---------------------------------------------------------------------------
+
 
 class TestBenchmarkInvariantChecker:
     def _clean_context(self) -> dict:
@@ -144,7 +148,9 @@ class TestBenchmarkInvariantChecker:
     def test_attribution_below_threshold_violates(self):
         checker = BenchmarkInvariantChecker()
         ctx = self._clean_context()
-        ctx["predictions"] = [{"confidence": 0.10, "attribution": "network", "uncertainty_flagged": False}]
+        ctx["predictions"] = [
+            {"confidence": 0.10, "attribution": "network", "uncertainty_flagged": False}
+        ]
         result = checker.run_all(ctx)
         violated = [v.invariant_name for v in result.violations]
         assert "attribution_requires_minimum_confidence" in violated
@@ -184,6 +190,7 @@ class TestBenchmarkInvariantChecker:
 
     def test_result_serializable(self):
         import json
+
         checker = BenchmarkInvariantChecker()
         result = checker.run_all(self._clean_context())
         json.dumps(result.to_dict())
@@ -192,6 +199,7 @@ class TestBenchmarkInvariantChecker:
 # ---------------------------------------------------------------------------
 # EvaluationPathAuditor
 # ---------------------------------------------------------------------------
+
 
 class TestEvaluationPathAuditor:
     def _clean_context(self) -> dict:
@@ -246,6 +254,7 @@ class TestEvaluationPathAuditor:
 
     def test_report_serializable(self):
         import json
+
         auditor = EvaluationPathAuditor()
         report = auditor.audit(self._clean_context())
         json.dumps(report.to_dict())

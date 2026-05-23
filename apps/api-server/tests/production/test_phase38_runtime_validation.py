@@ -227,7 +227,9 @@ def test_production_startup_fails_on_missing_required_config():
         app_env="production",
         auth0_secret_key="strong-secret-abc",
         approval_token_secret="strong-secret-xyz",
+        llm_provider="openai_compatible",
         llm_api_key="dummy-key",
+        nvidia_api_key="",
     )
     issues = settings.validate_required_configuration()
     assert len(issues) >= 1

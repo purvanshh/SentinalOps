@@ -127,7 +127,7 @@ class RationaleValidator:
                         f"{len(evidence_refs)} evidence reference(s) provided. "
                         "At least 2 are required to justify this certainty level."
                     ),
-                    affected_text=f"confidence={confidence:.2f}, " f"evidence_refs={evidence_refs}",
+                    affected_text=f"confidence={confidence:.2f}, evidence_refs={evidence_refs}",
                 )
             )
 

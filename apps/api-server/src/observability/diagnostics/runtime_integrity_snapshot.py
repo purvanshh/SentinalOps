@@ -74,7 +74,9 @@ class RuntimeIntegritySnapshot:
         )
 
         active_alerts = self._collect_alerts(confidence_monitor, collapse_detector)
-        integrity_score = self._compute_integrity(confidence_health, reasoning_health, active_alerts)
+        integrity_score = self._compute_integrity(
+            confidence_health, reasoning_health, active_alerts
+        )
         system_state = self._classify_state(integrity_score, active_alerts)
         summary = self._build_summary(snapshot_id, system_state, integrity_score, active_alerts)
 
@@ -95,12 +97,20 @@ class RuntimeIntegritySnapshot:
     def history(self) -> list[IntegrityReport]:
         return list(self._history)
 
-    def _collect_alerts(self, confidence_monitor: Any, collapse_detector: Any) -> list[dict[str, Any]]:
+    def _collect_alerts(
+        self, confidence_monitor: Any, collapse_detector: Any
+    ) -> list[dict[str, Any]]:
         alerts: list[dict[str, Any]] = []
         if collapse_detector is not None:
             summary = collapse_detector.summary()
             if summary.get("total_collapse_events", 0) > 0:
-                alerts.append({"source": "reasoning", "count": summary["total_collapse_events"], "severity": "high"})
+                alerts.append(
+                    {
+                        "source": "reasoning",
+                        "count": summary["total_collapse_events"],
+                        "severity": "high",
+                    }
+                )
         return alerts
 
     def _compute_integrity(

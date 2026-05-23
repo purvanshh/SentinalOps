@@ -24,9 +24,9 @@ class LLMClient:
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         settings = get_settings()
-        self.base_url = (base_url or settings.llm_base_url).rstrip("/")
-        self.api_key = api_key or settings.llm_api_key
-        self.model = model or settings.llm_model
+        self.base_url = (base_url or settings.resolved_llm_base_url).rstrip("/")
+        self.api_key = api_key or settings.resolved_llm_api_key
+        self.model = model or settings.resolved_llm_model
         self.timeout = timeout
         self.max_retries = max_retries
         self._client = httpx.AsyncClient(

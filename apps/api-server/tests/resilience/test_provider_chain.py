@@ -106,7 +106,7 @@ class TestProviderChain:
         messages = [{"role": "user", "content": "test"}]
 
         with respx.mock:
-            respx.post("http://primary.test/v1/chat/completions").mock(
+            primary_route = respx.post("http://primary.test/v1/chat/completions").mock(
                 return_value=_rate_limit_response()
             )
             respx.post("http://secondary.test/v1/chat/completions").mock(
@@ -118,6 +118,26 @@ class TestProviderChain:
             assert result.provider_used == "secondary"
             assert result.layer_used == 2
             assert result.fallback_activated is True
+            assert primary_route.call_count == 1
+
+    async def test_auth_failure_trips_circuit_without_retry(self):
+        """401/403 failures should fast-fail and open the circuit immediately."""
+        chain = ProviderChain(_make_providers())
+        messages = [{"role": "user", "content": "test"}]
+
+        with respx.mock:
+            primary_route = respx.post("http://primary.test/v1/chat/completions").mock(
+                return_value=httpx.Response(401, json={"error": "unauthorized"})
+            )
+            respx.post("http://secondary.test/v1/chat/completions").mock(
+                return_value=_success_response()
+            )
+
+            result = await chain.generate(messages)
+
+        assert result.provider_used == "secondary"
+        assert primary_route.call_count == 1
+        assert chain._circuit_breakers["primary"].state.value == "OPEN"
 
     async def test_fallback_to_local_when_primary_and_secondary_fail(self):
         """Both primary and secondary fail, falls back to local."""

@@ -28,6 +28,8 @@ from pydantic import BaseModel
 
 logger = structlog.get_logger(__name__)
 
+_FAST_FAIL_STATUS_CODES = {401, 402, 403, 429}
+
 
 @dataclass
 class ProviderConfig:
@@ -95,6 +97,10 @@ class ProviderChainResult:
             "attempts": [a.to_dict() for a in self.attempts],
             "provider_health": self.provider_health,
         }
+
+
+class ProviderFastFailError(RuntimeError):
+    """Raised for provider failures that should trip the circuit immediately."""
 
 
 class ProviderChain:
@@ -245,6 +251,26 @@ class ProviderChain:
                 )
                 return result
 
+            except ProviderFastFailError as exc:
+                retry_count = attempt_num + 1
+                last_error = str(exc)
+                cb.trip()
+
+                logger.warning(
+                    "provider_fast_fail",
+                    provider=provider.name,
+                    layer=provider.layer,
+                    attempt=retry_count,
+                    error=last_error,
+                )
+                return ProviderAttempt(
+                    provider_name=provider.name,
+                    layer=provider.layer,
+                    success=False,
+                    error=last_error,
+                    latency_ms=(time.time() - attempt_start) * 1000,
+                    retry_count=retry_count,
+                )
             except Exception as exc:
                 retry_count = attempt_num + 1
                 last_error = f"{type(exc).__name__}: {exc}"
@@ -303,10 +329,13 @@ class ProviderChain:
         ) as client:
             response = await client.post("/chat/completions", json=payload)
 
-            # Specific handling for 429 Too Many Requests
-            if response.status_code == 429:
-                raise ProviderRateLimitError(
-                    f"Provider {provider.name} returned 429 Too Many Requests"
+            response_text = response.text.lower()
+            if (
+                response.status_code in _FAST_FAIL_STATUS_CODES
+                or "insufficient_quota" in response_text
+            ):
+                raise ProviderFastFailError(
+                    f"Provider {provider.name} fast-failed with status {response.status_code}"
                 )
 
             response.raise_for_status()

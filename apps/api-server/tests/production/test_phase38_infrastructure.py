@@ -197,3 +197,23 @@ def test_development_does_not_fail_on_dummy_llm_key():
     settings = Settings(app_env="development", llm_api_key="dummy-key")
     issues = settings.validate_required_configuration()
     assert not any("LLM_API_KEY" in i for i in issues)
+
+
+def test_nvidia_provider_uses_nvidia_api_key_when_primary_key_is_placeholder():
+    from core.config import Settings
+
+    settings = Settings(
+        app_env="production",
+        llm_provider="nvidia",
+        llm_api_key="dummy-key",
+        nvidia_api_key="nvapi-test",
+        llm_base_url="http://localhost:11434/v1",
+        nvidia_base_url="https://integrate.api.nvidia.com/v1",
+        llm_model="gpt-oss-120b",
+        nvidia_model="meta/llama-3.1-70b-instruct",
+    )
+
+    assert settings.resolved_llm_api_key == "nvapi-test"
+    assert settings.resolved_llm_base_url == "https://integrate.api.nvidia.com/v1"
+    assert settings.resolved_llm_model == "meta/llama-3.1-70b-instruct"
+    assert not any("LLM_API_KEY" in i for i in settings.validate_required_configuration())

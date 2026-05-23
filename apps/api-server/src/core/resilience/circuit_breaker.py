@@ -120,6 +120,17 @@ class CircuitBreaker:
             if self._state == CircuitState.HALF_OPEN:
                 self._half_open_calls += 1
 
+    def trip(self) -> None:
+        """Immediately open the circuit after a non-retriable provider failure."""
+        with self._lock:
+            self._failure_count = max(self._failure_count + 1, self.failure_threshold)
+            self._total_failures += 1
+            self._success_count = 0
+            self._half_open_calls = 0
+            self._last_failure_time = time.time()
+            self._state = CircuitState.OPEN
+            logger.warning("circuit_breaker_tripped", provider=self.name)
+
     def force_open(self) -> None:
         """Manually open the circuit."""
         with self._lock:

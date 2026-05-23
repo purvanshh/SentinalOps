@@ -47,8 +47,8 @@ class SemanticEmbeddingClient:
         settings = get_settings()
         self.model = model or settings.embedding_model
         self.fallback_model = fallback_model or settings.embedding_fallback_model
-        self._base_url = (base_url or settings.llm_base_url).rstrip("/")
-        self._api_key = api_key or settings.llm_api_key
+        self._base_url = (base_url or settings.resolved_llm_base_url).rstrip("/")
+        self._api_key = api_key or settings.resolved_llm_api_key
         self._fallback_base_url = (fallback_base_url or settings.llm_local_base_url).rstrip("/")
         self._transport = transport
         self._cache: dict[str, list[float]] = {}

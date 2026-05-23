@@ -71,6 +71,13 @@ class TestCircuitBreaker:
         assert cb.state == CircuitState.CLOSED
         assert cb.is_available is True
 
+    def test_trip_opens_circuit_immediately(self):
+        cb = CircuitBreaker("test", failure_threshold=3)
+        cb.trip()
+        assert cb.state == CircuitState.OPEN
+        assert cb.is_available is False
+        assert cb.to_dict()["failure_count"] == 3
+
     def test_to_dict(self):
         cb = CircuitBreaker("test_provider", failure_threshold=3)
         cb.record_failure()

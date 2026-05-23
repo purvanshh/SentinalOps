@@ -43,14 +43,18 @@ class Settings(BaseSettings):
     celery_broker_url: str = Field(default="redis://localhost:6379/1")
     celery_result_backend: str = Field(default="redis://localhost:6379/2")
     default_agent_timeout_seconds: int = Field(default=30)
+    llm_provider: str = Field(default="openai_compatible")
     llm_base_url: str = Field(default="http://localhost:11434/v1")
     llm_api_key: str = Field(default="dummy-key")
     llm_model: str = Field(default="gpt-oss-120b")
     llm_secondary_base_url: str = Field(default="")
     llm_secondary_api_key: str = Field(default="")
-    llm_secondary_model: str = Field(default="gpt-4.1-mini")
+    llm_secondary_model: str = Field(default="")
     llm_local_base_url: str = Field(default="http://localhost:11434/v1")
     llm_local_model: str = Field(default="llama3.2")
+    nvidia_api_key: str = Field(default="")
+    nvidia_base_url: str = Field(default="https://integrate.api.nvidia.com/v1")
+    nvidia_model: str = Field(default="")
     auth0_domain: str = Field(default="sentinelops.local")
     auth0_audience: str = Field(default="sentinelops-api")
     auth0_algorithms: str = Field(default="HS256")
@@ -78,6 +82,30 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env in ("production", "prod")
+
+    @property
+    def uses_nvidia_provider(self) -> bool:
+        return self.llm_provider.strip().lower() == "nvidia"
+
+    @property
+    def resolved_llm_base_url(self) -> str:
+        if self.uses_nvidia_provider and self.llm_base_url == "http://localhost:11434/v1":
+            return self.nvidia_base_url
+        return self.llm_base_url
+
+    @property
+    def resolved_llm_api_key(self) -> str:
+        if self.llm_api_key != "dummy-key":
+            return self.llm_api_key
+        if self.uses_nvidia_provider and self.nvidia_api_key:
+            return self.nvidia_api_key
+        return self.llm_api_key
+
+    @property
+    def resolved_llm_model(self) -> str:
+        if self.uses_nvidia_provider and self.llm_model == "gpt-oss-120b" and self.nvidia_model:
+            return self.nvidia_model
+        return self.llm_model
 
     def validate_production_secrets(self) -> list[str]:
         """Return a list of insecure-secret warnings.
@@ -107,7 +135,7 @@ class Settings(BaseSettings):
             issues.append("REDIS_URL is not configured")
         if not self.celery_broker_url:
             issues.append("CELERY_BROKER_URL is not configured")
-        if self.llm_api_key == "dummy-key" and self.is_production:
+        if self.resolved_llm_api_key == "dummy-key" and self.is_production:
             issues.append("LLM_API_KEY is using the dummy development value in production")
         return issues
 

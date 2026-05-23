@@ -1,18 +1,17 @@
 """Tests for adversarial red-team evaluation framework."""
 
-import pytest
 from evaluation.redteam.adversarial_scenarios import (
     AdversarialScenario,
     AttackType,
     ScenarioLibrary,
 )
-from evaluation.redteam.redteam_evaluator import RedTeamEvaluator, RedTeamResult
 from evaluation.redteam.realism_scores import AdversarialRealismScorer
-
+from evaluation.redteam.redteam_evaluator import RedTeamEvaluator, RedTeamResult
 
 # ---------------------------------------------------------------------------
 # Scenario library
 # ---------------------------------------------------------------------------
+
 
 class TestScenarioLibrary:
     def test_all_scenarios_returns_nine(self):
@@ -43,6 +42,7 @@ class TestScenarioLibrary:
 
     def test_to_dict_serializable(self):
         import json
+
         for s in ScenarioLibrary.all_scenarios():
             d = s.to_dict()
             json.dumps(d)  # must not raise
@@ -51,6 +51,7 @@ class TestScenarioLibrary:
 # ---------------------------------------------------------------------------
 # RedTeamEvaluator
 # ---------------------------------------------------------------------------
+
 
 class TestRedTeamEvaluator:
     def _honest_response(self, scenario: AdversarialScenario) -> dict:
@@ -113,6 +114,7 @@ class TestRedTeamEvaluator:
 
     def test_result_to_dict(self):
         import json
+
         evaluator = RedTeamEvaluator()
         scenario = ScenarioLibrary.all_scenarios()[0]
         result = evaluator.evaluate_scenario(scenario, self._honest_response(scenario))
@@ -140,6 +142,7 @@ class TestRedTeamEvaluator:
 # ---------------------------------------------------------------------------
 # AdversarialRealismScorer
 # ---------------------------------------------------------------------------
+
 
 class TestAdversarialRealismScorer:
     def _make_results(self, passed: bool) -> list[RedTeamResult]:
@@ -178,6 +181,7 @@ class TestAdversarialRealismScorer:
 
     def test_to_dict_serializable(self):
         import json
+
         scorer = AdversarialRealismScorer()
         report = scorer.score(self._make_results(passed=True))
         json.dumps(report.to_dict())
@@ -187,7 +191,12 @@ class TestAdversarialRealismScorer:
         scorer = AdversarialRealismScorer()
 
         def honest(s):
-            return {"confidence": 0.30, "attribution": None, "uncertainty_flagged": True, "refused": True}
+            return {
+                "confidence": 0.30,
+                "attribution": None,
+                "uncertainty_flagged": True,
+                "refused": True,
+            }
 
         suite_output = evaluator.run_full_suite(honest)
         report = scorer.score_from_suite(suite_output)

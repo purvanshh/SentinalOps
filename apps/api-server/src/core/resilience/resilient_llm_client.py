@@ -44,26 +44,32 @@ def build_provider_chain_from_settings() -> ProviderChain:
         ProviderConfig(
             name="primary",
             layer=1,
-            base_url=settings.llm_base_url,
-            api_key=settings.llm_api_key,
-            model=settings.llm_model,
-            timeout=30.0,
-            max_retries=2,
-            initial_backoff=1.0,
-            max_backoff=8.0,
+            base_url=settings.resolved_llm_base_url,
+            api_key=settings.resolved_llm_api_key,
+            model=settings.resolved_llm_model,
+            timeout=15.0,
+            max_retries=1,
+            initial_backoff=0.5,
+            max_backoff=2.0,
             circuit_breaker_threshold=3,
             circuit_breaker_recovery=30.0,
         )
     )
 
-    # Layer 2: Secondary provider (use env vars if available,
-    # else use primary URL with smaller model)
-    secondary_base_url = getattr(settings, "llm_secondary_base_url", None) or settings.llm_base_url
-    secondary_api_key = getattr(settings, "llm_secondary_api_key", None) or settings.llm_api_key
-    secondary_model = getattr(settings, "llm_secondary_model", None) or "gpt-4.1-mini"
+    # Layer 2: Secondary provider is opt-in to avoid accidental model drift
+    # between heterogeneous OpenAI-compatible endpoints.
+    secondary_configured = any(
+        [
+            settings.llm_secondary_base_url,
+            settings.llm_secondary_api_key,
+            settings.llm_secondary_model,
+        ]
+    )
+    secondary_base_url = settings.llm_secondary_base_url or settings.resolved_llm_base_url
+    secondary_api_key = settings.llm_secondary_api_key or settings.resolved_llm_api_key
+    secondary_model = settings.llm_secondary_model or settings.resolved_llm_model
 
-    # Only add secondary if it's actually different from primary
-    if secondary_model != settings.llm_model or secondary_base_url != settings.llm_base_url:
+    if secondary_configured:
         providers.append(
             ProviderConfig(
                 name="secondary",
@@ -71,10 +77,10 @@ def build_provider_chain_from_settings() -> ProviderChain:
                 base_url=secondary_base_url,
                 api_key=secondary_api_key,
                 model=secondary_model,
-                timeout=25.0,
+                timeout=12.0,
                 max_retries=1,
                 initial_backoff=0.5,
-                max_backoff=4.0,
+                max_backoff=2.0,
                 circuit_breaker_threshold=3,
                 circuit_breaker_recovery=20.0,
             )
@@ -91,10 +97,10 @@ def build_provider_chain_from_settings() -> ProviderChain:
             base_url=local_base_url,
             api_key="ollama",  # Ollama doesn't require a real key
             model=local_model,
-            timeout=60.0,  # Local models can be slower
-            max_retries=1,
+            timeout=20.0,
+            max_retries=0,
             initial_backoff=0.5,
-            max_backoff=4.0,
+            max_backoff=2.0,
             circuit_breaker_threshold=5,  # More lenient for local
             circuit_breaker_recovery=15.0,
         )

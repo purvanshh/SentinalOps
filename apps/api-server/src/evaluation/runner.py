@@ -27,7 +27,11 @@ from evaluation.scorers.blast_radius_scorer import score_blast_radius
 from evaluation.scorers.classification_scorer import score_classification
 from evaluation.scorers.execution_safety_scorer import ExecutionRisk, classify_execution_risk
 from evaluation.scorers.hallucination_scorer import score_hallucination
-from evaluation.scorers.rootcause_scorer import score_grounding, score_root_cause
+from evaluation.scorers.rootcause_scorer import (
+    score_grounding,
+    score_root_cause,
+    semantic_similarity,
+)
 from evaluation.scorers.safety_scorer import score_safety
 
 
@@ -83,7 +87,17 @@ async def evaluate_incident_async(benchmark: BenchmarkIncident) -> dict:
     top_hypothesis_text = (
         rootcause_result.hypotheses[0].hypothesis if rootcause_result.hypotheses else ""
     )
-    rootcause_score = score_root_cause(top_hypothesis_text, benchmark.golden_root_cause)
+    rootcause_score_lexical = score_root_cause(
+        top_hypothesis_text,
+        benchmark.golden_root_cause,
+        mode="lexical",
+    )
+    rootcause_score_semantic = score_root_cause(
+        top_hypothesis_text,
+        benchmark.golden_root_cause,
+        mode="semantic",
+    )
+    rootcause_similarity = semantic_similarity(top_hypothesis_text, benchmark.golden_root_cause)
     grounding_score = score_grounding(valid_item_keys, rootcause_result)
     hallucination_score = score_hallucination(grounding_score)
 
@@ -99,7 +113,10 @@ async def evaluate_incident_async(benchmark: BenchmarkIncident) -> dict:
     return {
         "name": benchmark.name,
         "classification_score": classification_score,
-        "rootcause_score": rootcause_score,
+        "rootcause_score": rootcause_score_lexical,
+        "rootcause_score_lexical": rootcause_score_lexical,
+        "rootcause_score_semantic": rootcause_score_semantic,
+        "rootcause_similarity": rootcause_similarity,
         "grounding_score": grounding_score,
         "hallucination_score": hallucination_score,
         "blast_radius_score": blast_radius_score,
@@ -130,11 +147,14 @@ async def run_evaluation(dataset_dir: str | None = None) -> dict:
     n = len(results)
     summary = {
         "classification_accuracy": sum(r["classification_score"] for r in results) / n,
-        "rootcause_accuracy": sum(r["rootcause_score"] for r in results) / n,
+        "rootcause_accuracy": sum(r["rootcause_score_lexical"] for r in results) / n,
+        "root_cause_accuracy_lexical": sum(r["rootcause_score_lexical"] for r in results) / n,
+        "root_cause_accuracy_semantic": sum(r["rootcause_score_semantic"] for r in results) / n,
+        "mean_semantic_similarity": sum(r["rootcause_similarity"] for r in results) / n,
         "grounding_score": sum(r["grounding_score"] for r in results) / n,
         "hallucination_score": sum(r["hallucination_score"] for r in results) / n,
         "blast_radius_score": sum(r["blast_radius_score"] for r in results) / n,
         "safety_score": sum(r["safety_score"] for r in results) / n,
         "workflow_completion": sum(r["workflow_completed"] for r in results) / n,
     }
-    return {"count": n, "results": results, "summary": summary}
+    return {"count": n, "results": results, "summary": summary, **summary}

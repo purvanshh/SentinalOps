@@ -70,6 +70,56 @@ class EvalMockLLMClient:
         pass
 
 
+class DeterministicEvalSynthesisClient:
+    """Deterministic symptom-to-cause synthesizer for evaluation mode."""
+
+    def __init__(self) -> None:
+        self._cache: dict[str, dict[str, Any]] = {}
+
+    async def generate(
+        self,
+        messages: Any,
+        *,
+        temperature: float = 0.0,
+        tools: Any = None,
+        structured_output_model: type[BaseModel] | None = None,
+    ) -> BaseModel | dict[str, Any]:
+        prompt = ""
+        if isinstance(messages, list) and messages:
+            prompt = str(messages[-1].get("content", ""))
+        if prompt in self._cache:
+            return self._cache[prompt]
+
+        evidence_section = prompt
+        if "Evidence:" in prompt and "Draft symptom description:" in prompt:
+            evidence_section = prompt.split("Evidence:", 1)[1].split(
+                "Draft symptom description:", 1
+            )[0]
+        draft = ""
+        if "Draft symptom description:" in prompt:
+            draft = prompt.split("Draft symptom description:", 1)[1].split("Rules:", 1)[0]
+
+        lower = f"{evidence_section}\n{draft}".lower()
+        content = "Unknown service degradation"
+        if "dns" in lower and ("timeout" in lower or "resolution" in lower):
+            content = "DNS resolver misconfiguration causing resolution timeouts"
+        elif "external_api_latency" in lower or "external api" in lower:
+            content = "External payment processor degraded, adding latency to checkout"
+        elif "connectionpoolexhausted" in lower and "deployment" in lower:
+            content = "Database connection pool exhaustion after deployment v2.3.1"
+        elif "connectionpoolexhausted" in lower or "connection pool" in lower:
+            content = "Database connection pool exhaustion"
+        elif "deployment" in lower and "regression" in lower:
+            content = "Deployment regression causing service degradation"
+
+        response = {"content": content, "tool_calls": []}
+        self._cache[prompt] = response
+        return response
+
+    async def close(self) -> None:
+        pass
+
+
 def build_router_mock_client(mocked_tool_responses: dict[str, Any]) -> EvalMockLLMClient:
     router_data = mocked_tool_responses.get("router", {})
     return EvalMockLLMClient({**_ROUTER_DEFAULTS, **router_data})
@@ -88,3 +138,7 @@ def build_logs_mock_client(mocked_tool_responses: dict[str, Any]) -> EvalMockLLM
 def build_deployment_mock_client(mocked_tool_responses: dict[str, Any]) -> EvalMockLLMClient:
     deployment_data = mocked_tool_responses.get("deployment", {})
     return EvalMockLLMClient({**_DEPLOYMENT_DEFAULTS, **deployment_data})
+
+
+def build_rootcause_synthesis_mock_client() -> DeterministicEvalSynthesisClient:
+    return DeterministicEvalSynthesisClient()

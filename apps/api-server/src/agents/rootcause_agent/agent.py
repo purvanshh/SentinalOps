@@ -6,7 +6,9 @@ from agents.rootcause_agent.evidence_normalizer import normalize_agent_execution
 from agents.rootcause_agent.output_schema import RootCauseAnalysis
 from agents.rootcause_agent.probabilistic_reasoner import (
     build_probabilistic_root_cause_analysis,
+    synthesize_root_cause_hypothesis,
 )
+from core.llm_client import LLMClient
 from db.models.incident import Incident
 from db.repositories.incident_repo import IncidentRepository
 from observability.metrics.definitions import (
@@ -27,9 +29,11 @@ async def analyze_root_cause(
     *,
     db_session: AsyncSession,
     hybrid_retriever: HybridRetriever | None = None,
+    llm_client: LLMClient | None = None,
 ) -> RootCauseAnalysis:
     repository = IncidentRepository(db_session)
     retriever = hybrid_retriever or HybridRetriever()
+    owned_llm_client = llm_client or LLMClient()
     executions = await repository.list_agent_executions(incident.id)
     evidence_payloads = normalize_agent_executions(executions)
     evidence_rows = await repository.replace_evidence_items(incident.id, evidence_payloads)
@@ -75,6 +79,12 @@ async def analyze_root_cause(
         candidates=candidates,
         grounding_score=grounding,
     )
+    result = await synthesize_root_cause_hypothesis(
+        result,
+        candidates=candidates,
+        evidence_items=simplified_evidence,
+        llm_client=owned_llm_client,
+    )
     if result.uncertainty is not None:
         observe_confidence_reliability("rootcause", result.uncertainty.confidence)
         observe_calibration_error(
@@ -116,4 +126,6 @@ async def analyze_root_cause(
         output_payload=result.model_dump(mode="json"),
         status="completed",
     )
+    if llm_client is None:
+        await owned_llm_client.close()
     return result

@@ -76,6 +76,114 @@ def _recommended_next_steps(assessment: UncertaintyAssessment) -> list[str]:
     ]
 
 
+def _content_from_llm_response(response: Any) -> str:
+    if isinstance(response, str):
+        return response.strip()
+    if isinstance(response, dict):
+        content = response.get("content", "")
+        if isinstance(content, list):
+            return "".join(part.get("text", "") for part in content if isinstance(part, dict)).strip()
+        return str(content).strip()
+    return str(response).strip()
+
+
+def _supporting_evidence_lines(
+    winning_candidate: CandidateCause,
+    evidence_items: list[dict[str, Any]],
+) -> list[str]:
+    lines: list[str] = []
+    supporting = [
+        item for item in evidence_items if item.get("item_key") in winning_candidate.supporting_item_keys
+    ]
+    correlated = supporting + [
+        item for item in evidence_items if item not in supporting
+    ][:2]
+    for item in correlated:
+        if item.get("item_type") == "metric_anomaly":
+            lines.append(
+                f"- Metric: {item.get('metric')} = {item.get('observed')} "
+                f"(expected {item.get('expected_range')}, z={item.get('z_score')})"
+            )
+        elif item.get("item_type") == "error_signature":
+            lines.append(
+                f"- Log error: {item.get('signature')} x{item.get('count')} "
+                f"first seen {item.get('first_seen')}"
+            )
+        elif item.get("item_type") == "deployment_change":
+            lines.append(
+                f"- Deployment: {item.get('service')} {item.get('version')} at {item.get('time')}"
+            )
+    return lines
+
+
+async def synthesize_root_cause_hypothesis(
+    result: RootCauseAnalysis,
+    *,
+    candidates: list[CandidateCause],
+    evidence_items: list[dict[str, Any]],
+    llm_client: Any | None,
+) -> RootCauseAnalysis:
+    if llm_client is None or not result.hypotheses:
+        return result
+
+    strongest_index = result.strongest_hypothesis_index or 0
+    if strongest_index >= len(result.hypotheses):
+        strongest_index = 0
+    hypothesis = result.hypotheses[strongest_index]
+    winning_candidate = next(
+        (candidate for candidate in candidates if candidate.title == (hypothesis.cause or candidate.title)),
+        None,
+    )
+    if winning_candidate is None:
+        return result
+
+    evidence_lines = _supporting_evidence_lines(winning_candidate, evidence_items)
+    evidence_text = "\n".join(evidence_lines) or "- No specific evidence items"
+    prompt = f"""You are an expert Site Reliability Engineer. Given the operational evidence below, write a single concise root-cause hypothesis (maximum 12 words) that states the likely underlying cause.
+
+Evidence:
+{evidence_text}
+
+Draft symptom description: {winning_candidate.title}
+
+Rules:
+1. Name the specific component or dependency that is the root cause.
+2. Use standard infrastructure terminology (database, DNS, cache, load balancer, deployment, memory leak, connection pool, etc.).
+3. If DNS resolution is extremely slow or timing out, hypothesize a DNS infrastructure or resolver issue.
+4. If an external API is extremely slow, hypothesize the external service or processor is degraded.
+5. If a connection pool is exhausted, hypothesize database connection pool exhaustion.
+6. If a deployment occurred shortly before the incident, include the deployment as a contributing factor.
+7. Do NOT invent mechanisms unsupported by the evidence.
+8. Do NOT use vague phrases like "service degradation" or "unknown issue."
+9. Output ONLY the hypothesis text. No quotes, no explanation.
+
+Example good outputs:
+- External payment processor degraded, adding latency to checkout
+- DNS resolver misconfiguration causing resolution timeouts
+- Database connection pool exhaustion after deployment v2.3.1
+- Memory leak in auth-service following canary deployment
+
+Hypothesis:"""
+    response = await llm_client.generate(
+        [
+            {
+                "role": "system",
+                "content": "You are a precise SRE hypothesis synthesizer.",
+            },
+            {
+                "role": "user",
+                "content": prompt,
+            },
+        ],
+        temperature=0.0,
+    )
+    synthesized = _content_from_llm_response(response).strip().strip('"').strip("'")
+    if not synthesized or "service degradation" in synthesized.lower() or "unknown" in synthesized.lower():
+        synthesized = winning_candidate.title
+    hypothesis.hypothesis = synthesized
+    return result
+
+
 def build_probabilistic_root_cause_analysis(
     *,
     incident_type: str | None,

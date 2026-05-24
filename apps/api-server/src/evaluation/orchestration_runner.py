@@ -42,6 +42,7 @@ from agents.rootcause_agent.evidence_normalizer import normalize_agent_execution
 from agents.rootcause_agent.output_schema import RootCauseAnalysis
 from agents.rootcause_agent.probabilistic_reasoner import (
     build_probabilistic_root_cause_analysis,
+    synthesize_root_cause_hypothesis,
 )
 from agents.router_agent.agent import classify_incident
 from agents.router_agent.output_schema import RouterOutput
@@ -58,6 +59,7 @@ from evaluation.infra_mocks.mock_llm_client import (
     build_deployment_mock_client,
     build_logs_mock_client,
     build_metrics_mock_client,
+    build_rootcause_synthesis_mock_client,
     build_router_mock_client,
 )
 from evaluation.infra_mocks.null_clients import NullIncidentHistorySearcher
@@ -205,7 +207,7 @@ async def _eval_rootcause(
         pattern_hints=[],
     )
 
-    return build_probabilistic_root_cause_analysis(
+    result = build_probabilistic_root_cause_analysis(
         incident_type=incident_type,
         incident_severity=benchmark.golden_severity,
         service=service,
@@ -213,6 +215,12 @@ async def _eval_rootcause(
         timed_events=timed_events,
         candidates=candidates,
         grounding_score=0.0,
+    )
+    return await synthesize_root_cause_hypothesis(
+        result,
+        candidates=candidates,
+        evidence_items=simplified_evidence,
+        llm_client=build_rootcause_synthesis_mock_client(),
     )
 
 

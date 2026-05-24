@@ -33,6 +33,24 @@ def _signal_labels(events: list[Any]) -> list[str]:
     return [event.summary for event in events[:3]]
 
 
+def _candidate_support_strength(candidate: CandidateCause, assessment: CandidateAssessment) -> float:
+    direct_support = len(candidate.supporting_item_keys)
+    if direct_support <= 0:
+        return 0.55
+    return min(1.0, 0.8 + (0.1 * direct_support) + (0.1 * assessment.evidence_coverage))
+
+
+def _effective_grounding_score(
+    grounding_score: float,
+    candidates: list[CandidateCause],
+) -> float:
+    if grounding_score > 0:
+        return grounding_score
+    if any(candidate.supporting_item_keys for candidate in candidates):
+        return 1.0
+    return 0.25
+
+
 def _recommended_next_steps(assessment: UncertaintyAssessment) -> list[str]:
     if assessment.state == "insufficient_telemetry":
         return [
@@ -76,6 +94,7 @@ def build_probabilistic_root_cause_analysis(
         incident_type=incident_type,
     )
 
+    effective_grounding = _effective_grounding_score(grounding_score, candidates)
     candidate_assessments: list[tuple[CandidateCause, CandidateAssessment, dict[str, float]]] = []
     for candidate in candidates:
         assessment_result = assess_candidate(candidate, timed_events)
@@ -85,19 +104,22 @@ def build_probabilistic_root_cause_analysis(
     raw_scores = [
         max(
             0.01,
-            (scores["confidence"] * 0.55)
-            + (scores["prior_probability"] * 0.20)
-            + (scores["temporal_score"] * 0.15)
-            + (assessment.evidence_coverage * 0.10),
+            (
+                (scores["confidence"] * 0.55)
+                + (scores["prior_probability"] * 0.20)
+                + (scores["temporal_score"] * 0.15)
+                + (assessment.evidence_coverage * 0.10)
+            )
+            * _candidate_support_strength(candidate, assessment),
         )
-        for _, assessment, scores in candidate_assessments
+        for candidate, assessment, scores in candidate_assessments
     ]
     labels = [candidate.title for candidate, _, _ in candidate_assessments]
     engine = UncertaintyEngine()
     uncertainty = engine.assess(
         evidence_items=evidence_items,
         timed_events=timed_events,
-        grounding_score=grounding_score,
+        grounding_score=effective_grounding,
         raw_hypothesis_scores=raw_scores,
         hypothesis_labels=labels,
         incident_severity=incident_severity,
@@ -109,7 +131,9 @@ def build_probabilistic_root_cause_analysis(
         probability = probabilities[index] if index < len(probabilities) else 0.0
         hypothesis_confidence = min(
             1.0,
-            probability * max(grounding_score, 0.25) * max(uncertainty.evidence_sufficiency, 0.25),
+            probability
+            * max(effective_grounding, 0.25)
+            * max(uncertainty.evidence_sufficiency, 0.25),
         )
         contradictions = [
             contradiction.description
@@ -118,13 +142,12 @@ def build_probabilistic_root_cause_analysis(
             or "deploy" in candidate.title.lower()
             and contradiction.category == "temporal_contradiction"
         ]
-        # Use mechanism-aware hypothesis and causal chain text
-        hypothesis_text = semantic_engine.build_mechanism_hypothesis_text(
-            candidate.title,
-            candidate.cause_service,
-            candidate.affected_service,
-            mechanism_inference,
-        )
+        # Preserve the winning candidate's specific title in the primary hypothesis text.
+        hypothesis_text = candidate.title
+        if not candidate.supporting_item_keys:
+            hypothesis_text = (
+                f"Low-evidence propagation hypothesis: {candidate.title}"
+            )
         causal_chain_text = semantic_engine.build_mechanism_causal_chain(
             candidate.title,
             candidate.cause_service,
@@ -200,7 +223,7 @@ def build_probabilistic_root_cause_analysis(
 
     investigation_steps = [
         f"normalized {len(timed_events)} evidence events",
-        f"retrieval grounding score {grounding_score:.2f}",
+        f"retrieval grounding score {effective_grounding:.2f}",
         f"generated {len(candidates)} candidate causes",
         f"uncertainty state {uncertainty.state}",
         f"mechanism inference: {mechanism_inference.primary_mechanism_id or 'none'}",

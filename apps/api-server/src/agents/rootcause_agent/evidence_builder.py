@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+import re
 from typing import Any
 
 
@@ -22,6 +23,8 @@ def _parse_timestamp(value: str | None) -> datetime | None:
     try:
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
+        if re.match(r"^\d{2}:\d{2}:\d{2}$", value):
+            return datetime.fromisoformat(f"2026-05-13T{value}+00:00")
         return None
 
 

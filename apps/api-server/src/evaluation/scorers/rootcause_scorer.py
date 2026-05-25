@@ -5,8 +5,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-import numpy as np
-
 from evaluation.hallucination_checks.check_citations import check_citations_present
 
 ScoringMode = Literal["lexical", "semantic"]
@@ -83,6 +81,8 @@ def _get_embedder():
 def semantic_similarity(predicted_text: str, expected_text: str) -> float:
     if not predicted_text.strip() or not expected_text.strip():
         return 0.0
+    import numpy as np
+
     embedder = _get_embedder()
     embeddings = embedder.encode([predicted_text, expected_text], convert_to_numpy=True)
     numerator = float(np.dot(embeddings[0], embeddings[1]))

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from agents.rootcause_agent.causal_validator import service_exists
 from agents.rootcause_agent.evidence_builder import TimedEvent
 from orchestration.state.topology_schema import ServiceNode
 
@@ -253,6 +254,11 @@ def build_candidate_causes(
         title = pattern.get("title", "Unknown pattern")
         cause_service = pattern.get("cause_service") or service
         affected_service = pattern.get("effect_service") or service
+        if topology_graph and (
+            not service_exists(cause_service, topology_graph)
+            or not service_exists(affected_service, topology_graph)
+        ):
+            continue
         supporting_keys = [
             event.item_key
             for event in events

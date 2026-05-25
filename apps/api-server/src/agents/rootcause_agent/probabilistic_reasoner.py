@@ -33,7 +33,10 @@ def _signal_labels(events: list[Any]) -> list[str]:
     return [event.summary for event in events[:3]]
 
 
-def _candidate_support_strength(candidate: CandidateCause, assessment: CandidateAssessment) -> float:
+def _candidate_support_strength(
+    candidate: CandidateCause,
+    assessment: CandidateAssessment,
+) -> float:
     direct_support = len(candidate.supporting_item_keys)
     if direct_support <= 0:
         return 0.55
@@ -82,7 +85,9 @@ def _content_from_llm_response(response: Any) -> str:
     if isinstance(response, dict):
         content = response.get("content", "")
         if isinstance(content, list):
-            return "".join(part.get("text", "") for part in content if isinstance(part, dict)).strip()
+            return "".join(
+                part.get("text", "") for part in content if isinstance(part, dict)
+            ).strip()
         return str(content).strip()
     return str(response).strip()
 
@@ -93,7 +98,9 @@ def _supporting_evidence_lines(
 ) -> list[str]:
     lines: list[str] = []
     supporting = [
-        item for item in evidence_items if item.get("item_key") in winning_candidate.supporting_item_keys
+        item
+        for item in evidence_items
+        if item.get("item_key") in winning_candidate.supporting_item_keys
     ]
     correlated = supporting + [
         item for item in evidence_items if item not in supporting
@@ -111,7 +118,8 @@ def _supporting_evidence_lines(
             )
         elif item.get("item_type") == "deployment_change":
             lines.append(
-                f"- Deployment: {item.get('service')} {item.get('version')} at {item.get('time')}"
+                f"- Deployment: {item.get('service')} {item.get('version')} "
+                f"at {item.get('time')}"
             )
     return lines
 
@@ -131,7 +139,11 @@ async def synthesize_root_cause_hypothesis(
         strongest_index = 0
     hypothesis = result.hypotheses[strongest_index]
     winning_candidate = next(
-        (candidate for candidate in candidates if candidate.title == (hypothesis.cause or candidate.title)),
+        (
+            candidate
+            for candidate in candidates
+            if candidate.title == (hypothesis.cause or candidate.title)
+        ),
         None,
     )
     if winning_candidate is None:
@@ -139,7 +151,11 @@ async def synthesize_root_cause_hypothesis(
 
     evidence_lines = _supporting_evidence_lines(winning_candidate, evidence_items)
     evidence_text = "\n".join(evidence_lines) or "- No specific evidence items"
-    prompt = f"""You are an expert Site Reliability Engineer. Given the operational evidence below, write a single concise root-cause hypothesis (maximum 12 words) that states the likely underlying cause.
+    prompt = f"""You are an expert Site Reliability Engineer.
+
+Given the operational evidence below, write a single concise
+root-cause hypothesis (maximum 12 words) that states the likely
+underlying cause.
 
 Evidence:
 {evidence_text}
@@ -148,11 +164,16 @@ Draft symptom description: {winning_candidate.title}
 
 Rules:
 1. Name the specific component or dependency that is the root cause.
-2. Use standard infrastructure terminology (database, DNS, cache, load balancer, deployment, memory leak, connection pool, etc.).
-3. If DNS resolution is extremely slow or timing out, hypothesize a DNS infrastructure or resolver issue.
-4. If an external API is extremely slow, hypothesize the external service or processor is degraded.
+2. Use standard infrastructure terminology
+   (database, DNS, cache, load balancer, deployment, memory leak,
+   connection pool, etc.).
+3. If DNS resolution is extremely slow or timing out, hypothesize
+   a DNS infrastructure or resolver issue.
+4. If an external API is extremely slow, hypothesize the external
+   service or processor is degraded.
 5. If a connection pool is exhausted, hypothesize database connection pool exhaustion.
-6. If a deployment occurred shortly before the incident, include the deployment as a contributing factor.
+6. If a deployment occurred shortly before the incident, include
+   the deployment as a contributing factor.
 7. Do NOT invent mechanisms unsupported by the evidence.
 8. Do NOT use vague phrases like "service degradation" or "unknown issue."
 9. Output ONLY the hypothesis text. No quotes, no explanation.
@@ -178,7 +199,11 @@ Hypothesis:"""
         temperature=0.0,
     )
     synthesized = _content_from_llm_response(response).strip().strip('"').strip("'")
-    if not synthesized or "service degradation" in synthesized.lower() or "unknown" in synthesized.lower():
+    if (
+        not synthesized
+        or "service degradation" in synthesized.lower()
+        or "unknown" in synthesized.lower()
+    ):
         synthesized = winning_candidate.title
     hypothesis.hypothesis = synthesized
     return result

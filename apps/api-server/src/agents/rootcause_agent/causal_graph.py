@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 from agents.rootcause_agent.evidence_builder import TimedEvent
 from orchestration.state.topology_schema import ServiceNode
 
@@ -28,13 +29,18 @@ def _normalized_text(value: str | None) -> str:
     return (value or "").strip().lower()
 
 
-def _topology_neighbors(service: str, topology_graph: dict[str, ServiceNode]) -> tuple[list[str], list[str]]:
+def _topology_neighbors(
+    service: str,
+    topology_graph: dict[str, ServiceNode],
+) -> tuple[list[str], list[str]]:
     if not topology_graph or service not in topology_graph:
         return [], []
 
     upstream = list(topology_graph[service].depends_on)
     downstream = [
-        node.name for node in topology_graph.values() if service in node.depends_on and node.name != service
+        node.name
+        for node in topology_graph.values()
+        if service in node.depends_on and node.name != service
     ]
     return upstream, downstream
 
@@ -79,7 +85,8 @@ def _metric_candidate(
             required_keywords=["pool", "connection", "exhaust", "timeout"],
             supporting_item_keys=[_safe_item_key(event)],
         )
-    if any(token in metric_lower for token in ("latency", "duration", "response_time", "resolution_ms")):
+    latency_tokens = ("latency", "duration", "response_time", "resolution_ms")
+    if any(token in metric_lower for token in latency_tokens):
         return CandidateCause(
             pattern_id=f"latency_regression_{service}",
             title=f"{metric_name} critical latency in {service}",
@@ -175,7 +182,9 @@ def _log_candidate(
         cause_service=service,
         affected_service=service,
         pattern_match_score=0.72,
-        required_keywords=[token for token in signature_lower.replace("-", "_").split("_") if token],
+        required_keywords=[
+            token for token in signature_lower.replace("-", "_").split("_") if token
+        ],
         supporting_item_keys=[_safe_item_key(event)],
     )
 
@@ -214,9 +223,16 @@ def build_candidate_causes(
         key = (candidate.pattern_id, candidate.cause_service, candidate.affected_service)
         existing = seen.get(key)
         if existing is not None:
-            merged = list(dict.fromkeys(existing.supporting_item_keys + candidate.supporting_item_keys))
+            merged = list(
+                dict.fromkeys(
+                    existing.supporting_item_keys + candidate.supporting_item_keys
+                )
+            )
             existing.supporting_item_keys = merged
-            existing.pattern_match_score = max(existing.pattern_match_score, candidate.pattern_match_score)
+            existing.pattern_match_score = max(
+                existing.pattern_match_score,
+                candidate.pattern_match_score,
+            )
             existing.required_keywords = list(
                 dict.fromkeys(existing.required_keywords + candidate.required_keywords)
             )

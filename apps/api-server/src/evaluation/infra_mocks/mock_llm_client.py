@@ -10,9 +10,12 @@ fields may be used as inputs to these clients.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from typing import Any
 
+import httpx
+from core.config import get_settings
 from pydantic import BaseModel
 
 _ROUTER_DEFAULTS: dict[str, Any] = {
@@ -120,6 +123,69 @@ class DeterministicEvalSynthesisClient:
         pass
 
 
+class EvaluationSynthesisClient:
+    """Pinned local synthesis client for evaluation with deterministic fallback."""
+
+    def __init__(self) -> None:
+        settings = get_settings()
+        self.base_url = settings.eval_synthesis_base_url.rstrip("/")
+        self.api_key = settings.eval_synthesis_api_key
+        self.model = settings.eval_synthesis_model
+        self.temperature = settings.eval_synthesis_temperature
+        self.max_tokens = settings.eval_synthesis_max_tokens
+        self._cache: dict[str, dict[str, Any]] = {}
+        self._fallback = DeterministicEvalSynthesisClient()
+
+    async def generate(
+        self,
+        messages: Any,
+        *,
+        temperature: float = 0.0,
+        tools: Any = None,
+        structured_output_model: type[BaseModel] | None = None,
+    ) -> BaseModel | dict[str, Any]:
+        prompt = ""
+        if isinstance(messages, list) and messages:
+            prompt = str(messages[-1].get("content", ""))
+        key = hashlib.sha256(prompt.encode()).hexdigest()
+        if key in self._cache:
+            return self._cache[key]
+
+        payload = {
+            "model": self.model,
+            "messages": list(messages) if isinstance(messages, list) else messages,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+        }
+        try:
+            async with httpx.AsyncClient(
+                base_url=self.base_url,
+                timeout=30.0,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+            ) as client:
+                response = await client.post("/chat/completions", json=payload)
+                response.raise_for_status()
+                body = response.json()
+                message = body["choices"][0]["message"]
+                self._cache[key] = message
+                return message
+        except Exception:
+            response = await self._fallback.generate(
+                messages,
+                temperature=temperature,
+                tools=tools,
+                structured_output_model=structured_output_model,
+            )
+            self._cache[key] = response
+            return response
+
+    async def close(self) -> None:
+        await self._fallback.close()
+
+
 def build_router_mock_client(mocked_tool_responses: dict[str, Any]) -> EvalMockLLMClient:
     router_data = mocked_tool_responses.get("router", {})
     return EvalMockLLMClient({**_ROUTER_DEFAULTS, **router_data})
@@ -140,5 +206,5 @@ def build_deployment_mock_client(mocked_tool_responses: dict[str, Any]) -> EvalM
     return EvalMockLLMClient({**_DEPLOYMENT_DEFAULTS, **deployment_data})
 
 
-def build_rootcause_synthesis_mock_client() -> DeterministicEvalSynthesisClient:
-    return DeterministicEvalSynthesisClient()
+def build_rootcause_synthesis_mock_client() -> EvaluationSynthesisClient:
+    return EvaluationSynthesisClient()

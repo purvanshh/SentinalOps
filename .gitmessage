@@ -1,0 +1,10 @@
+# <type>(<scope>): <subject>
+# Header line of 50 characters or less
+#
+# <body>
+# Detailed explanation of changes
+#
+# <footer>
+# Breaking changes, issue references, etc.
+#
+# Types: feat, fix, docs, refactor, test, chore, build, ci

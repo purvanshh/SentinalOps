@@ -14,4 +14,4 @@
 4. Open the graph trace endpoint and the WebSocket stream to show live state progression.
 5. Pause at the approval queue and explain the safety gate.
 6. Approve the remediation path and show the execution/postmortem flow.
-7. End with `GET /evaluations/summary` and the PRD checklist in [docs/prd-compliance-checklist.md](/Users/purvansh/Desktop/Projects/SentinalOps/docs/prd-compliance-checklist.md:1).
+7. End with `GET /evaluations/summary` and the PRD checklist in [docs/prd-compliance-checklist.md](/Users/purvansh/Desktop/Projects/SentinelOps/docs/prd-compliance-checklist.md:1).

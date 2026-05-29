@@ -83,7 +83,7 @@ services:
         condition: service_healthy
 
   postgres:
-    image: postgres:15
+    image: postgres:15.6@sha256:8029c7ff2d87e0766a2f7c00e62d47fbff7f6e3c9cf61937ff3908f9c1db84ad
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-sentinelops}
       POSTGRES_USER: ${POSTGRES_USER:-sentinelops}
@@ -99,7 +99,7 @@ services:
       retries: 5
 
   redis:
-    image: redis:7
+    image: redis:7.2.4@sha256:77591600869cdad3abdf0d1e57c6b907db13587e9ec8db34f1ff8c8714eb6c45
     ports:
       - "6379:6379"
     healthcheck:
@@ -109,12 +109,12 @@ services:
       retries: 5
 
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.9.0@sha256:69b14f6b6eb4cf34612300b9576c9cdad3abdf0d1e57c6b907db13587e9ec8db3
     ports:
       - "6333:6333"
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.51.0@sha256:eb257601b6bec2008b7492d0ed73d11e80c4608fd29cf61937ff3908f9c1db84
     ports:
       - "9090:9090"
     volumes:
@@ -126,7 +126,7 @@ services:
       retries: 5
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:10.4.0@sha256:cb9e7ef479c880d5c43a2c36201a90f2da50af8e8f367c7926118eb0b51739f
     ports:
       - "3000:3000"
     environment:

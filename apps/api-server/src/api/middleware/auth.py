@@ -31,7 +31,7 @@ def decode_access_token(token: str) -> AuthenticatedUser:
     try:
         payload = jwt.decode(
             token,
-            settings.auth0_secret_key,
+            settings.auth0_secret_key.get_secret_value() if hasattr(settings.auth0_secret_key, 'get_secret_value') else settings.auth0_secret_key,
             algorithms=[
                 algorithm.strip()
                 for algorithm in settings.auth0_algorithms.split(",")

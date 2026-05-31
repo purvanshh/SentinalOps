@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     tempo_url: str = Field(default="http://localhost:3200")
     topology_path: str = Field(default="configs/development/topology.yaml")
     github_api_url: str = Field(default="https://api.github.com")
-    github_token: str = Field(default="dummy-token")
+    github_token: SecretStr = Field(default="dummy-token")
     slack_webhook_url: str = Field(default="")
     approval_timeout_minutes: int = Field(default=15)
     approval_auto_reject_minutes: int = Field(default=30)
@@ -45,27 +45,27 @@ class Settings(BaseSettings):
     default_agent_timeout_seconds: int = Field(default=30)
     llm_provider: str = Field(default="openai_compatible")
     llm_base_url: str = Field(default="http://localhost:11434/v1")
-    llm_api_key: str = Field(default="dummy-key")
+    llm_api_key: SecretStr = Field(default="dummy-key")
     llm_model: str = Field(default="gpt-oss-120b")
     llm_secondary_base_url: str = Field(default="")
-    llm_secondary_api_key: str = Field(default="")
+    llm_secondary_api_key: SecretStr = Field(default="")
     llm_secondary_model: str = Field(default="")
     llm_local_base_url: str = Field(default="http://localhost:11434/v1")
     llm_local_model: str = Field(default="llama3.2")
     eval_synthesis_base_url: str = Field(default="http://localhost:11434/v1")
-    eval_synthesis_api_key: str = Field(default="ollama")
+    eval_synthesis_api_key: SecretStr = Field(default="ollama")
     eval_synthesis_model: str = Field(default="llama3.1:8b")
     eval_synthesis_temperature: float = Field(default=0.0)
     eval_synthesis_max_tokens: int = Field(default=40)
-    nvidia_api_key: str = Field(default="")
+    nvidia_api_key: SecretStr = Field(default="")
     nvidia_base_url: str = Field(default="https://integrate.api.nvidia.com/v1")
     nvidia_model: str = Field(default="")
     auth0_domain: str = Field(default="sentinelops.local")
     auth0_audience: str = Field(default="sentinelops-api")
     auth0_algorithms: str = Field(default="HS256")
     auth0_issuer: str | None = Field(default=None)
-    auth0_secret_key: str = Field(default="dev-secret-change-me")
-    approval_token_secret: str = Field(default="approval-secret-change-me")
+    auth0_secret_key: SecretStr = Field(default="dev-secret-change-me")
+    approval_token_secret: SecretStr = Field(default="approval-secret-change-me")
     tool_allowlist_path: str = Field(default="configs/production/tool_allowlist.yaml")
     backup_oncall_targets: str = Field(default="backup-oncall")
 
@@ -121,9 +121,9 @@ class Settings(BaseSettings):
         if not self.is_production:
             return []
         issues: list[str] = []
-        if self.auth0_secret_key == "dev-secret-change-me":
+        if self.auth0_secret_key.get_secret_value() == "dev-secret-change-me":
             issues.append("AUTH0_SECRET_KEY is using the default development value")
-        if self.approval_token_secret == "approval-secret-change-me":
+        if self.approval_token_secret.get_secret_value() == "approval-secret-change-me":
             issues.append("APPROVAL_TOKEN_SECRET is using the default development value")
         return issues
 

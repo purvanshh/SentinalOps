@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from agents.rootcause_agent.causal_validator import service_exists
+from causality.validators.causal_validator import service_exists
 from agents.rootcause_agent.evidence_builder import TimedEvent
 from orchestration.state.topology_schema import ServiceNode
 

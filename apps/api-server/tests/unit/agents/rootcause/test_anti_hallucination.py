@@ -1,4 +1,4 @@
-from agents.rootcause_agent.causal_validator import check_temporal_order, is_valid_path
+from causality.validators.causal_validator import check_temporal_order, is_valid_path
 from orchestration.state.topology_schema import ServiceNode
 
 

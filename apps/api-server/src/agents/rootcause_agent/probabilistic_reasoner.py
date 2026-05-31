@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from agents.rootcause_agent.causal_graph import CandidateCause
-from agents.rootcause_agent.deductive_tester import CandidateAssessment, assess_candidate
+from causality.validators.deductive_tester import CandidateAssessment, assess_candidate
 from agents.rootcause_agent.output_schema import (
     HypothesisEvidence,
     RootCauseAnalysis,

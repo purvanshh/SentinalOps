@@ -1,14 +1,15 @@
-# Contributing
+# Contributing to SentinelOps
 
-## Local workflow
+Thank you for helping build the future of autonomous incident response.
 
-1. Copy `.env.example` to `.env`.
-2. Start the stack with `make up`.
-3. Keep backend Python modules import-clean and use `apply_patch` for targeted edits.
-4. Update README and relevant docs when a new phase materially changes architecture or user-facing behavior.
+## Development Guidelines
+1. We follow Trunk-Based Development. All feature branches (`feat/`, `fix/`, `docs/`) must merge to `main` via PRs.
+2. Direct commits to `main` are restricted.
+3. Every pull request must pass the CI gate, including all unit and integration tests.
 
-## Expectations
-
-- Preserve evidence-grounded behavior
-- Avoid destructive git commands
-- Add tests or fixtures when introducing new workflow stages
+## Development Workflow
+```bash
+cp .env.example .env
+make up
+.venv/bin/pytest
+```

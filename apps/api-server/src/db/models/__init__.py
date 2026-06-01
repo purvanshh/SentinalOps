@@ -11,6 +11,7 @@ from db.models.prevention_item import PreventionItem
 from db.models.remediation import RemediationAction
 from db.models.remediation_history import RemediationHistory
 from db.models.workflow_checkpoint import WorkflowCheckpoint
+from db.models.approval_token import ApprovalToken
 
 __all__ = [
     "AgentExecution",
@@ -26,4 +27,5 @@ __all__ = [
     "RemediationAction",
     "RemediationHistory",
     "WorkflowCheckpoint",
+    "ApprovalToken",
 ]

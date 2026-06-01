@@ -13,6 +13,7 @@ from api.routes.evaluations import router as evaluations_router
 from api.routes.graph import router as graph_router
 from api.routes.health import router as health_router
 from api.routes.incidents import router as incidents_router
+from api.routes.auth import router as auth_router
 from api.ws.incident_stream import router as incident_stream_router
 from core.config import get_settings
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -78,6 +79,7 @@ async def request_context_middleware(request: Request, call_next):
 
 
 app.include_router(health_router)
+app.include_router(auth_router)
 app.include_router(incidents_router)
 app.include_router(approvals_router)
 app.include_router(graph_router)

@@ -1,3 +1,21 @@
+import httpx
+
+_jwks_cache = {}
+
+def get_jwk_key_sync(kid: str, jwks_url: str) -> dict:
+    if kid in _jwks_cache:
+        return _jwks_cache[kid]
+    try:
+        with httpx.Client() as client:
+            resp = client.get(jwks_url, timeout=5.0)
+            resp.raise_for_status()
+            jwks = resp.json()
+            for key in jwks.get("keys", []):
+                _jwks_cache[key["kid"]] = key
+    except Exception:
+        pass
+    return _jwks_cache.get(kid)
+
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -28,10 +46,29 @@ def _extract_roles(payload: dict[str, Any]) -> list[str]:
 
 def decode_access_token(token: str) -> AuthenticatedUser:
     settings = get_settings()
+    
+    try:
+        headers = jwt.get_unverified_header(token)
+        kid = headers.get("kid")
+        alg = headers.get("alg")
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token headers"
+        ) from exc
+
+    secret_key = settings.auth0_secret_key.get_secret_value() if hasattr(settings.auth0_secret_key, 'get_secret_value') else settings.auth0_secret_key
+    
+    if alg == "RS256" and "RS256" in settings.auth0_algorithms:
+        jwks_url = f"https://{settings.auth0_domain}/.well-known/jwks.json"
+        if kid:
+            key_data = get_jwk_key_sync(kid, jwks_url)
+            if key_data:
+                secret_key = key_data
+
     try:
         payload = jwt.decode(
             token,
-            settings.auth0_secret_key.get_secret_value() if hasattr(settings.auth0_secret_key, 'get_secret_value') else settings.auth0_secret_key,
+            secret_key,
             algorithms=[
                 algorithm.strip()
                 for algorithm in settings.auth0_algorithms.split(",")

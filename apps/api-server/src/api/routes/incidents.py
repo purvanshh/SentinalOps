@@ -1,3 +1,20 @@
+import time
+from fastapi import Request
+
+# Simple thread-safe-like in-memory rate limiter for webhook
+_webhook_rates = {}
+
+async def rate_limiter(request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    _webhook_rates[client_ip] = [t for t in _webhook_rates.get(client_ip, []) if now - t < 60]
+    if len(_webhook_rates[client_ip]) >= 120:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded. Maximum 120 requests per minute."
+        )
+    _webhook_rates[client_ip].append(now)
+
 import inspect
 from uuid import UUID
 
@@ -41,6 +58,7 @@ async def create_incident_from_webhook(
     payload: AlertPayload,
     db: AsyncSession = DB_DEPENDENCY,
     _: AuthenticatedUser = ADMIN_ROLE_DEPENDENCY,
+    _rate: None = Depends(rate_limiter),
 ) -> IncidentResponse:
     repository = IncidentRepository(db)
     incident = await repository.create_from_alert(

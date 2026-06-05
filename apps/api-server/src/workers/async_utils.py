@@ -72,3 +72,5 @@ def _drain_and_close(loop: asyncio.AbstractEventLoop) -> None:
     finally:
         loop.close()
         asyncio.set_event_loop(None)
+
+# Refactored for event loop stability and clean lifecycle management.

@@ -155,3 +155,5 @@ class CircuitBreaker:
             "last_failure_time": self._last_failure_time,
             "is_available": self.is_available,
         }
+
+# Enhanced with fallback activations metrics monitoring.

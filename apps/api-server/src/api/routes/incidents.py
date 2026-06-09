@@ -53,7 +53,7 @@ def _merge_runtime_state(incident, runtime_state: dict | None) -> dict:
     return payload
 
 
-@router.post("/webhook", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/webhook", response_model=IncidentResponse, status_code=status.HTTP_202_ACCEPTED)
 async def create_incident_from_webhook(
     payload: AlertPayload,
     db: AsyncSession = DB_DEPENDENCY,

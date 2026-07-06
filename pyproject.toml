@@ -50,6 +50,13 @@ asyncio_default_fixture_loop_scope = "function"
 testpaths = [
   "apps/api-server/tests",
 ]
+markers = [
+  "unit: Unit tests (no external dependencies, extremely fast)",
+  "integration: Integration tests (uses real infrastructure / databases)",
+  "e2e: End-to-end tests (verifies full-system flows)",
+  "evaluation: Evaluation tests (measures model and scoring quality)",
+]
+
 
 [tool.ruff]
 line-length = 100

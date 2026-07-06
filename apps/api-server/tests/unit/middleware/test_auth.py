@@ -14,9 +14,11 @@ def _make_token(*, roles: list[str], sub: str = "user-1") -> str:
         "iss": settings.auth_issuer,
         "exp": datetime.now(UTC) + timedelta(hours=1),
     }
+    secret = settings.auth0_secret_key
+    secret_str = secret.get_secret_value() if hasattr(secret, "get_secret_value") else secret
     return jwt.encode(
         payload,
-        settings.auth0_secret_key,
+        secret_str,
         algorithm=settings.auth0_algorithms.split(",")[0].strip(),
     )
 

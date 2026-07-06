@@ -30,13 +30,17 @@ def create_approval_token(
         "approved_by": approved_by,
         "exp": expires_at,
     }
-    return jwt.encode(payload, settings.approval_token_secret, algorithm="HS256")
+    secret = settings.approval_token_secret
+    secret_str = secret.get_secret_value() if hasattr(secret, "get_secret_value") else secret
+    return jwt.encode(payload, secret_str, algorithm="HS256")
 
 
 def decode_approval_token(token: str) -> dict[str, Any]:
     settings = get_settings()
     try:
-        return jwt.decode(token, settings.approval_token_secret, algorithms=["HS256"])
+        secret = settings.approval_token_secret
+        secret_str = secret.get_secret_value() if hasattr(secret, "get_secret_value") else secret
+        return jwt.decode(token, secret_str, algorithms=["HS256"])
     except JWTError as exc:  # noqa: PERF203
         raise ExecutionGuardError("Invalid approval token") from exc
 

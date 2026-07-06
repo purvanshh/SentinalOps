@@ -21,7 +21,7 @@ jobs:
       - name: Ruff
         run: ruff check apps/api-server/src apps/api-server/tests
       - name: Pytest
-        run: pytest -m unit
+        run: pytest -m unit --cov=apps/api-server/src --cov-fail-under=80
       - name: Evaluation
         run: python -c "import asyncio; from evaluation.runner import run_evaluation; print(asyncio.run(run_evaluation())['count'])"
         env:

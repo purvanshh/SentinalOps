@@ -22,6 +22,8 @@ jobs:
         run: ruff check apps/api-server/src apps/api-server/tests
       - name: Flake8
         run: flake8 apps/api-server/src apps/api-server/tests
+      - name: Mypy
+        run: mypy apps/api-server/src/core/config.py apps/api-server/src/core/llm_client.py
       - name: Pytest
         run: pytest -m unit --cov=apps/api-server/src --cov-fail-under=80
       - name: Evaluation

@@ -22,7 +22,7 @@ class LLMClient:
         model: str | None = None,
         timeout: float = 15.0,
         max_retries: int = 2,
-        transport: httpx.BaseTransport | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         if not live_provider_access_allowed() and transport is None:
             raise LLMClientError(

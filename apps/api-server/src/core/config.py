@@ -100,11 +100,12 @@ class Settings(BaseSettings):
 
     @property
     def resolved_llm_api_key(self) -> str:
-        if self.llm_api_key != "dummy-key":
-            return self.llm_api_key
+        llm_key_str = self.llm_api_key.get_secret_value()
+        if llm_key_str != "dummy-key":
+            return llm_key_str
         if self.uses_nvidia_provider and self.nvidia_api_key:
-            return self.nvidia_api_key
-        return self.llm_api_key
+            return self.nvidia_api_key.get_secret_value()
+        return llm_key_str
 
     @property
     def resolved_llm_model(self) -> str:

@@ -50,6 +50,7 @@ pythonpath = [
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+addopts = "--cov=apps/api-server/src --cov-config=apps/api-server/.coveragerc --cov-report=term-missing --cov-report=html"
 testpaths = [
   "apps/api-server/tests",
 ]

@@ -1,0 +1,7 @@
+[run]
+branch = True
+source = apps/api-server/src
+omit =
+    */__init__.py
+    */tests/*
+    */migrations/*

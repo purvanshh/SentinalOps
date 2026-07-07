@@ -1,5 +1,8 @@
 # SentinelOps
 
+[![codecov](https://codecov.io/gh/purvanshh/SentinalOps/branch/main/graph/badge.svg)](https://codecov.io/gh/purvanshh/SentinalOps)
+[![CI Status](https://github.com/purvanshh/SentinalOps/actions/workflows/ci.yml/badge.svg)](https://github.com/purvanshh/SentinalOps/actions/workflows/ci.yml)
+
 **Autonomous Multi-Agent Incident Response and Reliability Orchestration Platform**
 
 > [!WARNING]

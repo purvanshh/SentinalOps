@@ -1,0 +1,64 @@
+services:
+  postgres-e2e:
+    image: postgres:15.6@sha256:8029c7ff2d87e0766a2f7c00e62d47fbff7f6e3c9cf61937ff3908f9c1db84ad
+    environment:
+      POSTGRES_DB: sentinelops_e2e
+      POSTGRES_USER: sentinelops_e2e
+      POSTGRES_PASSWORD: sentinelops_e2e_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinelops_e2e -d sentinelops_e2e"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis-e2e:
+    image: redis:7.2.4@sha256:77591600869cdad3abdf0d1e57c6b907db13587e9ec8db34f1ff8c8714eb6c45
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrations-e2e:
+    build:
+      context: .
+      dockerfile: apps/api-server/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://sentinelops_e2e:sentinelops_e2e_pass@postgres-e2e:5432/sentinelops_e2e
+    command: ["python", "-c", "import asyncio; from db.session import initialize_database; asyncio.run(initialize_database())"]
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+
+  api-server-e2e:
+    build:
+      context: .
+      dockerfile: apps/api-server/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://sentinelops_e2e:sentinelops_e2e_pass@postgres-e2e:5432/sentinelops_e2e
+      REDIS_URL: redis://redis-e2e:6379/0
+      CELERY_BROKER_URL: redis://redis-e2e:6379/0
+      CELERY_RESULT_BACKEND: redis://redis-e2e:6379/0
+      JWT_SECRET: e2e-jwt-secret-dummy-change-me
+      APPROVAL_TOKEN_SECRET: e2e-approval-token-secret-dummy
+      AUTH0_SECRET_KEY: e2e-auth0-secret-key-dummy
+    ports:
+      - "8080:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      migrations-e2e:
+        condition: service_completed_successfully
+      postgres-e2e:
+        condition: service_healthy
+      redis-e2e:
+        condition: service_healthy

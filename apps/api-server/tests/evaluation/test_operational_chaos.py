@@ -243,9 +243,9 @@ class TestObservabilityOnDataset:
             gap_report = detector.detect(events)
             integrity = checker.check(events)
             breakdown = calc.compute(0.85, completeness, gap_report, integrity)
-            assert breakdown.penalised_confidence >= 0.05, (
-                f"Floored below 0.05 for {inc['incident_id']}"
-            )
+            assert (
+                breakdown.penalised_confidence >= 0.05
+            ), f"Floored below 0.05 for {inc['incident_id']}"
 
 
 # ---------------------------------------------------------------------------
@@ -350,9 +350,9 @@ class TestFalseRecoveryIncidents:
                 for ev in inc["events"]
                 if ev.get("labels", {}).get("recovery_state") == "false"
             ]
-            assert len(labels_with_recovery) >= 1, (
-                f"{inc['incident_id']} should have recovery_state=false markers"
-            )
+            assert (
+                len(labels_with_recovery) >= 1
+            ), f"{inc['incident_id']} should have recovery_state=false markers"
 
 
 class TestAlertStormIncidents:

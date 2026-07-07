@@ -159,13 +159,13 @@ def test_to_dict_structure(ontology: FailureMechanismOntology) -> None:
 def test_incompatible_remediations_nonempty(ontology: FailureMechanismOntology) -> None:
     # Every mechanism should have at least one incompatible remediation
     for m in ontology.all_mechanisms():
-        assert m.incompatible_remediations, (
-            f"Mechanism '{m.mechanism_id}' has no incompatible_remediations defined"
-        )
+        assert (
+            m.incompatible_remediations
+        ), f"Mechanism '{m.mechanism_id}' has no incompatible_remediations defined"
 
 
 def test_plausible_remediations_nonempty(ontology: FailureMechanismOntology) -> None:
     for m in ontology.all_mechanisms():
-        assert m.plausible_remediations, (
-            f"Mechanism '{m.mechanism_id}' has no plausible_remediations defined"
-        )
+        assert (
+            m.plausible_remediations
+        ), f"Mechanism '{m.mechanism_id}' has no plausible_remediations defined"

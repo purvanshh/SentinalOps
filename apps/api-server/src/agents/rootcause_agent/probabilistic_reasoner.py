@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from agents.rootcause_agent.causal_graph import CandidateCause
-from causality.validators.deductive_tester import CandidateAssessment, assess_candidate
 from agents.rootcause_agent.output_schema import (
     HypothesisEvidence,
     RootCauseAnalysis,
@@ -15,6 +14,7 @@ from agents.uncertainty import (
     UncertaintyAssessment,
     UncertaintyEngine,
 )
+from causality.validators.deductive_tester import CandidateAssessment, assess_candidate
 from semantics.semantic_engine import MechanismInference, OperationalSemanticEngine
 
 
@@ -102,9 +102,7 @@ def _supporting_evidence_lines(
         for item in evidence_items
         if item.get("item_key") in winning_candidate.supporting_item_keys
     ]
-    correlated = supporting + [
-        item for item in evidence_items if item not in supporting
-    ][:2]
+    correlated = supporting + [item for item in evidence_items if item not in supporting][:2]
     for item in correlated:
         if item.get("item_type") == "metric_anomaly":
             lines.append(
@@ -278,9 +276,7 @@ def build_probabilistic_root_cause_analysis(
         # Preserve the winning candidate's specific title in the primary hypothesis text.
         hypothesis_text = candidate.title
         if not candidate.supporting_item_keys:
-            hypothesis_text = (
-                f"Low-evidence propagation hypothesis: {candidate.title}"
-            )
+            hypothesis_text = f"Low-evidence propagation hypothesis: {candidate.title}"
         causal_chain_text = semantic_engine.build_mechanism_causal_chain(
             candidate.title,
             candidate.cause_service,

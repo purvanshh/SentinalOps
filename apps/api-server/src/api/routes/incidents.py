@@ -1,21 +1,5 @@
-import time
-from fastapi import Request
-
-# Simple thread-safe-like in-memory rate limiter for webhook
-_webhook_rates = {}
-
-async def rate_limiter(request: Request):
-    client_ip = request.client.host if request.client else "unknown"
-    now = time.time()
-    _webhook_rates[client_ip] = [t for t in _webhook_rates.get(client_ip, []) if now - t < 60]
-    if len(_webhook_rates[client_ip]) >= 120:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Rate limit exceeded. Maximum 120 requests per minute."
-        )
-    _webhook_rates[client_ip].append(now)
-
 import inspect
+import time
 from uuid import UUID
 
 from agents.router_agent import classify_incident
@@ -30,10 +14,26 @@ from api.schemas.incident import (
 )
 from db.repositories.incident_repo import IncidentRepository
 from db.repositories.postmortem_repo import PostmortemRepository
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from memory.short_term.incident_state import IncidentStateStore
 from sqlalchemy.ext.asyncio import AsyncSession
 from workers.tasks.incident_pipeline import enqueue_incident_pipeline
+
+# Simple thread-safe-like in-memory rate limiter for webhook
+_webhook_rates = {}
+
+
+async def rate_limiter(request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    _webhook_rates[client_ip] = [t for t in _webhook_rates.get(client_ip, []) if now - t < 60]
+    if len(_webhook_rates[client_ip]) >= 120:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded. Maximum 120 requests per minute.",
+        )
+    _webhook_rates[client_ip].append(now)
+
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
 DB_DEPENDENCY = Depends(get_db)

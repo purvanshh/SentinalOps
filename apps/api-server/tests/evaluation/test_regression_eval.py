@@ -82,9 +82,9 @@ class TestRegressionDetection:
     def test_identical_runs_have_no_regressions(self, suite) -> None:
         result = replay_benchmark(suite)
         regressions = detect_regressions(result, result)
-        assert len(regressions) == 0, (
-            f"Identical runs should have no regressions, got: {[r.metric for r in regressions]}"
-        )
+        assert (
+            len(regressions) == 0
+        ), f"Identical runs should have no regressions, got: {[r.metric for r in regressions]}"
 
     def test_degraded_accuracy_detected_as_regression(self, baseline_result: ReplayResult) -> None:
         degraded = ReplayResult(
@@ -104,8 +104,9 @@ class TestRegressionDetection:
             hallucination_summary=baseline_result.hallucination_summary,
             aggregate_trustworthiness_score=baseline_result.aggregate_trustworthiness_score - 0.08,
             aggregate_safety_score=baseline_result.aggregate_safety_score,
-            aggregate_autonomous_readiness_score=baseline_result.aggregate_autonomous_readiness_score
-            - 0.08,
+            aggregate_autonomous_readiness_score=(
+                baseline_result.aggregate_autonomous_readiness_score - 0.08
+            ),
         )
         regressions = detect_regressions(baseline_result, degraded)
         regression_metrics = [r.metric for r in regressions]
@@ -129,8 +130,9 @@ class TestRegressionDetection:
             hallucination_summary=baseline_result.hallucination_summary,
             aggregate_trustworthiness_score=baseline_result.aggregate_trustworthiness_score + 0.08,
             aggregate_safety_score=baseline_result.aggregate_safety_score,
-            aggregate_autonomous_readiness_score=baseline_result.aggregate_autonomous_readiness_score
-            + 0.08,
+            aggregate_autonomous_readiness_score=(
+                baseline_result.aggregate_autonomous_readiness_score + 0.08
+            ),
         )
         report = compare_runs(baseline_result, improved)
         assert len(report.improvements) > 0

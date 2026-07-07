@@ -1,14 +1,21 @@
-import time
 import asyncio
-from redis.asyncio import Redis
+import time
+
 from core.config import get_settings
+from redis.asyncio import Redis
+
 
 class RedisStateManager:
     def __init__(self, redis_client: Redis | None = None) -> None:
         settings = get_settings()
         self.redis = redis_client or Redis.from_url(settings.redis_url, decode_responses=True)
 
-    async def get_lock(self, lock_name: str, acquire_timeout: float = 10.0, lock_timeout: float = 30.0) -> str | None:
+    async def get_lock(
+        self,
+        lock_name: str,
+        acquire_timeout: float = 10.0,
+        lock_timeout: float = 30.0,
+    ) -> str | None:
         identifier = str(time.time())
         end = time.time() + acquire_timeout
         while time.time() < end:

@@ -88,9 +88,9 @@ def test_action_risk_tier_classification(action, expected_tier):
     from tools.risk_classifier import RiskTier, classify_action_risk_tier
 
     result = classify_action_risk_tier(action)
-    assert result == RiskTier(expected_tier), (
-        f"Action '{action}' classified as {result}, expected {expected_tier}"
-    )
+    assert result == RiskTier(
+        expected_tier
+    ), f"Action '{action}' classified as {result}, expected {expected_tier}"
 
 
 def test_unknown_action_defaults_to_high_risk():

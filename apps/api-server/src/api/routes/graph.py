@@ -131,9 +131,7 @@ async def graph_visual_state(
             "status": (
                 "completed"
                 if node_name in completed
-                else "active"
-                if node_name == state.get("current_node")
-                else "pending"
+                else "active" if node_name == state.get("current_node") else "pending"
             ),
         }
         for node_name in ordered_nodes

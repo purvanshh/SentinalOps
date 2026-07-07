@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from causality.validators.causal_validator import service_exists
 from agents.rootcause_agent.evidence_builder import TimedEvent
+from causality.validators.causal_validator import service_exists
 from orchestration.state.topology_schema import ServiceNode
 
 
@@ -225,9 +225,7 @@ def build_candidate_causes(
         existing = seen.get(key)
         if existing is not None:
             merged = list(
-                dict.fromkeys(
-                    existing.supporting_item_keys + candidate.supporting_item_keys
-                )
+                dict.fromkeys(existing.supporting_item_keys + candidate.supporting_item_keys)
             )
             existing.supporting_item_keys = merged
             existing.pattern_match_score = max(

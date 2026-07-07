@@ -20,6 +20,8 @@ jobs:
           pip install -e ".[dev,eval]"
       - name: Ruff
         run: ruff check apps/api-server/src apps/api-server/tests
+      - name: Flake8
+        run: flake8 apps/api-server/src apps/api-server/tests
       - name: Pytest
         run: pytest -m unit --cov=apps/api-server/src --cov-fail-under=80
       - name: Evaluation

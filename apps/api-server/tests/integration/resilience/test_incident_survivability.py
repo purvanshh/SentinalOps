@@ -130,9 +130,9 @@ class TestIncidentSurvivability:
         # ASSERTIONS: The system MUST produce a valid classification
         assert result is not None, "Classification must not be None"
         assert isinstance(result, FallbackClassification), "Must use deterministic fallback"
-        assert result.incident_type == "database", (
-            f"Expected 'database', got '{result.incident_type}'"
-        )
+        assert (
+            result.incident_type == "database"
+        ), f"Expected 'database', got '{result.incident_type}'"
         assert result.severity == "high"
         assert result.fallback is True
         assert result.provider_used == "deterministic_fallback"

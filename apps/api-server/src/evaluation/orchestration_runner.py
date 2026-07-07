@@ -362,9 +362,9 @@ async def run_agent_pipeline(
     - No approval escalation
     - Fully deterministic for same benchmark inputs
     """
-    assert execution_mode == ExecutionMode.EVALUATION, (
-        f"run_agent_pipeline must only be called in EVALUATION mode. Received: {execution_mode}"
-    )
+    assert (
+        execution_mode == ExecutionMode.EVALUATION
+    ), f"run_agent_pipeline must only be called in EVALUATION mode. Received: {execution_mode}"
 
     _assert_no_golden_contamination(benchmark)
 

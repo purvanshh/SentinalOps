@@ -3,11 +3,13 @@ import pytest
 try:
     from testcontainers.postgres import PostgresContainer
     from testcontainers.redis import RedisContainer
+
     HAS_TESTCONTAINERS = True
 except ImportError:
     HAS_TESTCONTAINERS = False
 
 if HAS_TESTCONTAINERS:
+
     @pytest.fixture(scope="session")
     def postgres_container():
         with PostgresContainer("postgres:15.6") as postgres:
@@ -17,7 +19,9 @@ if HAS_TESTCONTAINERS:
     def redis_container():
         with RedisContainer("redis:7.2.4") as redis:
             yield redis
+
 else:
+
     @pytest.fixture(scope="session")
     def postgres_container():
         pytest.skip("testcontainers not installed")
@@ -25,6 +29,7 @@ else:
     @pytest.fixture(scope="session")
     def redis_container():
         pytest.skip("testcontainers not installed")
+
 
 def pytest_collection_modifyitems(items):
     for item in items:

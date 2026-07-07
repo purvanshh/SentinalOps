@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from causality.validators.causal_validator import check_temporal_order
 from agents.rootcause_agent.confidence import compute_confidence
-from causality.validators.deductive_tester import CandidateAssessment
 from agents.rootcause_agent.evidence_builder import TimedEvent
+from causality.validators.causal_validator import check_temporal_order
+from causality.validators.deductive_tester import CandidateAssessment
 
 
 def derive_prior_probability(incident_type: str | None, pattern_id: str) -> float:

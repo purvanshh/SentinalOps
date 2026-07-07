@@ -156,4 +156,5 @@ class CircuitBreaker:
             "is_available": self.is_available,
         }
 
+
 # Enhanced with fallback activations metrics monitoring.

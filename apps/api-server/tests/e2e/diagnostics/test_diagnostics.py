@@ -220,9 +220,7 @@ class TestTelemetryHealthMonitor:
         return {"metrics": {"error_rate": 0.05, "latency_p99": 200.0}}
 
     def _corrupt_sample(self) -> dict:
-        return {
-            "metrics": {"error_rate": -0.5, "latency_p99": 200.0}  # impossible
-        }
+        return {"metrics": {"error_rate": -0.5, "latency_p99": 200.0}}  # impossible
 
     def test_healthy_sample_accepted(self):
         monitor = TelemetryHealthMonitor()

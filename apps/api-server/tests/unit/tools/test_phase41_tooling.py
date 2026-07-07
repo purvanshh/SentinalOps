@@ -87,9 +87,9 @@ async def test_expand_log_context_never_returns_fabricated_context_string() -> N
     result = await tool.handler(trace_id="xyz789")
 
     result_str = json.dumps(result)
-    assert "context for xyz789" not in result_str, (
-        "expand_log_context returned fabricated context string — old placeholder behavior detected"
-    )
+    assert (
+        "context for xyz789" not in result_str
+    ), "expand_log_context returned fabricated context string — old placeholder behavior detected"
     await loki_client.close()
 
 
@@ -179,12 +179,12 @@ async def test_extract_stacktrace_does_not_return_arbitrary_noise_lines() -> Non
     result = await tool.handler(log_entry=log_entry_with_noise)
 
     assert result.get("status") == "present"
-    assert len(result["stacktrace"]) < len(log_entry_with_noise), (
-        "extract_stacktrace returned the entire raw log entry — old pass-through behavior detected"
-    )
-    assert "metric tick 0" not in result["stacktrace"], (
-        "Non-exception noise lines leaked into the extracted stacktrace"
-    )
+    assert len(result["stacktrace"]) < len(
+        log_entry_with_noise
+    ), "extract_stacktrace returned the entire raw log entry — old pass-through behavior detected"
+    assert (
+        "metric tick 0" not in result["stacktrace"]
+    ), "Non-exception noise lines leaked into the extracted stacktrace"
     await loki_client.close()
 
 

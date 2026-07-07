@@ -81,7 +81,8 @@ class EnvironmentValidator:
             warnings.append(f"package_removed:{pkg}")
         for pkg in changed:
             warnings.append(
-                f"package_changed:{pkg}:{baseline.package_versions[pkg]}->{current.package_versions[pkg]}"
+                f"package_changed:{pkg}:"
+                f"{baseline.package_versions[pkg]}->{current.package_versions[pkg]}"
             )
 
         critical_drifted = [w for w in warnings if any(p in w for p in CRITICAL_PACKAGES)]

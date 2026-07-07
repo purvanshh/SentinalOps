@@ -98,9 +98,9 @@ class TestRealAgentExecution:
             "risk",
             "remediation",
         }
-        assert expected_steps.issubset(set(trace.timing.keys())), (
-            f"Missing agent timing entries. Got: {set(trace.timing.keys())}"
-        )
+        assert expected_steps.issubset(
+            set(trace.timing.keys())
+        ), f"Missing agent timing entries. Got: {set(trace.timing.keys())}"
 
     @pytest.mark.asyncio
     async def test_router_output_matches_mocked_tool_response(self, first_benchmark) -> None:
@@ -115,9 +115,9 @@ class TestRealAgentExecution:
         log = outputs.rootcause_output.investigation_log
         assert "normalized" in log
         assert "generated" in log
-        assert "Evaluation executed deterministic incident flow" not in log, (
-            "Old synthetic evaluation log text detected — root cause is not using real reasoning"
-        )
+        assert (
+            "Evaluation executed deterministic incident flow" not in log
+        ), "Old synthetic evaluation log text detected — root cause is not using real reasoning"
 
     @pytest.mark.asyncio
     async def test_remediation_plan_derived_from_risk_output(self, first_benchmark) -> None:
@@ -125,9 +125,9 @@ class TestRealAgentExecution:
         assert len(outputs.remediation_output.steps) >= 1
         step_actions = {s.action for s in outputs.remediation_output.steps}
         risk_actions = {r.action for r in outputs.risk_output.remediation_risks}
-        assert step_actions.issubset(risk_actions | {"restart payment-api"}), (
-            "Remediation steps must come from actual risk output, not golden labels"
-        )
+        assert step_actions.issubset(
+            risk_actions | {"restart payment-api"}
+        ), "Remediation steps must come from actual risk output, not golden labels"
 
     @pytest.mark.asyncio
     async def test_execution_mode_is_evaluation(self, first_benchmark) -> None:

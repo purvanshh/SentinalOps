@@ -17,8 +17,9 @@ coverage/
 *.log
 .DS_Store
 .env
+.coverage
+htmlcov/
 apps/api-server/.coverage
-apps/api-server/htmlcov/
 apps/api-server/.pytest_cache/
 apps/api-server/.mypy_cache/
 apps/api-server/.ruff_cache/

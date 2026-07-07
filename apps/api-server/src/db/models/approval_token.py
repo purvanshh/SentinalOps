@@ -1,7 +1,9 @@
 import uuid
+
 from db.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-from sqlalchemy import Text, Boolean
+from sqlalchemy import Boolean, Text
 from sqlalchemy.orm import Mapped, mapped_column
+
 
 class ApprovalToken(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "approval_tokens"

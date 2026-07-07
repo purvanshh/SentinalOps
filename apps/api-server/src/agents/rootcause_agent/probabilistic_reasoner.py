@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from agents.rootcause_agent.causal_graph import CandidateCause
-from causality.validators.deductive_tester import CandidateAssessment, assess_candidate
 from agents.rootcause_agent.output_schema import (
     HypothesisEvidence,
     RootCauseAnalysis,
@@ -15,6 +14,7 @@ from agents.uncertainty import (
     UncertaintyAssessment,
     UncertaintyEngine,
 )
+from causality.validators.deductive_tester import CandidateAssessment, assess_candidate
 from semantics.semantic_engine import MechanismInference, OperationalSemanticEngine
 
 

@@ -32,7 +32,9 @@ class LLMClient:
         settings = get_settings()
         self.base_url = (base_url or settings.resolved_llm_base_url).rstrip("/")
         raw_key = api_key or settings.resolved_llm_api_key
-        self.api_key = raw_key.get_secret_value() if hasattr(raw_key, 'get_secret_value') else raw_key
+        self.api_key = (
+            raw_key.get_secret_value() if hasattr(raw_key, "get_secret_value") else raw_key
+        )
         self.model = model or settings.resolved_llm_model
         self.timeout = timeout
         self.max_retries = max_retries

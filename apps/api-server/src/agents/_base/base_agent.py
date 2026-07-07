@@ -1,6 +1,8 @@
 import abc
-from pydantic import BaseModel
+
 from core.llm_client import LLMClient
+from pydantic import BaseModel
+
 
 class BaseAgent(abc.ABC):
     def __init__(self, name: str, llm_client: LLMClient | None = None) -> None:

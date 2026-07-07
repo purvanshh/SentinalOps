@@ -1,12 +1,11 @@
-import pytest
-from datetime import datetime
 from causality.validators.causal_validator import (
-    service_exists,
+    ServiceNode,
     check_service_references,
-    is_valid_path,
     check_temporal_order,
-    ServiceNode
+    is_valid_path,
+    service_exists,
 )
+
 
 def test_service_exists() -> None:
     topology = {"payment-api": ServiceNode(name="payment-api", depends_on=[])}

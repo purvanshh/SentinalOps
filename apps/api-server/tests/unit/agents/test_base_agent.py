@@ -1,7 +1,7 @@
 import pytest
-from pydantic import BaseModel
 from agents._base.base_agent import BaseAgent
-from core.llm_client import LLMClient
+from pydantic import BaseModel
+
 
 class MockOutput(BaseModel):
     success: bool

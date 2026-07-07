@@ -1,6 +1,17 @@
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
+
 import httpx
+from core.config import get_settings
+from core.security.permissions import has_permission
+from fastapi import HTTPException, Request, status
+from jose import JWTError, jwt
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 
 _jwks_cache = {}
+
 
 def get_jwk_key_sync(kid: str, jwks_url: str) -> dict:
     if kid in _jwks_cache:
@@ -15,17 +26,6 @@ def get_jwk_key_sync(kid: str, jwks_url: str) -> dict:
     except Exception:
         pass
     return _jwks_cache.get(kid)
-
-from collections.abc import Callable
-from dataclasses import dataclass
-from typing import Any
-
-from core.config import get_settings
-from core.security.permissions import has_permission
-from fastapi import HTTPException, Request, status
-from jose import JWTError, jwt
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
 
 
 @dataclass(slots=True)
@@ -56,7 +56,11 @@ def decode_access_token(token: str) -> AuthenticatedUser:
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token headers"
         ) from exc
 
-    secret_key = settings.auth0_secret_key.get_secret_value() if hasattr(settings.auth0_secret_key, 'get_secret_value') else settings.auth0_secret_key
+    secret_key = (
+        settings.auth0_secret_key.get_secret_value()
+        if hasattr(settings.auth0_secret_key, "get_secret_value")
+        else settings.auth0_secret_key
+    )
     
     if alg == "RS256" and "RS256" in settings.auth0_algorithms:
         jwks_url = f"https://{settings.auth0_domain}/.well-known/jwks.json"

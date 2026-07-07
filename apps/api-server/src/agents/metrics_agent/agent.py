@@ -1,7 +1,7 @@
-from time import perf_counter
 from typing import Any
 
 from agents._base.base_agent import BaseAgent
+from agents.base_agent import agent_loop
 from agents.metrics_agent.output_schema import MetricsSummary
 from agents.metrics_agent.prompts import build_metrics_system_prompt, build_metrics_user_prompt
 from core.llm_client import LLMClient
@@ -9,7 +9,7 @@ from db.models.incident import Incident
 from sqlalchemy.ext.asyncio import AsyncSession
 from tools.prometheus.client import PrometheusClient
 from tools.prometheus.tools import build_prometheus_registry
-from agents.base_agent import agent_loop
+
 
 class MetricsAgent(BaseAgent):
     def __init__(self, llm_client: LLMClient | None = None) -> None:

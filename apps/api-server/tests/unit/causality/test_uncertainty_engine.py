@@ -1,6 +1,7 @@
 import pytest
 from agents.uncertainty import UncertaintyEngine
 
+
 def test_uncertainty_engine_confidence_interval() -> None:
     engine = UncertaintyEngine()
     interval = engine.confidence_interval(0.8, 0.2, 0)
@@ -27,4 +28,10 @@ def test_uncertainty_engine_assess_basic() -> None:
         incident_severity="medium"
     )
     assert assessment.confidence > 0.0
-    assert assessment.state in ["stable", "insufficient_telemetry", "conflicting_signals", "unknown_cause", "low_confidence_escalation"]
+    assert assessment.state in [
+        "stable",
+        "insufficient_telemetry",
+        "conflicting_signals",
+        "unknown_cause",
+        "low_confidence_escalation",
+    ]

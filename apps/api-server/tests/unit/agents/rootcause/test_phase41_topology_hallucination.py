@@ -10,12 +10,12 @@ Proves:
 from __future__ import annotations
 
 from agents.rootcause_agent.causal_graph import build_candidate_causes
+from agents.rootcause_agent.evidence_builder import TimedEvent
 from causality.validators.causal_validator import (
     HallucinationViolation,
     check_service_references,
     service_exists,
 )
-from agents.rootcause_agent.evidence_builder import TimedEvent
 from orchestration.state.topology_schema import ServiceNode
 
 

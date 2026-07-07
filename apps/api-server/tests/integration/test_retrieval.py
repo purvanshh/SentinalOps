@@ -1,5 +1,6 @@
 import pytest
 
+
 @pytest.mark.integration
 def test_qdrant_retrieval_integration() -> None:
     # Verify that retrieval orchestrator connects to Qdrant successfully

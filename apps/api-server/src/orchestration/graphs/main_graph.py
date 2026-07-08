@@ -17,6 +17,7 @@ from orchestration.checkpointing.checkpoint import (
 from orchestration.interrupts.commands import ResumeCommand
 from orchestration.nodes.approval_node import approval_node
 from orchestration.nodes.deployment_node import deployment_node
+from orchestration.nodes.evidence_synthesis_node import evidence_synthesis_node
 from orchestration.nodes.execution_node import execution_node
 from orchestration.nodes.logs_node import logs_node
 from orchestration.nodes.metrics_node import metrics_node
@@ -93,6 +94,10 @@ class LangGraphWorkflow:
         workflow.add_node("logs", self._checkpointed_node("logs", logs_node))
         workflow.add_node("deployment", self._checkpointed_node("deployment", deployment_node))
         workflow.add_node(
+            "evidence_synthesis",
+            self._checkpointed_node("evidence_synthesis", evidence_synthesis_node),
+        )
+        workflow.add_node(
             "root_cause_analysis",
             self._checkpointed_node("root_cause_analysis", rootcause_node),
         )
@@ -120,9 +125,10 @@ class LangGraphWorkflow:
         workflow.add_conditional_edges(
             "dispatch_evidence", fan_out_evidence, ["metrics", "logs", "deployment"]
         )
-        workflow.add_edge("metrics", "root_cause_analysis")
-        workflow.add_edge("logs", "root_cause_analysis")
-        workflow.add_edge("deployment", "root_cause_analysis")
+        workflow.add_edge("metrics", "evidence_synthesis")
+        workflow.add_edge("logs", "evidence_synthesis")
+        workflow.add_edge("deployment", "evidence_synthesis")
+        workflow.add_edge("evidence_synthesis", "root_cause_analysis")
         workflow.add_edge("root_cause_analysis", "risk")
         workflow.add_edge("risk", "remediation")
         workflow.add_edge("remediation", "approval_gate")
@@ -261,6 +267,7 @@ class LangGraphWorkflow:
         await apply("metrics", metrics_node)
         await apply("logs", logs_node)
         await apply("deployment", deployment_node)
+        await apply("evidence_synthesis", evidence_synthesis_node)
         await apply("root_cause_analysis", rootcause_node)
         await apply("risk", risk_node)
         await apply("remediation", remediation_node)

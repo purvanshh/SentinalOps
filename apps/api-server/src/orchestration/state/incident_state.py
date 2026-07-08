@@ -41,6 +41,10 @@ class IncidentState(TypedDict, total=False):
     postmortem: dict[str, Any]
     errors: Annotated[list[str], append_unique]
     completed_nodes: Annotated[list[str], append_unique]
+    # Structured RCA fields
+    synthesized_narrative: dict[str, Any]
+    candidate_causes: list[dict[str, Any]]
+    ambiguity_state: str
     # Resilience metadata
     provider_chain_result: dict[str, Any]
     fallback_activated: bool

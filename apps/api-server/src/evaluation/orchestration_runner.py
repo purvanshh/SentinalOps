@@ -44,6 +44,7 @@ from agents.rootcause_agent.probabilistic_reasoner import (
     build_probabilistic_root_cause_analysis,
     synthesize_root_cause_hypothesis,
 )
+from agents.evidence_synthesis_agent import EvidenceSynthesisAgent
 from agents.router_agent.agent import classify_incident
 from agents.router_agent.output_schema import RouterOutput
 from core.runtime_context import disallow_live_providers
@@ -197,6 +198,15 @@ async def _eval_rootcause(
     ]
 
     service = benchmark.alert_payload["labels"].get("service", "payment-api")
+
+    synthesis_client = build_rootcause_synthesis_mock_client()
+    synthesis_agent = EvidenceSynthesisAgent(llm_client=synthesis_client)
+    narrative = await synthesis_agent.synthesize(
+        incident_id=benchmark.id,
+        simplified_evidence=simplified_evidence,
+        primary_service=service,
+    )
+
     timed_events = build_timed_events(simplified_evidence, service)
     topology = load_topology()
 
@@ -216,6 +226,10 @@ async def _eval_rootcause(
         candidates=candidates,
         grounding_score=0.0,
     )
+    
+    # Store narrative in the result object's narrative field for tracking
+    result.narrative = narrative.summary
+
     return await synthesize_root_cause_hypothesis(
         result,
         candidates=candidates,

@@ -5,8 +5,7 @@
 
 **Autonomous Multi-Agent Incident Response and Reliability Orchestration Platform**
 
-> [!WARNING]
-> **Current Limitations:** SentinelOps is currently a development prototype. Leading metric Root Cause Match is at **8.2%** accuracy under simulation. Autonomy is disabled; human supervision is required for all actions.
+> **Current Limitations:** SentinelOps is currently a development prototype. Leading metric Root Cause Match is at **11.93% (lexical) / 14.68% (semantic)** accuracy under simulation. Autonomy is disabled; human supervision is required for all actions.
 
 ## Quickstart
 
@@ -25,7 +24,7 @@ SentinelOps uses a cooperative multi-agent architecture powered by LangGraph. De
 
 | Metric | Target | Current Value | Status |
 | :--- | :--- | :--- | :--- |
-| Root Cause Match (top-1) | >75% | **8.2%** | Warning |
+| Root Cause Match (top-1) | >75% | **11.93% (lexical) / 14.68% (semantic)** | Warning |
 | Classification Accuracy | >90% | **99.17%** | Passing |
 | Evidence Grounding Score | >0.95 | **98.4%** | Passing |
 

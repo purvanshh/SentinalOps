@@ -232,19 +232,28 @@ def build_probabilistic_root_cause_analysis(
         scores = score_assessment(assessment_result, incident_type)
         candidate_assessments.append((candidate, assessment_result, scores))
 
-    raw_scores = [
-        max(
+    raw_scores = []
+    for candidate, assessment, scores in candidate_assessments:
+        spec_score = getattr(candidate, "specificity_score", None)
+        if spec_score is None:
+            spec_score = 0.5
+        
+        cov_score = getattr(candidate, "evidence_coverage", None)
+        if cov_score is None:
+            cov_score = assessment.evidence_coverage
+
+        raw_score = max(
             0.01,
             (
-                (scores["confidence"] * 0.55)
-                + (scores["prior_probability"] * 0.20)
-                + (scores["temporal_score"] * 0.15)
-                + (assessment.evidence_coverage * 0.10)
+                (scores["confidence"] * 0.40)
+                + (scores["prior_probability"] * 0.15)
+                + (scores["temporal_score"] * 0.10)
+                + (cov_score * 0.15)
+                + (spec_score * 0.20)
             )
             * _candidate_support_strength(candidate, assessment),
         )
-        for candidate, assessment, scores in candidate_assessments
-    ]
+        raw_scores.append(raw_score)
     labels = [candidate.title for candidate, _, _ in candidate_assessments]
     engine = UncertaintyEngine()
     uncertainty = engine.assess(

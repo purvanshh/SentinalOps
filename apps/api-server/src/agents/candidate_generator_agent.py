@@ -6,7 +6,14 @@ from jinja2 import Template
 from pydantic import BaseModel
 import structlog
 
-from agents.rca_structured import CandidateCause, CandidateList, RunbookMatch, SynthesizedNarrative
+from agents.rca_structured import (
+    CandidateCause,
+    CandidateList,
+    RunbookMatch,
+    SynthesizedNarrative,
+    compute_specificity_score,
+    compute_evidence_coverage,
+)
 from agents.prompts.rca_prompts import CANDIDATE_GENERATION_TEMPLATE
 from core.resilience.resilient_llm_client import ResilientLLMClient
 
@@ -72,11 +79,17 @@ class CandidateGeneratorAgent:
             else:
                 response = res
 
+            candidates = []
             if isinstance(response, CandidateList):
-                return response.candidates
-            
-            if isinstance(response, dict):
-                return CandidateList.model_validate(response).candidates
+                candidates = response.candidates
+            elif isinstance(response, dict):
+                candidates = CandidateList.model_validate(response).candidates
+
+            for c in candidates:
+                c.specificity_score = compute_specificity_score(c)
+                c.evidence_coverage = compute_evidence_coverage(c, narrative)
+
+            return candidates
 
         except Exception as exc:
             logger.error("candidate_generator_failed_falling_back", error=str(exc))

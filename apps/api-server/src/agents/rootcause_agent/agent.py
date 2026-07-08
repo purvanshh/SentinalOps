@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from agents.rootcause_agent.causal_graph import build_candidate_causes
+from agents.candidate_generator_agent import CandidateGeneratorAgent
+from agents.evidence_synthesis_agent import EvidenceSynthesisAgent
 from agents.rootcause_agent.evidence_builder import build_timed_events
 from agents.rootcause_agent.evidence_normalizer import normalize_agent_executions
 from agents.rootcause_agent.output_schema import RootCauseAnalysis
@@ -8,8 +9,6 @@ from agents.rootcause_agent.probabilistic_reasoner import (
     build_probabilistic_root_cause_analysis,
     synthesize_root_cause_hypothesis,
 )
-from agents.evidence_synthesis_agent import EvidenceSynthesisAgent
-from agents.candidate_generator_agent import CandidateGeneratorAgent
 from core.llm_client import LLMClient
 from db.models.incident import Incident
 from db.repositories.incident_repo import IncidentRepository

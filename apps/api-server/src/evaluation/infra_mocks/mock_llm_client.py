@@ -117,7 +117,12 @@ class DeterministicEvalSynthesisClient:
 
         if structured_output_model is not None:
             # Construct a basic SynthesizedNarrative or other model as fallback
-            from agents.rca_structured import SynthesizedNarrative, EvidenceItem, CandidateList, CandidateCause
+            from agents.rca_structured import (
+                CandidateCause,
+                CandidateList,
+                SynthesizedNarrative,
+            )
+
             if structured_output_model == SynthesizedNarrative:
                 narrative = SynthesizedNarrative(
                     narrative_id="fallback-narrative",
@@ -126,20 +131,24 @@ class DeterministicEvalSynthesisClient:
                     timeline=[],
                     anomalies=[content],
                     primary_affected_service="payment-api",
-                    confidence_per_source={"metrics": 0.9, "logs": 0.9}
+                    confidence_per_source={"metrics": 0.9, "logs": 0.9},
                 )
                 self._cache[prompt] = narrative
                 return narrative
             elif structured_output_model == CandidateList:
                 candidate = CandidateCause(
                     cause_id="fallback-cause",
-                    description=content if len(content) > 10 else "Unknown service degradation under high load",
+                    description=(
+                        content
+                        if len(content) > 10
+                        else "Unknown service degradation under high load"
+                    ),
                     affected_service="payment-api",
                     triggering_event="unknown",
                     evidence_support=[],
                     confidence=0.6,
                     mechanism_type="unknown",
-                    counterfactual="Rollback payment-api"
+                    counterfactual="Rollback payment-api",
                 )
                 candidate_list = CandidateList(candidates=[candidate])
                 self._cache[prompt] = candidate_list
@@ -147,7 +156,13 @@ class DeterministicEvalSynthesisClient:
             else:
                 try:
                     # Generic pydantic fallback
-                    parsed = {"description": content, "summary": content, "narrative_id": "fallback", "incident_id": "fallback", "primary_affected_service": "payment-api"}
+                    parsed = {
+                        "description": content,
+                        "summary": content,
+                        "narrative_id": "fallback",
+                        "incident_id": "fallback",
+                        "primary_affected_service": "payment-api",
+                    }
                     res = structured_output_model.model_validate(parsed)
                     self._cache[prompt] = res
                     return res
@@ -168,7 +183,10 @@ class EvaluationSynthesisClient:
     def __init__(self) -> None:
         settings = get_settings()
         self.base_url = settings.eval_synthesis_base_url.rstrip("/")
-        self.api_key = settings.eval_synthesis_api_key.get_secret_value() if hasattr(settings.eval_synthesis_api_key, "get_secret_value") else settings.eval_synthesis_api_key
+        raw_key = settings.eval_synthesis_api_key
+        self.api_key = (
+            raw_key.get_secret_value() if hasattr(raw_key, "get_secret_value") else raw_key
+        )
         self.model = settings.eval_synthesis_model
         self.temperature = settings.eval_synthesis_temperature
         self.max_tokens = settings.eval_synthesis_max_tokens
@@ -177,12 +195,14 @@ class EvaluationSynthesisClient:
         # Load file-based cache for cross-process determinism and speed
         import json
         from pathlib import Path
+
         self.cache_path = Path("/tmp/eval_synthesis_cache.json")
         self._cache = {}
         if self.cache_path.exists():
             try:
                 raw_cache = json.loads(self.cache_path.read_text())
                 from agents.rca_structured import SynthesizedNarrative
+
                 for k, v in raw_cache.items():
                     if isinstance(v, dict) and v.get("__type__") == "pydantic":
                         model_name = v.get("model")
@@ -197,6 +217,7 @@ class EvaluationSynthesisClient:
 
     def _save_cache(self) -> None:
         import json
+
         try:
             serializable = {}
             for k, v in self._cache.items():
@@ -246,7 +267,7 @@ class EvaluationSynthesisClient:
                 response.raise_for_status()
                 body = response.json()
                 message = body["choices"][0]["message"]
-                
+
                 if structured_output_model is not None:
                     content = message.get("content", "").strip()
                     if content.startswith("```"):
@@ -254,12 +275,13 @@ class EvaluationSynthesisClient:
                         if len(lines) > 2:
                             content = "\n".join(lines[1:-1])
                     import json
+
                     parsed = json.loads(content)
                     validated = structured_output_model.model_validate(parsed)
                     self._cache[key] = validated
                     self._save_cache()
                     return validated
-                
+
                 self._cache[key] = message
                 self._save_cache()
                 return message

@@ -1,9 +1,9 @@
+import structlog
 from agents.evidence_synthesis_agent import EvidenceSynthesisAgent
+from agents.rootcause_agent.evidence_normalizer import normalize_agent_executions
 from core.llm_client import LLMClient
 from db.repositories.incident_repo import IncidentRepository
 from db.session import SessionLocal
-from agents.rootcause_agent.evidence_normalizer import normalize_agent_executions
-import structlog
 
 logger = structlog.get_logger(__name__)
 
@@ -41,18 +41,18 @@ async def evidence_synthesis_node(state: dict, session=None) -> dict:
         ]
 
         service = incident.raw_payload.get("labels", {}).get("service", "payment-api")
-        
+
         # Instantiate and run EvidenceSynthesisAgent
         # Uses LLMClient which acts as the LLM interface in orchestration
         llm = LLMClient()
         agent = EvidenceSynthesisAgent(llm_client=llm)
-        
+
         narrative = await agent.synthesize(
             incident_id=str(incident.id),
             simplified_evidence=simplified_evidence,
             primary_service=service,
         )
-        
+
         await llm.close()
 
         return {
@@ -63,7 +63,6 @@ async def evidence_synthesis_node(state: dict, session=None) -> dict:
     except Exception as exc:
         logger.error("evidence_synthesis_node_failed", error=str(exc))
         # Fallback to empty/basic narrative
-        from datetime import datetime
         fallback_narrative = {
             "narrative_id": f"fallback-{incident.id}",
             "incident_id": str(incident.id),
@@ -72,7 +71,9 @@ async def evidence_synthesis_node(state: dict, session=None) -> dict:
             "correlations": [],
             "anomalies": [],
             "missing_telemetry": [],
-            "primary_affected_service": incident.raw_payload.get("labels", {}).get("service", "payment-api"),
+            "primary_affected_service": (
+                incident.raw_payload.get("labels", {}).get("service", "payment-api")
+            ),
             "confidence_per_source": {},
         }
         return {

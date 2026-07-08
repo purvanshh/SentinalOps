@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from typing import Any
-from jinja2 import Template
-import structlog
 
-from agents.rca_structured import EvidenceItem, SynthesizedNarrative
+import structlog
 from agents.prompts.rca_prompts import EVIDENCE_SYNTHESIS_TEMPLATE
+from agents.rca_structured import EvidenceItem, SynthesizedNarrative
 from core.resilience.resilient_llm_client import ResilientLLMClient
+from jinja2 import Template
 
 logger = structlog.get_logger(__name__)
 
@@ -53,7 +52,10 @@ def map_to_evidence_items(simplified_evidence: list[dict[str, Any]]) -> list[Evi
         item_type = item.get("item_type", "")
         if item_type == "metric_anomaly":
             signal = item.get("metric") or "metric_anomaly"
-            value = f"observed={item.get('observed')}, expected={item.get('expected_range')}, z={item.get('z_score')}"
+            value = (
+                f"observed={item.get('observed')}, expected={item.get('expected_range')}, "
+                f"z={item.get('z_score')}"
+            )
         elif item_type == "error_signature":
             signal = item.get("signature") or "log_error"
             value = f"count={item.get('count')}, first_seen={item.get('first_seen')}"
@@ -81,16 +83,18 @@ def map_to_evidence_items(simplified_evidence: list[dict[str, Any]]) -> list[Evi
             except (ValueError, TypeError):
                 pass
 
-        items.append(EvidenceItem(
-            evidence_id=item.get("item_key") or f"EVID-{len(items)+1}",
-            source=source,
-            timestamp=ts,
-            service=service,
-            signal=signal,
-            value=value,
-            severity=severity,
-            confidence=float(item.get("confidence", 1.0)),
-        ))
+        items.append(
+            EvidenceItem(
+                evidence_id=item.get("item_key") or f"EVID-{len(items)+1}",
+                source=source,
+                timestamp=ts,
+                service=service,
+                signal=signal,
+                value=value,
+                severity=severity,
+                confidence=float(item.get("confidence", 1.0)),
+            )
+        )
     return items
 
 
@@ -114,14 +118,15 @@ class EvidenceSynthesisAgent:
         }
 
         # Render prompt using Jinja2
-        prompt = Template(EVIDENCE_SYNTHESIS_TEMPLATE).render(
-            evidence_by_source=evidence_by_source
-        )
+        prompt = Template(EVIDENCE_SYNTHESIS_TEMPLATE).render(evidence_by_source=evidence_by_source)
 
         messages = [
             {
                 "role": "system",
-                "content": "You are an evidence synthesis engine. Return only a valid JSON object matching the SynthesizedNarrative schema.",
+                "content": (
+                    "You are an evidence synthesis engine. Return only a valid JSON "
+                    "object matching the SynthesizedNarrative schema."
+                ),
             },
             {"role": "user", "content": prompt},
         ]
@@ -148,7 +153,7 @@ class EvidenceSynthesisAgent:
 
             if isinstance(response, SynthesizedNarrative):
                 return response
-            
+
             # Fallback if dictionary returned
             if isinstance(response, dict):
                 return SynthesizedNarrative.model_validate(response)
@@ -165,7 +170,10 @@ class EvidenceSynthesisAgent:
         evidence_items: list[EvidenceItem],
         primary_service: str,
     ) -> SynthesizedNarrative:
-        summary = "Evidence synthesis failed or fallback triggered. Using raw correlated event fragments."
+        summary = (
+            "Evidence synthesis failed or fallback triggered. "
+            "Using raw correlated event fragments."
+        )
         if evidence_items:
             summary += f" Detected {len(evidence_items)} telemetry anomalies across the system."
 

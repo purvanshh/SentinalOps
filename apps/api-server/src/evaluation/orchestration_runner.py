@@ -26,8 +26,10 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
 
+from agents.candidate_generator_agent import CandidateGeneratorAgent
 from agents.deployment_agent.agent import analyze_deployments
 from agents.deployment_agent.output_schema import DeploymentSummary
+from agents.evidence_synthesis_agent import EvidenceSynthesisAgent
 from agents.logs_agent.agent import analyze_logs
 from agents.logs_agent.output_schema import LogsSummary
 from agents.metrics_agent.agent import analyze_metrics
@@ -36,7 +38,6 @@ from agents.remediation_agent.output_schema import RemediationPlan
 from agents.risk_agent.action_risk import score_remediation_action
 from agents.risk_agent.blast_radius import compute_blast_radius
 from agents.risk_agent.schemas import RiskAssessment
-from agents.rootcause_agent.causal_graph import build_candidate_causes
 from agents.rootcause_agent.evidence_builder import build_timed_events
 from agents.rootcause_agent.evidence_normalizer import normalize_agent_executions
 from agents.rootcause_agent.output_schema import RootCauseAnalysis
@@ -44,8 +45,6 @@ from agents.rootcause_agent.probabilistic_reasoner import (
     build_probabilistic_root_cause_analysis,
     synthesize_root_cause_hypothesis,
 )
-from agents.evidence_synthesis_agent import EvidenceSynthesisAgent
-from agents.candidate_generator_agent import CandidateGeneratorAgent
 from agents.router_agent.agent import classify_incident
 from agents.router_agent.output_schema import RouterOutput
 from core.runtime_context import disallow_live_providers
@@ -212,6 +211,7 @@ async def _eval_rootcause(
     topology = load_topology()
 
     from retrieval.hybrid_retrieval import HybridRetriever
+
     retriever = HybridRetriever()
     query_text = f"{narrative.summary} {' '.join(narrative.anomalies)}"
     pattern_hints = retriever.retrieve(
@@ -237,7 +237,7 @@ async def _eval_rootcause(
         candidates=candidates,
         grounding_score=0.0,
     )
-    
+
     # Store narrative in the result object's narrative field for tracking
     result.narrative = narrative.summary
 

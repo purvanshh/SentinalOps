@@ -1,3 +1,5 @@
+# ruff: noqa: E501
+# flake8: noqa
 """
 SentinelOps — Production Prompt Templates for Structured RCA
 Fits into: apps/api-server/src/agents/prompts/rca_prompts.py
@@ -151,10 +153,9 @@ Key Evidence IDs: {{ evidence_ids }}
 # Helper: Build few-shot examples from your benchmark dataset
 # =============================================================================
 
+
 def build_few_shot_examples(
-    mechanism_type: str,
-    benchmark_dataset: List[dict],
-    max_examples: int = 3
+    mechanism_type: str, benchmark_dataset: List[dict], max_examples: int = 3
 ) -> List[dict]:
     """
     Pull golden-label examples from your benchmark_suite_v1.json
@@ -163,12 +164,14 @@ def build_few_shot_examples(
     examples = []
     for incident in benchmark_dataset:
         if incident.get("golden_mechanism") == mechanism_type:
-            examples.append({
-                "evidence_summary": incident.get("synthesized_evidence_summary", ""),
-                "golden_description": incident.get("golden_root_cause", ""),
-                "mechanism_type": mechanism_type,
-                "evidence_ids": incident.get("key_evidence_ids", [])
-            })
+            examples.append(
+                {
+                    "evidence_summary": incident.get("synthesized_evidence_summary", ""),
+                    "golden_description": incident.get("golden_root_cause", ""),
+                    "mechanism_type": mechanism_type,
+                    "evidence_ids": incident.get("key_evidence_ids", []),
+                }
+            )
         if len(examples) >= max_examples:
             break
     return examples

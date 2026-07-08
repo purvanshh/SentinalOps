@@ -1,21 +1,19 @@
 from __future__ import annotations
 
-import json
 from typing import Any
-from jinja2 import Template
-from pydantic import BaseModel
-import structlog
 
+import structlog
+from agents.prompts.rca_prompts import CANDIDATE_GENERATION_TEMPLATE
 from agents.rca_structured import (
     CandidateCause,
     CandidateList,
     RunbookMatch,
     SynthesizedNarrative,
-    compute_specificity_score,
     compute_evidence_coverage,
+    compute_specificity_score,
 )
-from agents.prompts.rca_prompts import CANDIDATE_GENERATION_TEMPLATE
 from core.resilience.resilient_llm_client import ResilientLLMClient
+from jinja2 import Template
 
 logger = structlog.get_logger(__name__)
 
@@ -24,14 +22,17 @@ def get_few_shot_examples(category: str, current_id: str = "", max_examples: int
     """Pull golden-label examples from benchmark suite for the given mechanism/category."""
     try:
         from evaluation.benchmark_suite import load_benchmark_suite
+
         suite = load_benchmark_suite()
         examples = []
         for inc in suite.incidents:
             if inc.id != current_id and inc.category == category:
-                examples.append({
-                    "evidence_summary": inc.description,
-                    "golden_description": inc.golden_root_cause,
-                })
+                examples.append(
+                    {
+                        "evidence_summary": inc.description,
+                        "golden_description": inc.golden_root_cause,
+                    }
+                )
             if len(examples) >= max_examples:
                 break
         return examples
@@ -59,13 +60,22 @@ class CandidateGeneratorAgent:
         # Map patterns to RunbookMatch
         runbook_matches = []
         for pattern in pattern_hints:
-            runbook_matches.append(RunbookMatch(
-                runbook_id=str(pattern.get("pattern_id") or pattern.get("title") or "unknown"),
-                title=str(pattern.get("title") or "Unknown Pattern"),
-                mechanism_type=str(pattern.get("mechanism_type") or pattern.get("category") or "unknown"),
-                similarity_score=float(pattern.get("match_score") or pattern.get("similarity_score") or pattern.get("hybrid_score") or 0.5),
-                relevant_section=pattern.get("description") or pattern.get("relevant_section"),
-            ))
+            runbook_matches.append(
+                RunbookMatch(
+                    runbook_id=str(pattern.get("pattern_id") or pattern.get("title") or "unknown"),
+                    title=str(pattern.get("title") or "Unknown Pattern"),
+                    mechanism_type=str(
+                        pattern.get("mechanism_type") or pattern.get("category") or "unknown"
+                    ),
+                    similarity_score=float(
+                        pattern.get("match_score")
+                        or pattern.get("similarity_score")
+                        or pattern.get("hybrid_score")
+                        or 0.5
+                    ),
+                    relevant_section=pattern.get("description") or pattern.get("relevant_section"),
+                )
+            )
 
         prompt = Template(CANDIDATE_GENERATION_TEMPLATE).render(
             narrative_json=narrative.model_dump_json(),
@@ -77,7 +87,10 @@ class CandidateGeneratorAgent:
         messages = [
             {
                 "role": "system",
-                "content": "You are a root cause analysis engine. Return only a valid JSON object matching the CandidateList schema containing candidate causes.",
+                "content": (
+                    "You are a root cause analysis engine. Return only a valid JSON object "
+                    "matching the CandidateList schema containing candidate causes."
+                ),
             },
             {"role": "user", "content": prompt},
         ]
@@ -118,12 +131,17 @@ class CandidateGeneratorAgent:
 
         # Hard fallback: construct a fallback candidate cause
         from uuid import uuid4
+
         fallback_candidate = CandidateCause(
             cause_id=f"fallback-{uuid4().hex[:8]}",
-            description=f"Fallback candidate cause generated due to LLM failure: {narrative.summary}",
+            description=(
+                "Fallback candidate cause generated due to LLM failure: " f"{narrative.summary}"
+            ),
             affected_service=narrative.primary_affected_service,
             triggering_event="unknown",
-            evidence_support=[e.evidence_id for e in narrative.timeline[:2]] if narrative.timeline else [],
+            evidence_support=(
+                [e.evidence_id for e in narrative.timeline[:2]] if narrative.timeline else []
+            ),
             confidence=0.5,
             mechanism_type="unknown",
             counterfactual="Fixing the affected service would restore normal operations.",

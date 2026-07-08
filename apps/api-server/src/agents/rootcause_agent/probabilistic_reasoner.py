@@ -237,7 +237,7 @@ def build_probabilistic_root_cause_analysis(
         spec_score = getattr(candidate, "specificity_score", None)
         if spec_score is None:
             spec_score = 0.5
-        
+
         cov_score = getattr(candidate, "evidence_coverage", None)
         if cov_score is None:
             cov_score = assessment.evidence_coverage

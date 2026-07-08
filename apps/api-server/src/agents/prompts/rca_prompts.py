@@ -78,9 +78,10 @@ Generate exactly 3 to 5 candidate root causes. Each candidate must:
 1. **Be specific**: Name exact services, deployment IDs, commit SHAs, metric names, or configuration keys. Avoid generic phrases like "performance issue" or "high load".
 2. **Be evidence-bound**: Every claim must reference specific evidence_ids from the narrative.
 3. **Map to a mechanism**: Use one of: deployment_error, resource_exhaustion, cascade_failure, configuration_drift, dependency_failure, network_partition, data_corruption, unknown.
-4. **Include counter-evidence**: List any evidence that contradicts or weakens the hypothesis.
+4. **Include counter-evidence**: List any evidence that contradicts or weakens the hypothesis (evidence_against).
 5. **Include a counterfactual**: "If X had not happened, the incident would not have occurred."
-6. **Match retrieved patterns where applicable**: If a historical pattern strongly matches, reference it.
+6. **Include expected missing evidence**: List expected symptoms or evidence that are missing (missing_evidence).
+7. **Match retrieved patterns where applicable**: If a historical pattern strongly matches, reference it.
 
 ## Scoring Guidance (for your confidence estimate)
 - 0.9-1.0: Direct evidence chain, matches historical pattern, no contradictions

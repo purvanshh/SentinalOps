@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from agents.candidate_generator_agent import CandidateGeneratorAgent
 from agents.evidence_synthesis_agent import EvidenceSynthesisAgent
+from knowledge.graph_builder import build_knowledge_graph
+from repo.git_analyzer import GitAnalyzer
+from memory.operational_memory import OperationalMemory
+from verification.validator import CounterfactualValidator
 from agents.rootcause_agent.evidence_builder import build_timed_events
 from agents.rootcause_agent.evidence_normalizer import normalize_agent_executions
 from agents.rootcause_agent.output_schema import RootCauseAnalysis
@@ -68,15 +72,45 @@ async def analyze_root_cause(
     timed_events = build_timed_events(simplified_evidence, service)
     topology = load_topology()
 
-    # Query retriever using the narrative summary and anomalies
-    query_text = f"{narrative.summary} {' '.join(narrative.anomalies)}"
+    # Phase 1: Build the Evidence Knowledge Graph
+    evidence_graph = build_knowledge_graph(simplified_evidence, topology)
+
+    # Phase 2: Repository Intelligence
+    git_analyzer = GitAnalyzer()
+    recent_commits = await git_analyzer.get_recent_commits(service)
+    repo_context = ""
+    if recent_commits:
+        repo_context = "\nRecent changes in repository:\n" + "\n".join([
+            f"- commit {c.get('sha')}: {c.get('message')} by {c.get('author')} (files: {', '.join(c.get('files_changed', []))})"
+            for c in recent_commits
+        ])
+
+    # Phase 3: Historical Incident Memory (Structured Recall)
+    query_text = f"{narrative.summary} {' '.join(narrative.anomalies)} {repo_context}"
     pattern_hints = retriever.retrieve(
         query_text,
         service=service,
         topology=topology,
     )
+    
+    memory = OperationalMemory()
+    memories = await memory.incident_memory.recall_structured(
+        query=query_text,
+        graph=evidence_graph,
+        service=service,
+        topology=topology,
+        limit=3,
+    )
+    for mem in memories:
+        pattern_hints.append({
+            "pattern_id": mem.key,
+            "title": mem.payload.get("title") or mem.payload.get("root_cause") or "Historical Incident",
+            "mechanism_type": mem.category,
+            "similarity_score": mem.similarity_score,
+            "description": mem.payload.get("summary") or mem.payload.get("description"),
+        })
 
-    # Generate structured candidates
+    # Phase 4: Competing Multi-Hypothesis Candidate Generator
     candidate_agent = CandidateGeneratorAgent(llm_client=owned_llm_client)
     candidates = await candidate_agent.generate_candidates(
         incident_id=str(incident.id),
@@ -84,6 +118,10 @@ async def analyze_root_cause(
         pattern_hints=pattern_hints,
         few_shot_mechanism=incident.incident_type or "unknown",
     )
+
+    # Phase 5: Counterfactual Verification Engine calibration
+    validator = CounterfactualValidator()
+    candidates = validator.validate_candidates(candidates, evidence_graph)
 
     grounding = retriever.grounding_score(pattern_hints)
     result = build_probabilistic_root_cause_analysis(

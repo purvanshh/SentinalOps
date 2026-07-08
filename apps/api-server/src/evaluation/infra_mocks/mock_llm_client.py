@@ -149,6 +149,7 @@ class DeterministicEvalSynthesisClient:
                     confidence=0.6,
                     mechanism_type="unknown",
                     counterfactual="Rollback payment-api",
+                    missing_evidence=[],
                 )
                 candidate_list = CandidateList(candidates=[candidate])
                 self._cache[prompt] = candidate_list

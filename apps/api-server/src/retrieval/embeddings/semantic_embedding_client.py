@@ -141,9 +141,15 @@ class SemanticEmbeddingClient:
             return None
 
     def embed_text(self, text: str) -> list[float]:
+        from core.runtime_context import live_provider_access_allowed
         cached = self._cache_get(text)
         if cached is not None:
             return cached
+        if not live_provider_access_allowed():
+            self._active_model = _EMERGENCY_FALLBACK
+            vec = self._hash_embed(text)
+            self._cache_put(text, vec)
+            return vec
         vec = self._try_openai_sync(text) or self._try_ollama_sync(text)
         if vec is None:
             self._active_model = _EMERGENCY_FALLBACK
@@ -190,9 +196,15 @@ class SemanticEmbeddingClient:
             return None
 
     async def embed_text_async(self, text: str) -> list[float]:
+        from core.runtime_context import live_provider_access_allowed
         cached = self._cache_get(text)
         if cached is not None:
             return cached
+        if not live_provider_access_allowed():
+            self._active_model = _EMERGENCY_FALLBACK
+            vec = self._hash_embed(text)
+            self._cache_put(text, vec)
+            return vec
         vec = await self._try_openai_async(text)
         if vec is None:
             vec = await self._try_ollama_async(text)

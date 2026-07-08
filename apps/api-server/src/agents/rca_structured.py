@@ -99,6 +99,9 @@ class CandidateCause(BaseModel):
     counterfactual: str = Field(
         ..., description="What would have prevented this? Used for remediation generation."
     )
+    missing_evidence: List[str] = Field(
+        default_factory=list, description="List of expected but missing evidence_ids or symptoms"
+    )
 
     @property
     def title(self) -> str:

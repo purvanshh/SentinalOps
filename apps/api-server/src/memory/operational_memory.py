@@ -114,6 +114,53 @@ class _MemoryStore:
             for item in results
         ]
 
+    async def recall_structured(
+        self,
+        query: str,
+        graph: Any = None,
+        service: str = "unknown",
+        topology: Any = None,
+        limit: int = 3,
+    ) -> list[MemoryItem]:
+        """Retrieve historical memories and re-rank them using multi-dimensional context."""
+        items = await self.recall(query, limit=limit * 2)
+
+        # Re-rank items using structural overlap
+        ranked_items = []
+        for item in items:
+            payload = item.payload
+            structural_score = 0.0
+
+            # 1. Service dependency overlap
+            historical_service = payload.get("service") or "unknown"
+            if service != "unknown" and historical_service != "unknown":
+                if service == historical_service:
+                    structural_score += 0.25
+                elif topology is not None:
+                    is_dep = False
+                    if hasattr(topology, "has_edge"):
+                        is_dep = topology.has_edge(service, historical_service) or topology.has_edge(historical_service, service)
+                    elif isinstance(topology, dict):
+                        is_dep = historical_service in topology.get(service, []) or service in topology.get(historical_service, [])
+                    if is_dep:
+                        structural_score += 0.15
+
+            # 2. Graph node-type overlap (similarity in failure characteristics)
+            if graph is not None:
+                current_types = {getattr(n, "type", "") for n in getattr(graph, "nodes", [])}
+                historical_types = set(payload.get("anomalies_types") or [])
+                if current_types and historical_types:
+                    overlap = len(current_types.intersection(historical_types)) / len(current_types)
+                    structural_score += overlap * 0.15
+
+            # Add structural score to semantic score
+            item.similarity_score = round(min(1.0, item.similarity_score + structural_score), 4)
+            ranked_items.append(item)
+
+        # Sort by updated similarity_score
+        ranked_items.sort(key=lambda x: x.similarity_score, reverse=True)
+        return ranked_items[:limit]
+
 
 def _payload_to_text(payload: dict[str, Any]) -> str:
     """Convert payload fields to a single embedding text."""

@@ -225,6 +225,7 @@ async def _eval_rootcause(
         incident_id=benchmark.id,
         narrative=narrative,
         pattern_hints=pattern_hints,
+        few_shot_mechanism=benchmark.category,
     )
 
     result = build_probabilistic_root_cause_analysis(

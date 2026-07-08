@@ -83,6 +83,7 @@ async def analyze_root_cause(
         incident_id=str(incident.id),
         narrative=narrative,
         pattern_hints=pattern_hints,
+        few_shot_mechanism=incident.incident_type or "unknown",
     )
 
     grounding = retriever.grounding_score(pattern_hints)

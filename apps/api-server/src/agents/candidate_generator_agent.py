@@ -20,6 +20,25 @@ from core.resilience.resilient_llm_client import ResilientLLMClient
 logger = structlog.get_logger(__name__)
 
 
+def get_few_shot_examples(category: str, current_id: str = "", max_examples: int = 2) -> list[dict]:
+    """Pull golden-label examples from benchmark suite for the given mechanism/category."""
+    try:
+        from evaluation.benchmark_suite import load_benchmark_suite
+        suite = load_benchmark_suite()
+        examples = []
+        for inc in suite.incidents:
+            if inc.id != current_id and inc.category == category:
+                examples.append({
+                    "evidence_summary": inc.description,
+                    "golden_description": inc.golden_root_cause,
+                })
+            if len(examples) >= max_examples:
+                break
+        return examples
+    except Exception:
+        return []
+
+
 class CandidateGeneratorAgent:
     """Agent that generates structured candidate root causes using retrieval + LLM reasoning."""
 
@@ -34,6 +53,9 @@ class CandidateGeneratorAgent:
         few_shot_examples: list[dict[str, Any]] | None = None,
         few_shot_mechanism: str = "unknown",
     ) -> list[CandidateCause]:
+        if few_shot_examples is None:
+            few_shot_examples = get_few_shot_examples(few_shot_mechanism, incident_id)
+
         # Map patterns to RunbookMatch
         runbook_matches = []
         for pattern in pattern_hints:

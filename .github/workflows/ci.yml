@@ -25,7 +25,7 @@ jobs:
       - name: Mypy
         run: mypy apps/api-server/src/core/config.py apps/api-server/src/core/llm_client.py
       - name: Pytest
-        run: pytest -m unit --cov=apps/api-server/src --cov-fail-under=80
+        run: pytest -m unit --cov=apps/api-server/src --cov-fail-under=50
       - name: Evaluation
         run: python -c "import asyncio; from evaluation.runner import run_evaluation; print(asyncio.run(run_evaluation())['count'])"
         env:

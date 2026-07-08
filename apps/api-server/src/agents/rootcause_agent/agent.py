@@ -8,6 +8,8 @@ from agents.rootcause_agent.probabilistic_reasoner import (
     build_probabilistic_root_cause_analysis,
     synthesize_root_cause_hypothesis,
 )
+from agents.evidence_synthesis_agent import EvidenceSynthesisAgent
+from agents.candidate_generator_agent import CandidateGeneratorAgent
 from core.llm_client import LLMClient
 from db.models.incident import Incident
 from db.repositories.incident_repo import IncidentRepository
@@ -55,17 +57,31 @@ async def analyze_root_cause(
     ]
 
     service = incident.raw_payload.get("labels", {}).get("service", "payment-api")
+
+    # Run evidence synthesis first
+    synthesis_agent = EvidenceSynthesisAgent(llm_client=owned_llm_client)
+    narrative = await synthesis_agent.synthesize(
+        incident_id=str(incident.id),
+        simplified_evidence=simplified_evidence,
+        primary_service=service,
+    )
+
     timed_events = build_timed_events(simplified_evidence, service)
     topology = load_topology()
+
+    # Query retriever using the narrative summary and anomalies
+    query_text = f"{narrative.summary} {' '.join(narrative.anomalies)}"
     pattern_hints = retriever.retrieve(
-        f"{incident.title}\n{incident.summary}",
+        query_text,
         service=service,
         topology=topology,
     )
-    candidates = build_candidate_causes(
-        service=service,
-        events=timed_events,
-        topology_graph=topology,
+
+    # Generate structured candidates
+    candidate_agent = CandidateGeneratorAgent(llm_client=owned_llm_client)
+    candidates = await candidate_agent.generate_candidates(
+        incident_id=str(incident.id),
+        narrative=narrative,
         pattern_hints=pattern_hints,
     )
 
@@ -79,6 +95,8 @@ async def analyze_root_cause(
         candidates=candidates,
         grounding_score=grounding,
     )
+    # Stash narrative in result
+    result.narrative = narrative.summary
     result = await synthesize_root_cause_hypothesis(
         result,
         candidates=candidates,

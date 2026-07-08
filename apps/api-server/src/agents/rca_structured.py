@@ -93,6 +93,32 @@ class CandidateCause(BaseModel):
         description="What would have prevented this? Used for remediation generation."
     )
 
+    @property
+    def title(self) -> str:
+        return self.description
+
+    @property
+    def pattern_id(self) -> str:
+        return self.cause_id
+
+    @property
+    def cause_service(self) -> str:
+        return self.affected_service
+
+    @property
+    def pattern_match_score(self) -> float:
+        return self.confidence
+
+    @property
+    def supporting_item_keys(self) -> List[str]:
+        return self.evidence_support
+
+    @property
+    def required_keywords(self) -> List[str]:
+        import re
+        words = re.findall(r"\b[a-zA-Z0-9_-]+\b", f"{self.description} {self.triggering_event}")
+        return [w.lower() for w in words if len(w) > 3]
+
     @field_validator("description")
     @classmethod
     def description_must_be_specific(cls, v: str) -> str:
@@ -104,6 +130,11 @@ class CandidateCause(BaseModel):
         ):
             raise ValueError(f"Description too generic: {v}. Must reference specific services, metrics, or versions.")
         return v
+
+
+class CandidateList(BaseModel):
+    """Wrapper model for candidate list structured output."""
+    candidates: List[CandidateCause]
 
 
 class RootCauseAnalysisOutput(BaseModel):

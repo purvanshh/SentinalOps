@@ -45,6 +45,7 @@ from agents.rootcause_agent.probabilistic_reasoner import (
     synthesize_root_cause_hypothesis,
 )
 from agents.evidence_synthesis_agent import EvidenceSynthesisAgent
+from agents.candidate_generator_agent import CandidateGeneratorAgent
 from agents.router_agent.agent import classify_incident
 from agents.router_agent.output_schema import RouterOutput
 from core.runtime_context import disallow_live_providers
@@ -210,11 +211,20 @@ async def _eval_rootcause(
     timed_events = build_timed_events(simplified_evidence, service)
     topology = load_topology()
 
-    candidates = build_candidate_causes(
+    from retrieval.hybrid_retrieval import HybridRetriever
+    retriever = HybridRetriever()
+    query_text = f"{narrative.summary} {' '.join(narrative.anomalies)}"
+    pattern_hints = retriever.retrieve(
+        query_text,
         service=service,
-        events=timed_events,
-        topology_graph=topology,
-        pattern_hints=[],
+        topology=topology,
+    )
+
+    candidate_agent = CandidateGeneratorAgent(llm_client=synthesis_client)
+    candidates = await candidate_agent.generate_candidates(
+        incident_id=benchmark.id,
+        narrative=narrative,
+        pattern_hints=pattern_hints,
     )
 
     result = build_probabilistic_root_cause_analysis(

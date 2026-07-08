@@ -117,7 +117,7 @@ class DeterministicEvalSynthesisClient:
 
         if structured_output_model is not None:
             # Construct a basic SynthesizedNarrative or other model as fallback
-            from agents.rca_structured import SynthesizedNarrative, EvidenceItem
+            from agents.rca_structured import SynthesizedNarrative, EvidenceItem, CandidateList, CandidateCause
             if structured_output_model == SynthesizedNarrative:
                 narrative = SynthesizedNarrative(
                     narrative_id="fallback-narrative",
@@ -130,6 +130,20 @@ class DeterministicEvalSynthesisClient:
                 )
                 self._cache[prompt] = narrative
                 return narrative
+            elif structured_output_model == CandidateList:
+                candidate = CandidateCause(
+                    cause_id="fallback-cause",
+                    description=content if len(content) > 10 else "Unknown service degradation under high load",
+                    affected_service="payment-api",
+                    triggering_event="unknown",
+                    evidence_support=[],
+                    confidence=0.6,
+                    mechanism_type="unknown",
+                    counterfactual="Rollback payment-api"
+                )
+                candidate_list = CandidateList(candidates=[candidate])
+                self._cache[prompt] = candidate_list
+                return candidate_list
             else:
                 try:
                     # Generic pydantic fallback

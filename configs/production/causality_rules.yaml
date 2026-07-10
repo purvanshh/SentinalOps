@@ -1,0 +1,103 @@
+version: "1.0"
+rules:
+  - id: db_slow_query
+    category: database_failure
+    description: "Database slow queries detected"
+    conditions:
+      - signal_contains: ["slow_query", "db_response_time", "query_latency"]
+        severity_in: ["critical", "warning"]
+        source_in: ["metrics", "logs"]
+    mechanism_type: resource_exhaustion
+    confidence: 0.75
+    source: "SRE Runbook: DB Performance"
+  - id: db_conn_pool_exhausted
+    category: database_failure
+    description: "Database connection pool exhaustion"
+    conditions:
+      - signal_contains: ["connection_pool", "db_connections", "pool_exhausted"]
+        severity_in: ["critical"]
+        source_in: ["metrics", "logs"]
+    mechanism_type: resource_exhaustion
+    confidence: 0.8
+    source: "SRE Runbook: DB Connection Pool"
+  - id: db_transaction_lock
+    category: database_failure
+    description: "Database transaction lock conflict"
+    conditions:
+      - signal_contains: ["lock_conflict", "deadlock", "transaction_lock"]
+        severity_in: ["critical", "warning"]
+        source_in: ["logs"]
+    mechanism_type: dependency_failure
+    confidence: 0.7
+    source: "SRE Runbook: DB Deadlock Analysis"
+
+  - id: oom_kill_detected
+    category: memory_pressure
+    description: "Container OOM-kill event detected"
+    conditions:
+      - signal_contains: ["oom_kill", "out_of_memory", "oom-kill"]
+        severity_in: ["critical"]
+        source_in: ["logs"]
+    mechanism_type: resource_exhaustion
+    confidence: 0.95
+    source: "SRE Runbook: OOM Troubleshooting"
+  - id: memory_leak_detected
+    category: memory_pressure
+    description: "System memory usage rising continuously"
+    conditions:
+      - signal_contains: ["memory_usage", "heap_size", "leak"]
+        severity_in: ["critical", "warning"]
+        source_in: ["metrics"]
+    mechanism_type: resource_exhaustion
+    confidence: 0.8
+    source: "SRE Runbook: Memory Leaks"
+  - id: gc_pause_spike
+    category: memory_pressure
+    description: "JVM / runtime GC pause latency spike"
+    conditions:
+      - signal_contains: ["gc_pause", "garbage_collection", "gc_latency"]
+        severity_in: ["warning"]
+        source_in: ["metrics", "logs"]
+    mechanism_type: resource_exhaustion
+    confidence: 0.65
+    source: "SRE Runbook: GC Latency Tuning"
+
+  - id: deployment_error_spike
+    category: deployment_regression
+    description: "Error rate spike following deployment"
+    conditions:
+      - signal_contains: ["deployment_", "version_"]
+        severity_in: ["critical", "warning", "info"]
+        source_in: ["deployment"]
+      - signal_contains: ["error", "exception", "failed"]
+        severity_in: ["critical", "warning"]
+        source_in: ["logs", "metrics"]
+    mechanism_type: deployment_error
+    confidence: 0.9
+    source: "SRE Runbook: Deployment Verification"
+  - id: config_change_rollback
+    category: deployment_regression
+    description: "Config change followed by failures"
+    conditions:
+      - signal_contains: ["config_", "env_"]
+        severity_in: ["info"]
+        source_in: ["deployment"]
+      - signal_contains: ["fail", "error", "degraded"]
+        severity_in: ["critical"]
+        source_in: ["logs", "metrics"]
+    mechanism_type: configuration_drift
+    confidence: 0.8
+    source: "SRE Runbook: Configuration Rollbacks"
+  - id: deployment_perf_drift
+    category: deployment_regression
+    description: "High latency spike following deployment"
+    conditions:
+      - signal_contains: ["deployment_", "version_"]
+        severity_in: ["critical", "warning", "info"]
+        source_in: ["deployment"]
+      - signal_contains: ["latency", "duration", "response_time"]
+        severity_in: ["critical", "warning"]
+        source_in: ["metrics"]
+    mechanism_type: deployment_error
+    confidence: 0.85
+    source: "SRE Runbook: Post-deployment Performance Audit"

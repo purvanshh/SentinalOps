@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from evaluation.hallucination_checks.check_citations import check_citations_present
 
@@ -111,3 +111,48 @@ def score_root_cause(
 
 def score_grounding(valid_item_keys: set[str], result) -> float:
     return 1.0 if check_citations_present(result, valid_item_keys) else 0.0
+
+
+def classify_failure_mode(
+    predicted_text: str, expected_text: str, incident: Any | None = None
+) -> str:
+    predicted = predicted_text.lower()
+
+    if not predicted.strip() or any(
+        term in predicted
+        for term in ["fallback", "unknown", "degradation", "failure occurred", "failed"]
+    ):
+        return "generic_fallback"
+
+    if "after" in predicted or "following" in predicted:
+        return "temporal_confusion"
+
+    if incident:
+        if not getattr(incident, "metrics_snapshot", None) and not getattr(
+            incident, "logs_sample", None
+        ):
+            return "missing_evidence"
+
+    if "missing" in predicted or "no metrics" in predicted or "no logs" in predicted:
+        return "missing_evidence"
+
+    if incident and getattr(incident, "mocked_tool_responses", None):
+        router = incident.mocked_tool_responses.get("router", {})
+        hints = router.get("pattern_hints", [])
+        if hints and not any(h.get("pattern_id", "") in predicted for h in hints):
+            return "pattern_mismatch"
+
+    return "wrong_evidence_weight"
+
+
+def detailed_score_root_cause(
+    predicted_text: str,
+    expected_text: str,
+    mode: ScoringMode = "lexical",
+    incident: Any | None = None,
+) -> tuple[float, str]:
+    score = score_root_cause(predicted_text, expected_text, mode)
+    if score >= 0.6:
+        return score, "correct"
+    failure_mode = classify_failure_mode(predicted_text, expected_text, incident)
+    return score, failure_mode

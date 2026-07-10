@@ -78,6 +78,23 @@ class BenchmarkIncident:
             "confidence", self.confidence_midpoint
         )
 
+    @property
+    def golden_mechanism(self) -> str:
+        mapping = {
+            "cascading_failure": "cascade_failure",
+            "cpu_saturation": "resource_exhaustion",
+            "deployment_regression": "deployment_error",
+            "disk_exhaustion": "resource_exhaustion",
+            "dns_failure": "dependency_failure",
+            "kubernetes_pod_failure": "cascade_failure",
+            "latency_spike": "dependency_failure",
+            "memory_leak": "resource_exhaustion",
+            "networking_failure": "network_partition",
+            "postgresql_failure": "dependency_failure",
+            "redis_outage": "dependency_failure",
+        }
+        return mapping.get(self.category, "unknown")
+
     def to_runner_format(self) -> dict[str, Any]:
         """Produce the dict format expected by evaluation/runner.py."""
         return {
@@ -121,6 +138,61 @@ class BenchmarkSuite:
 
     def low_confidence_incidents(self) -> list[BenchmarkIncident]:
         return [i for i in self.incidents if i.confidence_max < 0.65]
+
+    def accuracy_by_category(
+        self, results: list[dict[str, Any]], scoring_key: str = "rootcause_score_lexical"
+    ) -> dict[str, dict[str, Any]]:
+        incident_map = {inc.name: inc for inc in self.incidents}
+        stats: dict[str, dict[str, Any]] = {}
+        for r in results:
+            name = r.get("name")
+            inc = incident_map.get(name)
+            if not inc:
+                continue
+            cat = inc.category
+            if cat not in stats:
+                stats[cat] = {"total": 0, "correct": 0, "scores": []}
+            stats[cat]["total"] += 1
+            score = r.get(scoring_key, 0.0)
+            stats[cat]["scores"].append(score)
+            if score >= 0.6:
+                stats[cat]["correct"] += 1
+
+        report = {}
+        for cat, data in stats.items():
+            report[cat] = {
+                "total": data["total"],
+                "correct": data["correct"],
+                "accuracy": round(data["correct"] / data["total"], 4) if data["total"] > 0 else 0.0,
+                "mean_score": (
+                    round(sum(data["scores"]) / data["total"], 4) if data["total"] > 0 else 0.0
+                ),
+            }
+        return report
+
+    def failure_mode_breakdown(self, results: list[dict[str, Any]]) -> dict[str, int]:
+        from evaluation.scorers.rootcause_scorer import classify_failure_mode
+
+        incident_map = {inc.name: inc for inc in self.incidents}
+        breakdown = {
+            "missing_evidence": 0,
+            "wrong_evidence_weight": 0,
+            "temporal_confusion": 0,
+            "generic_fallback": 0,
+            "pattern_mismatch": 0,
+        }
+        for r in results:
+            name = r.get("name")
+            inc = incident_map.get(name)
+            if not inc:
+                continue
+            score = r.get("rootcause_score_lexical", 0.0)
+            if score < 0.6:
+                predicted = r.get("predicted_root_cause", "")
+                expected = inc.golden_root_cause
+                mode = classify_failure_mode(predicted, expected, inc)
+                breakdown[mode] = breakdown.get(mode, 0) + 1
+        return breakdown
 
 
 def _parse_incident(raw: dict[str, Any]) -> BenchmarkIncident:

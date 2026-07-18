@@ -237,7 +237,7 @@ async def _eval_rootcause(
         service=service,
         topology=topology,
     )
-    
+
     memory = OperationalMemory()
     memories = await memory.incident_memory.recall_structured(
         query=query_text,

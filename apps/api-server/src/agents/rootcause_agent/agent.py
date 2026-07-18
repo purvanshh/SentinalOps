@@ -93,7 +93,7 @@ async def analyze_root_cause(
         service=service,
         topology=topology,
     )
-    
+
     memory = OperationalMemory()
     memories = await memory.incident_memory.recall_structured(
         query=query_text,

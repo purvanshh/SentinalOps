@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+
 from knowledge.graph_schema import (
     EvidenceKnowledgeGraph,
     KnowledgeEdge,
@@ -80,7 +81,10 @@ def build_knowledge_graph(
                         target_id=later.id,
                         edge_type=KnowledgeEdgeType.HAPPENED_BEFORE,
                         weight=max(0.1, 1.0 - (delta / 900.0)),
-                        rationale=f"{earlier.source} event happened {delta:.1f}s before {later.source} event",
+                        rationale=(
+                            f"{earlier.source} event happened {delta:.1f}s before"
+                            f" {later.source} event"
+                        ),
                     )
                 )
 

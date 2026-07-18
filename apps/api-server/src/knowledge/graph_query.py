@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import List
+
 from knowledge.graph_schema import (
     EvidenceKnowledgeGraph,
     KnowledgeEdge,
@@ -25,7 +26,9 @@ class GraphQuery:
     def get_edges_to(self, node_id: str) -> List[KnowledgeEdge]:
         return [e for e in self.graph.edges if e.target_id == node_id]
 
-    def get_successors(self, node_id: str, edge_type: KnowledgeEdgeType | None = None) -> List[KnowledgeNode]:
+    def get_successors(
+        self, node_id: str, edge_type: KnowledgeEdgeType | None = None
+    ) -> List[KnowledgeNode]:
         successors = []
         for e in self.get_edges_from(node_id):
             if edge_type is None or e.edge_type == edge_type:
@@ -34,7 +37,9 @@ class GraphQuery:
                     successors.append(node)
         return successors
 
-    def get_predecessors(self, node_id: str, edge_type: KnowledgeEdgeType | None = None) -> List[KnowledgeNode]:
+    def get_predecessors(
+        self, node_id: str, edge_type: KnowledgeEdgeType | None = None
+    ) -> List[KnowledgeNode]:
         predecessors = []
         for e in self.get_edges_to(node_id):
             if edge_type is None or e.edge_type == edge_type:

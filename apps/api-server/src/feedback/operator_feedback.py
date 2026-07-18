@@ -23,7 +23,7 @@ import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 
 @dataclass
@@ -259,7 +259,6 @@ class OperatorFeedbackStore:
             return 0.0
 
         accepted = sum(1 for f in relevant if f.was_correct)
-        rejected = sum(1 for f in relevant if f.was_wrong)
         total = len(relevant)
 
         if total < 3:

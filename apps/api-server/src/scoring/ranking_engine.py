@@ -183,7 +183,9 @@ class RootCauseRankingEngine:
             candidate_dicts.append({
                 "hypothesis_id": cid,
                 "title": title,
-                "evidence_coverage": ev_map.get(cid, getattr(c, "evidence_coverage", None) or confidence * 0.8),
+                "evidence_coverage": ev_map.get(
+                    cid, getattr(c, "evidence_coverage", None) or confidence * 0.8
+                ),
                 "counterfactual_success": cf_map.get(cid, 0.5),
                 "historical_similarity": hist_map.get(cid, 0.3),
                 "graph_consistency": g_map.get(cid, confidence * 0.7),

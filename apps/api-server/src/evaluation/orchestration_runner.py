@@ -46,10 +46,7 @@ from agents.rootcause_agent.probabilistic_reasoner import (
     synthesize_root_cause_hypothesis,
 )
 from agents.router_agent.agent import classify_incident
-from knowledge.graph_builder import build_knowledge_graph
-from repo.git_analyzer import GitAnalyzer
-from memory.operational_memory import OperationalMemory
-from verification.validator import CounterfactualValidator
+from agents.router_agent.output_schema import RouterOutput
 from core.runtime_context import disallow_live_providers
 from evaluation.benchmark_suite import BenchmarkIncident
 from evaluation.execution_mode import ExecutionMode
@@ -68,7 +65,11 @@ from evaluation.infra_mocks.mock_llm_client import (
 )
 from evaluation.infra_mocks.null_clients import NullIncidentHistorySearcher
 from evaluation.trace import EvaluationTrace
+from knowledge.graph_builder import build_knowledge_graph
+from memory.operational_memory import OperationalMemory
 from orchestration.state.topology import load_topology
+from repo.git_analyzer import GitAnalyzer
+from verification.validator import CounterfactualValidator
 
 _DEFAULT_REMEDIATION_HISTORY: list[dict[str, Any]] = [
     {
@@ -222,7 +223,8 @@ async def _eval_rootcause(
     repo_context = ""
     if recent_commits:
         repo_context = "\nRecent changes in repository:\n" + "\n".join([
-            f"- commit {c.get('sha')}: {c.get('message')} by {c.get('author')} (files: {', '.join(c.get('files_changed', []))})"
+            f"- commit {c.get('sha')}: {c.get('message')} by {c.get('author')} "
+            f"(files: {', '.join(c.get('files_changed', []))})"
             for c in recent_commits
         ])
 
@@ -247,7 +249,8 @@ async def _eval_rootcause(
     for mem in memories:
         pattern_hints.append({
             "pattern_id": mem.key,
-            "title": mem.payload.get("title") or mem.payload.get("root_cause") or "Historical Incident",
+            "title": mem.payload.get("title") or mem.payload.get("root_cause")
+            or "Historical Incident",
             "mechanism_type": mem.category,
             "similarity_score": mem.similarity_score,
             "description": mem.payload.get("summary") or mem.payload.get("description"),

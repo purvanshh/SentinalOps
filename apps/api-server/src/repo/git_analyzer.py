@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+
 import structlog
 from tools.github.client import GitHubClient
 
@@ -21,7 +22,7 @@ class GitAnalyzer:
             for d in deployments[:limit]:
                 commit_sha = d.get("commit_sha") or d.get("sha")
                 if commit_sha:
-                    diff = await self.client.get_commit_diff("purvanshh/SentinalOps", commit_sha)
+                    diff = await self.client.get_commit_diff("purvanshh/SentinelOps", commit_sha)
                     commits.append(diff)
             return commits
         except Exception as exc:

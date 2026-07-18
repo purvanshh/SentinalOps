@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
 from agents.rca_structured import CandidateCause
 from knowledge.graph_schema import EvidenceKnowledgeGraph
 from verification.expectation_library import ExpectationLibrary
 
 
 class CounterfactualValidator:
-    """Validates candidate root causes against observed Evidence Knowledge Graph node types and symptoms."""
+    """Validates candidate root causes against observed EKG node types and symptoms."""
 
     def __init__(self) -> None:
         self.library = ExpectationLibrary()

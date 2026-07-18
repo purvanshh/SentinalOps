@@ -13,7 +13,7 @@ This makes SentinelOps useful, not just intelligent.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Dict, List
 
 
 @dataclass
@@ -92,15 +92,24 @@ class GeneratedRunbook:
 _MECHANISM_TEMPLATES: Dict[str, Dict[str, List[Dict[str, str]]]] = {
     "deployment_error": {
         "diagnosis": [
-            {"action": "Identify the deployment that preceded the incident", "command": "kubectl rollout history deployment/{service}"},
-            {"action": "Compare configuration diff between versions", "command": "diff <(kubectl get configmap {service}-config -o yaml --revision=prev) <(kubectl get configmap {service}-config -o yaml)"},
+            {"action": "Identify the deployment that preceded the incident",
+             "command": "kubectl rollout history deployment/{service}"},
+            {"action": "Compare configuration diff between versions",
+             "command": (
+                 "diff <(kubectl get configmap {service}-config -o yaml"
+                 " --revision=prev)"
+                 " <(kubectl get configmap {service}-config -o yaml)"
+             )},
         ],
         "fix": [
-            {"action": "Rollback to the last known good deployment", "command": "kubectl rollout undo deployment/{service}"},
-            {"action": "Verify service health after rollback", "command": "curl -s http://{service}/healthz"},
+            {"action": "Rollback to the last known good deployment",
+             "command": "kubectl rollout undo deployment/{service}"},
+            {"action": "Verify service health after rollback",
+             "command": "curl -s http://{service}/healthz"},
         ],
         "rollback": [
-            {"action": "If rollback worsens the issue, re-deploy current version", "command": "kubectl rollout undo deployment/{service}"},
+            {"action": "If rollback worsens the issue, re-deploy current version",
+             "command": "kubectl rollout undo deployment/{service}"},
         ],
         "verification": [
             {"action": "Verify error rates returned to baseline", "command": ""},
@@ -109,16 +118,19 @@ _MECHANISM_TEMPLATES: Dict[str, Dict[str, List[Dict[str, str]]]] = {
     },
     "resource_exhaustion": {
         "diagnosis": [
-            {"action": "Check current resource utilization", "command": "kubectl top pods -l app={service}"},
+            {"action": "Check current resource utilization",
+             "command": "kubectl top pods -l app={service}"},
             {"action": "Review memory and CPU trends", "command": ""},
         ],
         "fix": [
-            {"action": "Increase resource limits or restart pods", "command": "kubectl rollout restart deployment/{service}"},
+            {"action": "Increase resource limits or restart pods",
+             "command": "kubectl rollout restart deployment/{service}"},
             {"action": "If memory leak suspected, capture heap dump first", "command": ""},
         ],
         "verification": [
             {"action": "Monitor resource usage for 15 minutes post-fix", "command": ""},
-            {"action": "Verify no OOM kills in pod events", "command": "kubectl get events --field-selector reason=OOMKilling"},
+            {"action": "Verify no OOM kills in pod events",
+             "command": "kubectl get events --field-selector reason=OOMKilling"},
         ],
     },
     "configuration_drift": {
@@ -128,7 +140,8 @@ _MECHANISM_TEMPLATES: Dict[str, Dict[str, List[Dict[str, str]]]] = {
         ],
         "fix": [
             {"action": "Restore configuration to last known good state", "command": ""},
-            {"action": "Restart affected services", "command": "kubectl rollout restart deployment/{service}"},
+            {"action": "Restart affected services",
+             "command": "kubectl rollout restart deployment/{service}"},
         ],
         "verification": [
             {"action": "Verify configuration values match expected baseline", "command": ""},
@@ -138,7 +151,8 @@ _MECHANISM_TEMPLATES: Dict[str, Dict[str, List[Dict[str, str]]]] = {
         "diagnosis": [
             {"action": "Check health of upstream dependencies", "command": ""},
             {"action": "Review connection pool metrics", "command": ""},
-            {"action": "Check DNS resolution for dependency endpoints", "command": "nslookup {dependency}"},
+            {"action": "Check DNS resolution for dependency endpoints",
+             "command": "nslookup {dependency}"},
         ],
         "fix": [
             {"action": "If dependency is external, enable circuit breaker", "command": ""},
@@ -183,7 +197,9 @@ class RunbookGenerator:
         confidence: float,
     ) -> GeneratedRunbook:
         """Generate a complete runbook for the identified root cause."""
-        templates = _MECHANISM_TEMPLATES.get(mechanism_type, _MECHANISM_TEMPLATES.get("dependency_failure", {}))
+        templates = _MECHANISM_TEMPLATES.get(
+            mechanism_type, _MECHANISM_TEMPLATES.get("dependency_failure", {})
+        )
 
         def build_steps(phase: str) -> List[RunbookStep]:
             steps = []

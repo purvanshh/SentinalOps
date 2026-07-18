@@ -1,7 +1,7 @@
 # Root Cause Analysis (RCA) Accuracy Decomposition
 
 ## 1. Problem Statement
-The current root-cause accuracy in SentinalOps is 8.2%. The system produces plausible but generic hypotheses, and there is no learned causal inference or robust matching. To improve this, we must decompose the problem into sub-problems and classify failures using a structured taxonomy.
+The current root-cause accuracy in SentinelOps is 8.2%. The system produces plausible but generic hypotheses, and there is no learned causal inference or robust matching. To improve this, we must decompose the problem into sub-problems and classify failures using a structured taxonomy.
 
 ## 2. RCA Failure Taxonomy
 We categorize misdiagnoses into five failure modes:

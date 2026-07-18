@@ -17,13 +17,11 @@ a threshold or all available sources have been exhausted.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, List
 
 from agents.specialists import (
-    Arbitrator,
-    BaseInvestigator,
-    DeploymentInvestigator,
     DependencyInvestigator,
+    DeploymentInvestigator,
     GitInvestigator,
     MetricsInvestigator,
     RunbookInvestigator,
@@ -152,7 +150,8 @@ class AutonomousInvestigationPlanner:
                 )
                 current_confidence = min(1.0, current_confidence)
 
-                if finding.confidence > (getattr(all_findings[0], "confidence", 0) if all_findings else 0):
+                best_conf = getattr(all_findings[0], "confidence", 0) if all_findings else 0
+                if finding.confidence > best_conf:
                     best_hypothesis = finding.hypothesis
                     best_mechanism = finding.mechanism_type
 

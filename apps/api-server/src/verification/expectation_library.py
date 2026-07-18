@@ -14,7 +14,10 @@ class ExpectationLibrary:
             },
             "resource_exhaustion": {
                 "required_node_types": {"metric_anomaly"},
-                "expected_keywords": ["cpu", "memory", "exhausted", "starvation", "limit", "oom", "leak"],
+                "expected_keywords": [
+                    "cpu", "memory", "exhausted", "starvation",
+                    "limit", "oom", "leak",
+                ],
             },
             "cascade_failure": {
                 "required_node_types": {"metric_anomaly", "topology"},
@@ -26,7 +29,10 @@ class ExpectationLibrary:
             },
             "dependency_failure": {
                 "required_node_types": {"log_error"},
-                "expected_keywords": ["timeout", "connection refused", "502", "503", "504", "http", "api"],
+                "expected_keywords": [
+                    "timeout", "connection refused", "502", "503", "504",
+                    "http", "api",
+                ],
             },
         }
 

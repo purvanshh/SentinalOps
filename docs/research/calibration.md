@@ -1,7 +1,7 @@
 # Statistical Confidence Calibration
 
 ## 1. Executive Summary
-We identified poor confidence calibration in the SentinalOps RCA model, with an Expected Calibration Error (ECE) of 0.2045 and an 87.5% underconfidence bias. This document presents the calibration procedure using Temperature Scaling and Isotonic Regression, yielding well-calibrated confidence scores that reflect actual system accuracy.
+We identified poor confidence calibration in the SentinelOps RCA model, with an Expected Calibration Error (ECE) of 0.2045 and an 87.5% underconfidence bias. This document presents the calibration procedure using Temperature Scaling and Isotonic Regression, yielding well-calibrated confidence scores that reflect actual system accuracy.
 
 ## 2. Background & Theory
 * **Expected Calibration Error (ECE)**: Measures the average gap between confidence and correctness, binned across the probability space.

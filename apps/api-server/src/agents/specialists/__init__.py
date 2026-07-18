@@ -109,7 +109,8 @@ class DeploymentInvestigator(BaseInvestigator):
     ) -> SpecialistFinding:
         deploy_evidence = [
             e for e in evidence_items
-            if e.get("source") in ("deployment", "deploy") or e.get("item_type") == "deployment_change"
+            if e.get("source") in ("deployment", "deploy")
+            or e.get("item_type") == "deployment_change"
         ]
 
         if not deploy_evidence:
@@ -156,7 +157,10 @@ class GitInvestigator(BaseInvestigator):
         files = latest.get("files_changed", [])
 
         confidence = 0.4
-        if any("config" in f.lower() or "pool" in f.lower() or "connection" in f.lower() for f in files):
+        if any(
+            "config" in f.lower() or "pool" in f.lower() or "connection" in f.lower()
+            for f in files
+        ):
             confidence = 0.7
 
         return SpecialistFinding(
@@ -203,7 +207,10 @@ class TopologyInvestigator(BaseInvestigator):
                 evidence_ids=[],
                 confidence=0.55,
                 mechanism_type="cascade_failure",
-                explanation=f"{len(affected_services)} services affected — possible topology propagation",
+                explanation=(
+                    f"{len(affected_services)} services affected"
+                    " — possible topology propagation"
+                ),
             )
 
         return SpecialistFinding(

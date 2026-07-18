@@ -135,7 +135,9 @@ class EvidenceQualityScorer:
             rationale_parts.append(f"count={count}:+{count_boost:.2f}")
 
         # Final score
-        final_score = min(1.0, base_score + severity_boost + z_boost + specificity_boost + count_boost)
+        final_score = min(
+            1.0, base_score + severity_boost + z_boost + specificity_boost + count_boost
+        )
 
         return ScoredEvidence(
             item_key=item_key,

@@ -304,7 +304,10 @@ class MultiIncidentReasoningEngine:
             if inc.mechanism_type:
                 mechanism_votes[inc.mechanism_type] = mechanism_votes.get(inc.mechanism_type, 0) + 1
 
-        best_mechanism = max(mechanism_votes, key=mechanism_votes.get) if mechanism_votes else "unknown"
+        best_mechanism = (
+            max(mechanism_votes, key=mechanism_votes.get)
+            if mechanism_votes else "unknown"
+        )
 
         # Synthesize shared cause description
         services = sorted({inc.service for inc in incidents})

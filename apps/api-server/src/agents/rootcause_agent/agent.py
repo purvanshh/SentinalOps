@@ -2,10 +2,6 @@ from __future__ import annotations
 
 from agents.candidate_generator_agent import CandidateGeneratorAgent
 from agents.evidence_synthesis_agent import EvidenceSynthesisAgent
-from knowledge.graph_builder import build_knowledge_graph
-from repo.git_analyzer import GitAnalyzer
-from memory.operational_memory import OperationalMemory
-from verification.validator import CounterfactualValidator
 from agents.rootcause_agent.evidence_builder import build_timed_events
 from agents.rootcause_agent.evidence_normalizer import normalize_agent_executions
 from agents.rootcause_agent.output_schema import RootCauseAnalysis
@@ -16,6 +12,8 @@ from agents.rootcause_agent.probabilistic_reasoner import (
 from core.llm_client import LLMClient
 from db.models.incident import Incident
 from db.repositories.incident_repo import IncidentRepository
+from knowledge.graph_builder import build_knowledge_graph
+from memory.operational_memory import OperationalMemory
 from observability.metrics.definitions import (
     observe_calibration_error,
     observe_confidence_reliability,
@@ -25,8 +23,10 @@ from observability.metrics.definitions import (
     observe_uncertainty_quality,
 )
 from orchestration.state.topology import load_topology
+from repo.git_analyzer import GitAnalyzer
 from retrieval.hybrid_retrieval import HybridRetriever
 from sqlalchemy.ext.asyncio import AsyncSession
+from verification.validator import CounterfactualValidator
 
 
 async def analyze_root_cause(
@@ -81,7 +81,8 @@ async def analyze_root_cause(
     repo_context = ""
     if recent_commits:
         repo_context = "\nRecent changes in repository:\n" + "\n".join([
-            f"- commit {c.get('sha')}: {c.get('message')} by {c.get('author')} (files: {', '.join(c.get('files_changed', []))})"
+            f"- commit {c.get('sha')}: {c.get('message')} by {c.get('author')} "
+            f"(files: {', '.join(c.get('files_changed', []))})"
             for c in recent_commits
         ])
 
@@ -104,7 +105,8 @@ async def analyze_root_cause(
     for mem in memories:
         pattern_hints.append({
             "pattern_id": mem.key,
-            "title": mem.payload.get("title") or mem.payload.get("root_cause") or "Historical Incident",
+            "title": mem.payload.get("title") or mem.payload.get("root_cause")
+            or "Historical Incident",
             "mechanism_type": mem.category,
             "similarity_score": mem.similarity_score,
             "description": mem.payload.get("summary") or mem.payload.get("description"),

@@ -23,7 +23,6 @@ from knowledge.graph_schema import (
     KnowledgeNodeType,
 )
 
-
 # Edge types considered causal (traversable backward to find root causes)
 _CAUSAL_EDGE_TYPES = {
     KnowledgeEdgeType.HAPPENED_BEFORE,
@@ -240,7 +239,8 @@ class CausalReasoningEngine:
 
         steps = []
         for i, node in enumerate(path.nodes):
-            prefix = "ROOT: " if i == 0 else f"  → "
-            steps.append(f"{prefix}[{node.type.value}] {node.service}: {node.metadata.get('description', node.id)}")
+            prefix = "ROOT: " if i == 0 else "  → "
+            desc = node.metadata.get('description', node.id)
+            steps.append(f"{prefix}[{node.type.value}] {node.service}: {desc}")
 
         return " ".join(steps)

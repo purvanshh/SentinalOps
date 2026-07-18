@@ -139,9 +139,15 @@ class _MemoryStore:
                 elif topology is not None:
                     is_dep = False
                     if hasattr(topology, "has_edge"):
-                        is_dep = topology.has_edge(service, historical_service) or topology.has_edge(historical_service, service)
+                        is_dep = (
+                            topology.has_edge(service, historical_service)
+                            or topology.has_edge(historical_service, service)
+                        )
                     elif isinstance(topology, dict):
-                        is_dep = historical_service in topology.get(service, []) or service in topology.get(historical_service, [])
+                        is_dep = (
+                            historical_service in topology.get(service, [])
+                            or service in topology.get(historical_service, [])
+                        )
                     if is_dep:
                         structural_score += 0.15
 
